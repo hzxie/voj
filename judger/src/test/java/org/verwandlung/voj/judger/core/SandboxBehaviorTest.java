@@ -572,6 +572,97 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run on Windows that lists the privileges of its token, names its window station
+   * and desktop, tries to open the operator's window station (WinSta0) and counts the top-level
+   * windows it can see that belong to a process outside its Job. Expected result: the run holds no
+   * privilege but SeChangeNotifyPrivilege (not SeShutdownPrivilege and the others of Users), runs
+   * on the judger's private window station and desktop, may not open WinSta0, and sees no window
+   * of another process.
+   */
+  @Test
+  public void testRunIsIsolatedFromTheDesktopOnWindows() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeFalse(isLinux(), "Tokens and desktops are Windows-only here.");
+    Assertions.assertEquals("AC", judge(900044L, WINDOWS_ISOLATION_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "privileges: SeChangeNotifyPrivilege",
+            "window station: private",
+            "desktop: default",
+            "WinSta0: denied",
+            "windows of other processes: 0",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900044", "output.txt"))
+            .replace("\r\n", "\n"));
+  }
+
+  /**
+   * Test case: a run on Windows of a program that imports a DLL that is missing. Expected result:
+   * the program ends at once with STATUS_DLL_NOT_FOUND, a runtime error, rather than waiting on an
+   * error box nobody can close until it is killed at the wall-clock limit (a time limit exceeded).
+   * Needs gcc on the judger's PATH (it builds the program outside the sandbox).
+   */
+  @Test
+  public void testMissingDllIsARuntimeErrorOnWindows() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeFalse(isLinux(), "DLLs are Windows-only.");
+    String workDirectory = createWorkDirectory(900045L);
+    String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
+    Files.writeString(
+        Path.of(programDirectory, "missing.c"),
+        "__declspec(dllexport) int missing(void) { return 0; }\n");
+    Files.writeString(
+        Path.of(programDirectory, "program.c"),
+        "__declspec(dllimport) int missing(void);\nint main(void) { return missing(); }\n");
+    Assumptions.assumeTrue(
+        build(programDirectory, "gcc", "-shared", "-o", "missing.dll", "missing.c"),
+        "gcc is not on the PATH.");
+    Assertions.assertTrue(
+        build(programDirectory, "gcc", "-o", "program.exe", "program.c", "missing.dll"));
+    Files.delete(Path.of(programDirectory, "missing.dll"));
+
+    long startNanos = System.nanoTime();
+    RunResult result =
+        sandboxRunner.run(
+            programDirectory + "/program.exe",
+            programDirectory,
+            preprocessor.createRunDirectory(workDirectory),
+            null,
+            workDirectory + "/output.txt",
+            5000,
+            65536,
+            false);
+    long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, result.getVerdict());
+    Assertions.assertEquals(0xC0000135, result.getExitCode());
+    Assertions.assertTrue(elapsedMs < 3000, "The run took " + elapsedMs + " ms.");
+  }
+
+  /**
+   * Runs a build command as the judger (outside the sandbox).
+   *
+   * @param directory - the directory to run it in
+   * @param command - the command and its arguments
+   * @return whether it ran and succeeded, {@code false} if it could not be started
+   * @throws InterruptedException if interrupted while waiting for it
+   */
+  private static boolean build(String directory, String... command) throws InterruptedException {
+    try {
+      Process process =
+          new ProcessBuilder(command)
+              .directory(new java.io.File(directory))
+              .redirectErrorStream(true)
+              .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+              .start();
+      return process.waitFor() == 0;
+    } catch (IOException ex) {
+      return false;
+    }
+  }
+
+  /**
    * Test case: a run that tries to empty a file of the judger outside its work directory, such as
    * the cached expected output, with truncate(2) and with open(O_RDONLY | O_TRUNC), neither of which
    * Landlock confined before ABI 3 (Linux 6.2). Expected result: both are refused and the file is
@@ -1916,6 +2007,84 @@ public class SandboxBehaviorTest {
           report("create a directory at the next output", CreateDirectoryW(next.c_str(), NULL));
           reportFile("create a file in its work directory", CreateFileW(L"scratch", GENERIC_WRITE,
                      0, NULL, CREATE_NEW, 0, NULL));
+          return 0;
+      }
+      """;
+
+  /**
+   * A Windows program that reports the privileges of its token, whether its window station is the
+   * judger's private one, the name of its desktop, whether it may open the operator's window
+   * station (WinSta0), and how many top-level windows it sees that belong to a process outside its
+   * Job.
+   */
+  private static final String WINDOWS_ISOLATION_CODE =
+      """
+      #include <windows.h>
+      #include <algorithm>
+      #include <cstdio>
+      #include <string>
+      #include <vector>
+
+      static int foreignWindows = 0;
+
+      static BOOL CALLBACK countWindow(HWND window, LPARAM) {
+          DWORD processId = 0;
+          GetWindowThreadProcessId(window, &processId);
+          if (processId == GetCurrentProcessId()) {
+              return TRUE;
+          }
+          HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId);
+          BOOL inJob = FALSE;
+          if (process == NULL || !IsProcessInJob(process, NULL, &inJob) || !inJob) {
+              ++foreignWindows;
+          }
+          if (process != NULL) {
+              CloseHandle(process);
+          }
+          return TRUE;
+      }
+
+      int main() {
+          HANDLE token;
+          if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+              return 1;
+          }
+          DWORD size = 0;
+          GetTokenInformation(token, TokenPrivileges, NULL, 0, &size);
+          std::vector<BYTE> buffer(size);
+          if (!GetTokenInformation(token, TokenPrivileges, buffer.data(), size, &size)) {
+              return 2;
+          }
+          TOKEN_PRIVILEGES* privileges = (TOKEN_PRIVILEGES*) buffer.data();
+          std::vector<std::string> names;
+          for (DWORD i = 0; i < privileges->PrivilegeCount; ++i) {
+              char name[128];
+              DWORD length = sizeof(name);
+              if (LookupPrivilegeNameA(NULL, &privileges->Privileges[i].Luid, name, &length)) {
+                  names.push_back(name);
+              }
+          }
+          std::sort(names.begin(), names.end());
+          std::printf("privileges:");
+          for (const std::string& name : names) {
+              std::printf(" %s", name.c_str());
+          }
+          std::printf("\\n");
+          char station[256] = "";
+          char desktop[256] = "";
+          DWORD length = 0;
+          GetUserObjectInformationA(GetProcessWindowStation(), UOI_NAME, station, sizeof(station),
+                                    &length);
+          GetUserObjectInformationA(GetThreadDesktop(GetCurrentThreadId()), UOI_NAME, desktop,
+                                    sizeof(desktop), &length);
+          std::printf("window station: %s\\n",
+                      std::string(station).rfind("voj-judger-", 0) == 0 ? "private" : station);
+          std::printf("desktop: %s\\n", desktop);
+          HWINSTA operatorStation = OpenWindowStationA("WinSta0", FALSE, WINSTA_ENUMDESKTOPS);
+          std::printf("WinSta0: %s\\n", operatorStation != NULL ? "opened"
+                      : GetLastError() == ERROR_ACCESS_DENIED ? "denied" : "failed");
+          EnumWindows(countWindow, 0);
+          std::printf("windows of other processes: %d\\n", foreignWindows);
           return 0;
       }
       """;
