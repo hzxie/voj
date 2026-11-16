@@ -155,7 +155,7 @@ bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&, DWORD, DWORD&, bool&);
 bool isConsoleHost(DWORD);
-bool emptyJob(HANDLE, HANDLE, bool&);
+bool emptyJob(HANDLE, HANDLE);
 bool disableErrorDialogs(HANDLE);
 bool createProcess(const std::vector<std::wstring>&, const std::vector<std::wstring>&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
 std::wstring quoteArguments(const std::vector<std::wstring>&);
@@ -243,7 +243,7 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     // Whatever is left of the Job's processes is killed, and gone, first.
     auto cleanup = [&]() {
         if ( jobInUse ) {
-            emptyJob(hJob, hCompletionPort, memoryLimitHit);
+            emptyJob(hJob, hCompletionPort);
             jobInUse = false;
         }
         if ( processInfo.hThread != NULL ) {
@@ -422,8 +422,9 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 
     // Every process of the Job (what a compiler left running) is killed, and gone, before the
     // judger removes the work directory, which a process that still had a file of it open would
-    // keep it from doing.
-    if ( !emptyJob(hJob, hCompletionPort, memoryLimitHit) ) {
+    // keep it from doing. The program is gone and judged by now: what the rest of its Job does
+    // while it is killed is no concern of the verdict.
+    if ( !emptyJob(hJob, hCompletionPort) ) {
         std::string message = getErrorMessage("EmptyJob");
         jobInUse = false;
         cleanup();
@@ -726,11 +727,10 @@ bool isConsoleHost(DWORD pid) {
  * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port
  * @param  hJob            - the Job
  * @param  hCompletionPort - the Job's completion port
- * @param  memoryLimitHit  - set when an allocation was refused by the Job's hard memory cap
  * @return whether the Job is empty (GetLastError() tells why not: WAIT_TIMEOUT after
  *         JOB_EMPTY_TIMEOUT_MS)
  */
-bool emptyJob(HANDLE hJob, HANDLE hCompletionPort, bool& memoryLimitHit) {
+bool emptyJob(HANDLE hJob, HANDLE hCompletionPort) {
     // Fails harmlessly for a Job whose processes are all gone already.
     TerminateJobObject(hJob, 1);
     ULONGLONG deadline = GetTickCount64() + JOB_EMPTY_TIMEOUT_MS;
@@ -753,13 +753,9 @@ bool emptyJob(HANDLE hJob, HANDLE hCompletionPort, bool& memoryLimitHit) {
         LPOVERLAPPED overlapped = NULL;
         DWORD        wait       = deadline - now < POLL_INTERVAL_MS ? (DWORD) (deadline - now)
                                                                      : POLL_INTERVAL_MS;
-        if ( GetQueuedCompletionStatus(hCompletionPort, &message, &key, &overlapped, wait) ) {
-            if ( message == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO ) {
-                return true;
-            }
-            if ( message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT || message == JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT ) {
-                memoryLimitHit = true;
-            }
+        if ( GetQueuedCompletionStatus(hCompletionPort, &message, &key, &overlapped, wait) &&
+             message == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO ) {
+            return true;
         }
     }
 }
