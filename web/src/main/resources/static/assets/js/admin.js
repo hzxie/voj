@@ -1,7 +1,7 @@
 /*!
  * Verwandlung Online Judge - administration chrome behaviour (vanilla JS).
- * Navigation drawer/sidebar + ARIA state for the custom controls + checkbox
- * data-table selection / bulk bar.
+ * Navigation drawer/sidebar + switches / segmented controls (class + ARIA state)
+ * + checkbox data-table selection / bulk bar.
  * The theme toggle reuses [data-vw="theme-toggle"], handled by theme.js.
  */
 (function () {
@@ -12,32 +12,50 @@
     else { document.addEventListener('DOMContentLoaded', fn); }
   }
 
-  // --- ARIA state for the custom admin controls ------------------------------
-  // .adm-switch (<button role="switch">) keeps its state in an `.on` class that page
-  // scripts also flip; .adm-seg options mark the chosen one with `.active`. Mirror those classes
-  // into aria-checked / aria-pressed, including on controls added later.
+  // --- Switches and segmented controls ---------------------------------------
+  // .adm-switch (<button role="switch">) shows its state with an `.on` class and
+  // .adm-seg options (buttons) mark the chosen one with `.active`. The class is the
+  // look and aria-checked / aria-pressed the semantics, so they are always set
+  // together through admSetSwitch / admSetSegment (page scripts use them too).
+  function forEach(list, fn) { Array.prototype.forEach.call(list, fn); }
   function textOf(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
 
+  function setSwitch(sw, on) {
+    sw.classList.toggle('on', on);
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+
+  function setSegment(seg, chosen) {
+    forEach(seg.querySelectorAll(':scope > button'), function (o) {
+      o.classList.toggle('active', o === chosen);
+      o.setAttribute('aria-pressed', o === chosen ? 'true' : 'false');
+    });
+  }
+
+  // Name a switch after the text of its row, unless the markup names it already.
   function labelSwitch(sw) {
     if (sw.hasAttribute('aria-label') || sw.hasAttribute('aria-labelledby')) return;
     var row = sw.closest('.adm-setrow, .adm-togrow, .vw-between, .language');
     var lbl = row && row.querySelector('.lbl, .language-name, span:not(.knob)');
-    var text = lbl ? (lbl.value !== undefined && lbl.tagName === 'INPUT' ? lbl.value : textOf(lbl)) : '';
+    var text = lbl ? (lbl.tagName === 'INPUT' ? lbl.value : textOf(lbl)) : '';
     if (text) sw.setAttribute('aria-label', text);
   }
 
-  function syncState(el) {
-    if (el.classList.contains('adm-switch')) {
-      el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
-    } else if (el.parentNode && el.parentNode.classList && el.parentNode.classList.contains('adm-seg')) {
-      el.setAttribute('aria-pressed', el.classList.contains('active') ? 'true' : 'false');
-    }
+  // Initial ARIA state for the server-rendered controls (and for controls a page adds
+  // later: it calls admEnhance on the new markup).
+  function enhance(scope) {
+    forEach(scope.querySelectorAll('.adm-switch'), function (sw) {
+      labelSwitch(sw);
+      setSwitch(sw, sw.classList.contains('on'));
+    });
+    forEach(scope.querySelectorAll('.adm-seg > button'), function (o) {
+      o.setAttribute('aria-pressed', o.classList.contains('active') ? 'true' : 'false');
+    });
   }
 
-  function enhance(scope) {
-    Array.prototype.forEach.call(scope.querySelectorAll('.adm-switch'), function (sw) { labelSwitch(sw); syncState(sw); });
-    Array.prototype.forEach.call(scope.querySelectorAll('.adm-seg > [data-value]'), syncState);
-  }
+  window.admSetSwitch = setSwitch;
+  window.admSetSegment = setSegment;
+  window.admEnhance = enhance;
 
   // --- Navigation drawer that is also the sidebar ----------------------------
   // The sidebar is a <dialog>. Wide screens never open it (css/admin.css shows it in
@@ -72,12 +90,6 @@
 
   ready(function () {
     enhance(document);
-    new MutationObserver(function (records) {
-      records.forEach(function (r) {
-        if (r.type === 'attributes') { syncState(r.target); return; }
-        Array.prototype.forEach.call(r.addedNodes, function (n) { if (n.nodeType === 1) enhance(n.parentNode || n); });
-      });
-    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
 
     setupDrawer();
 
@@ -86,7 +98,8 @@
     // `.on` state (or the optional hidden input named by data-input) on save.
     Array.prototype.forEach.call(document.querySelectorAll('[data-adm="switch"]'), function (sw) {
       sw.addEventListener('click', function () {
-        var on = sw.classList.toggle('on');
+        var on = !sw.classList.contains('on');
+        setSwitch(sw, on);
         var inputId = sw.getAttribute('data-input');
         if (inputId) {
           var input = document.getElementById(inputId);
@@ -103,8 +116,7 @@
       Array.prototype.forEach.call(seg.querySelectorAll('[data-value]'), function (opt) {
         opt.addEventListener('click', function (e) {
           e.preventDefault();
-          Array.prototype.forEach.call(seg.querySelectorAll('[data-value]'), function (o) { o.classList.remove('active'); });
-          opt.classList.add('active');
+          setSegment(seg, opt);
           if (inputId) {
             var input = document.getElementById(inputId);
             if (input) input.value = opt.getAttribute('data-value');

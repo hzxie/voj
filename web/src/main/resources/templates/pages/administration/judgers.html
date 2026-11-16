@@ -204,7 +204,8 @@
 
             function addLanguage(data) {
                 $('#no-languages').addClass('hide');
-                $('#languages').append(languageCardHtml(data));
+                var $card = $(languageCardHtml(data)).appendTo('#languages');
+                window.admEnhance($card[0]);
             }
 
             // Render quick-add preset cards.
@@ -234,8 +235,9 @@
                 if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
             });
             $('#languages').on('click', '.lang-enabled', function() {
-                $(this).toggleClass('on');
-                $(this).closest('.language').toggleClass('off', !$(this).hasClass('on'));
+                var on = !$(this).hasClass('on');
+                window.admSetSwitch(this, on);
+                $(this).closest('.language').toggleClass('off', !on);
             });
             $('#languages').on('input', '.language-name', function() {
                 $('.nm', $(this).closest('.language')).text($(this).val());

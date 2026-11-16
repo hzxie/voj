@@ -176,10 +176,7 @@
             // Category chips: single-select.
             Array.prototype.forEach.call(document.querySelectorAll('#category-seg > button'), function (chip) {
                 chip.addEventListener('click', function () {
-                    Array.prototype.forEach.call(document.querySelectorAll('#category-seg > button'), function (c) {
-                        c.classList.remove('active');
-                    });
-                    chip.classList.add('active');
+                    window.admSetSegment(document.getElementById('category-seg'), chip);
                     admState.topicId = parseInt(chip.getAttribute('data-topic'), 10);
                 });
             });
@@ -189,7 +186,7 @@
                 var sw = document.getElementById(id);
                 sw.addEventListener('click', function () {
                     admState[key] = !admState[key];
-                    sw.classList.toggle('on', admState[key]);
+                    window.admSetSwitch(sw, admState[key]);
                 });
             }
             wireSwitch('pin-switch', 'pinned');
