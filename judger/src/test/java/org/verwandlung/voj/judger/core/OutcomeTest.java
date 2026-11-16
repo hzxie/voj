@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -57,6 +59,34 @@ public class OutcomeTest {
             + "- Test Point #3: Accepted, Time = 30 ms, Memory = 64 KB, Score = 25\n"
             + "\nTime Limit Exceeded, Time = 1060 ms, Memory = 256 KB, Score = 50\n",
         outcome.log());
+  }
+
+  /**
+   * Test case: tests the of method. Test data: 5000 checkpoints with names of multibyte characters.
+   * Expected result: a judge log well within the 65,535 bytes of its column, with the first
+   * checkpoints, a line that counts the rest, and the summary of all of them.
+   */
+  @Test
+  public void testOfCapsTheLog() {
+    List<CheckpointResult> results = new ArrayList<>();
+    for (int i = 0; i < 5000; ++i) {
+      boolean isLast = i == 4999;
+      results.add(new CheckpointResult(i, isLast ? "WA" : "AC", 1000, 262144, isLast ? 0 : 1));
+    }
+
+    Outcome outcome = Outcome.of(results, slug -> "答案正确".repeat(4) + slug);
+
+    int bytes = outcome.log().getBytes(StandardCharsets.UTF_8).length;
+    Assertions.assertTrue(bytes <= Outcome.MAX_LOG_BYTES && bytes > 50000, "" + bytes);
+    Assertions.assertTrue(outcome.log().contains("- Test Point #0: "), outcome.log());
+    Assertions.assertFalse(outcome.log().contains("- Test Point #4999: "));
+    Assertions.assertTrue(
+        outcome.log().matches("(?s).*\n- \\.\\.\\. and \\d+ more test points\n\n.*"),
+        outcome.log().substring(outcome.log().length() - 200));
+    Assertions.assertTrue(
+        outcome.log().endsWith(", Time = 5000000 ms, Memory = 262144 KB, Score = 4999\n"),
+        outcome.log());
+    Assertions.assertEquals("WA", outcome.judgeResult());
   }
 
   /**

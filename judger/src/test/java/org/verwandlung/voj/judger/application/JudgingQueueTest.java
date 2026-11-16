@@ -51,6 +51,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CheckpointStore;
 import org.verwandlung.voj.judger.core.Comparator;
 import org.verwandlung.voj.judger.core.CompileResult;
@@ -209,6 +210,28 @@ public class JudgingQueueTest {
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
     Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
     Assertions.assertNull(row.get("submission_claim_token"));
+  }
+
+  /**
+   * Test case: a judging records the verdict of a submission on a problem with 2000 checkpoints.
+   * Test data: a pending submission in C++. Expected result: the verdict is recorded, with a judge
+   * log that fits its column.
+   */
+  @Test
+  public void testAVerdictOnManyCheckpointsIsRecorded() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    Submission submission = applicationDispatcher.claimSubmission(CPP, 60);
+    List<CheckpointResult> results = new ArrayList<>();
+    for (int i = 0; i < 2000; ++i) {
+      results.add(new CheckpointResult(i, "TLE", 2000, 262144, 0));
+    }
+
+    applicationDispatcher.onAllTestPointsFinished(submission, results);
+
+    Map<String, Object> row = getRow(submissionId);
+    Assertions.assertEquals("TLE", row.get("submission_judge_result"));
+    Assertions.assertTrue(
+        ((String) row.get("submission_judge_log")).endsWith(", Score = 0\n"), row.toString());
   }
 
   /**

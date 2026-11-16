@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
@@ -63,7 +64,8 @@ public record Outcome(String judgeResult, int usedTime, int usedMemory, int scor
   /**
    * The outcome of a submission that compiled and ran on every checkpoint: the judge result of the
    * first checkpoint it did not pass (Accepted if none), the time of all runs, the most memory of
-   * a run and the score it earned.
+   * a run and the score it earned. The judge log has a line per checkpoint, as many as fit in
+   * {@value #MAX_LOG_BYTES} bytes (the rest are counted in a line of their own), and the summary.
    *
    * @param results - its results on the checkpoints, in their order, not empty
    * @param judgeResultNames - the name of a judge result, by its slug
@@ -77,8 +79,6 @@ public record Outcome(String judgeResult, int usedTime, int usedMemory, int scor
     int usedTime = 0;
     int usedMemory = 0;
     int score = 0;
-    StringBuilder log = new StringBuilder("Compile Successfully.\n\n");
-    int index = 0;
     for (CheckpointResult result : results) {
       if (judgeResult.equals(CheckpointResult.ACCEPTED) && !result.isAccepted()) {
         judgeResult = result.judgeResult();
@@ -86,19 +86,53 @@ public record Outcome(String judgeResult, int usedTime, int usedMemory, int scor
       usedTime += result.usedTime();
       usedMemory = Math.max(usedMemory, result.usedMemory());
       score += result.score();
-      log.append(
+    }
+    String header = "Compile Successfully.\n\n";
+    String summary =
+        String.format(
+            "\n%s, Time = %d ms, Memory = %d KB, Score = %d\n",
+            judgeResultNames.apply(judgeResult), usedTime, usedMemory, score);
+    StringBuilder log = new StringBuilder(header);
+    int bytes = utf8Length(header) + utf8Length(summary) + OMISSION_BYTES;
+    int index = 0;
+    for (CheckpointResult result : results) {
+      String line =
           String.format(
               "- Test Point #%d: %s, Time = %d ms, Memory = %d KB, Score = %d\n",
-              index++,
+              index,
               judgeResultNames.apply(result.judgeResult()),
               result.usedTime(),
               result.usedMemory(),
-              result.score()));
+              result.score());
+      bytes += utf8Length(line);
+      if (bytes > MAX_LOG_BYTES) {
+        log.append(String.format("- ... and %d more test points\n", results.size() - index));
+        break;
+      }
+      log.append(line);
+      ++index;
     }
-    log.append(
-        String.format(
-            "\n%s, Time = %d ms, Memory = %d KB, Score = %d\n",
-            judgeResultNames.apply(judgeResult), usedTime, usedMemory, score));
+    log.append(summary);
     return new Outcome(judgeResult, usedTime, usedMemory, score, log.toString());
   }
+
+  /**
+   * Gets the length of a text in UTF-8, as the database stores it (utf8mb4).
+   *
+   * @param text - the text
+   * @return its length (bytes)
+   */
+  private static int utf8Length(String text) {
+    return text.getBytes(StandardCharsets.UTF_8).length;
+  }
+
+  /**
+   * The longest judge log of a submission that ran (bytes), safely below the 65,535 bytes of the
+   * column it is recorded in (TEXT): every checkpoint has a line of its own, and a problem may have
+   * thousands of them.
+   */
+  static final int MAX_LOG_BYTES = 60000;
+
+  /** The room (bytes) kept for the line that counts the checkpoints left out of the judge log. */
+  private static final int OMISSION_BYTES = 64;
 }
