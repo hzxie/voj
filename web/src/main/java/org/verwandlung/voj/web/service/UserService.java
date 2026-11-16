@@ -837,7 +837,7 @@ public class UserService {
   private Map<String, Boolean> getChangePasswordResult(
       User user, String oldPassword, String newPassword, String confirmPassword) {
     Map<String, Boolean> result = new HashMap<>(8, 1);
-    boolean isPasswordCheckThrottled = isCurrentPasswordCheckThrottled(user);
+    boolean isPasswordCheckThrottled = !reserveCurrentPasswordCheck(user);
     result.put("isPasswordCheckThrottled", isPasswordCheckThrottled);
     result.put(
         "isOldPasswordCorrect",
@@ -887,7 +887,7 @@ public class UserService {
     Map<String, Boolean> result =
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
     boolean isEmailChanged = !email.equals(user.getEmail());
-    boolean isPasswordCheckThrottled = isEmailChanged && isCurrentPasswordCheckThrottled(user);
+    boolean isPasswordCheckThrottled = isEmailChanged && !reserveCurrentPasswordCheck(user);
     boolean isPasswordCorrect =
         !isEmailChanged || (!isPasswordCheckThrottled && checkCurrentPassword(user, password));
     result.put("isPasswordCheckThrottled", isPasswordCheckThrottled);
@@ -915,26 +915,43 @@ public class UserService {
   }
 
   /**
-   * Tests whether the current password of a user may not be checked for now: after {@value
-   * #MAX_CURRENT_PASSWORD_FAILURES} wrong current passwords (when changing the password or the
-   * email address) within {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS} of the first one, further
-   * attempts are refused until that window ends. Otherwise a hijacked session could find the
-   * current password by trying passwords one request after another, and then take the account
+   * Takes one of the checks of a user's current password allowed for now, if any is left: after
+   * {@value #MAX_CURRENT_PASSWORD_FAILURES} wrong current passwords (when changing the password or
+   * the email address) within {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS} of the first one,
+   * further attempts are refused until that window ends. Otherwise a hijacked session could find
+   * the current password by trying passwords one request after another, and then take the account
    * over.
    *
+   * <p>The check is counted as a failure when it is taken, atomically with testing the limit, and
+   * the count is cleared only if the password turns out right (see {@link #checkCurrentPassword}).
+   * Testing the count first and counting the failure after the (slow) password hash let any number
+   * of concurrent requests through before the first failure was counted.
+   *
    * @param user - the user whose current password is to be checked
-   * @return whether the check must be refused
+   * @return whether the password may be checked; false if the check must be refused
    */
-  private boolean isCurrentPasswordCheckThrottled(User user) {
-    long[] failures = currentPasswordFailures.get(user.getUid());
-    return failures != null
-        && failures[0] >= MAX_CURRENT_PASSWORD_FAILURES
-        && System.currentTimeMillis() - failures[1] < CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS;
+  private boolean reserveCurrentPasswordCheck(User user) {
+    long now = System.currentTimeMillis();
+    boolean[] isReserved = {false};
+    currentPasswordFailures.compute(
+        user.getUid(),
+        (uid, failures) -> {
+          if (failures == null || now - failures[1] >= CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS) {
+            isReserved[0] = true;
+            return new long[] {1, now};
+          }
+          if (failures[0] >= MAX_CURRENT_PASSWORD_FAILURES) {
+            return failures;
+          }
+          isReserved[0] = true;
+          return new long[] {failures[0] + 1, failures[1]};
+        });
+    return isReserved[0];
   }
 
   /**
-   * Checks the current password a user entered, and counts it when it is wrong (see {@link
-   * #isCurrentPasswordCheckThrottled}). A correct password clears the count.
+   * Checks the current password a user entered, after {@link #reserveCurrentPasswordCheck} took a
+   * check for it (counted as a failure). A correct password clears the count.
    *
    * @param user - the user
    * @param submittedPassword - the password the user entered
@@ -944,14 +961,6 @@ public class UserService {
     boolean isCorrect = isOldPasswordCorrect(user.getPassword(), submittedPassword);
     if (isCorrect) {
       currentPasswordFailures.remove(user.getUid());
-    } else {
-      long now = System.currentTimeMillis();
-      currentPasswordFailures.compute(
-          user.getUid(),
-          (uid, failures) ->
-              failures == null || now - failures[1] >= CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS
-                  ? new long[] {1, now}
-                  : new long[] {failures[0] + 1, failures[1]});
     }
     return isCorrect;
   }
