@@ -245,7 +245,7 @@ public class JudgingQueueTest {
     Assertions.assertTrue(
         judgeLog.contains(Dispatcher.MAX_FAILED_JUDGINGS + " judgings of this submission failed"),
         judgeLog);
-    Assertions.assertTrue(judgeLog.contains("ran past its deadline"), judgeLog);
+    Assertions.assertTrue(judgeLog.contains("stopped, crashed"), judgeLog);
   }
 
   /**
@@ -427,8 +427,6 @@ public class JudgingQueueTest {
     ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
     ReflectionTestUtils.setField(dispatcher, "isJudging", true);
-    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 300L);
-    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 20000L);
   }
 
   /**

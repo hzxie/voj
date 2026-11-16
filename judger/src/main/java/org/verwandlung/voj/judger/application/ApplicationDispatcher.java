@@ -53,8 +53,7 @@ public class ApplicationDispatcher {
    * it (see {@link #claimSubmission}).
    */
   public static final String INTERRUPTED_REASON =
-      "Its judger stopped, crashed or lost the database while judging it, or the judging ran past"
-          + " its deadline.";
+      "Its judger stopped, crashed or lost the database while judging it.";
 
   /**
    * Claims the next submission to judge in one of some languages (see {@code

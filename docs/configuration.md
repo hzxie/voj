@@ -137,12 +137,11 @@ The policy of the queue is the same on every judger, so it has no settings:
   succeed with; the claim gives the judging a lease of 60 seconds. An idle
   judger looks for a submission every 2 seconds.
 - While the judging runs, the judger renews its lease in the background every
-  15 seconds, however long a compilation or a run takes, until its deadline:
-  the download timeout, the wall-clock limits of the compilation and of every
-  run (twice the time limit, plus a second), and the lease timeout. A
-  judging past its deadline is stuck (e.g. on a connection that went silent):
-  its lease is no longer renewed, so another judger takes the submission, and
-  the judger is not ready until it is over.
+  15 seconds, however long a compilation or a run takes. Each step of a
+  judging is bounded by its own limit: the download timeout
+  (`judger.web.downloadTimeout`), the timeouts of the database statements, and
+  the wall-clock limit of a compilation or run (twice its time limit, plus a
+  second).
 - A judging stops, without recording a verdict or sending anything more, once
   it finds (when it renews its lease) that it was superseded: the submission was
   rejudged, or taken by another judging as its lease had expired. The web app
@@ -165,8 +164,7 @@ cannot be written, the sandbox cannot run the compiler or the program (e.g. as
 the submission broke its own runs), the outcome cannot be recorded (the
 database is unreachable or refuses it; it is tried 3 times within a few seconds
 first), an unexpected exception (a bug), or the judging vanished: its judger
-stopped, crashed or was killed while judging, or the judging ran past its
-deadline, and its lease expired. Two budgets, independent of each other, keep
+stopped, crashed or was killed while judging, and its lease expired. Two budgets, independent of each other, keep
 failed judgings from going on for ever:
 
 | Budget | Counts | When it is spent |

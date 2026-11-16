@@ -39,17 +39,9 @@ public record Limits(int timeLimitMs, int memoryLimitKb, int outputLimitKb, int 
    * @return the wall-clock limit (ms, 0 means none)
    */
   public int wallTimeLimitMs() {
-    return saturate(wallTimeLimitMs(timeLimitMs));
-  }
-
-  /**
-   * Gets the wall-clock limit of a time limit (see {@link #wallTimeLimitMs()}).
-   *
-   * @param timeLimitMs - the time limit (ms, 0 means none)
-   * @return the wall-clock limit (ms, 0 means none)
-   */
-  static long wallTimeLimitMs(long timeLimitMs) {
-    return timeLimitMs <= 0 ? 0 : timeLimitMs * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS;
+    return timeLimitMs <= 0
+        ? 0
+        : saturate((long) timeLimitMs * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS);
   }
 
   /**

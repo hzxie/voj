@@ -36,14 +36,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.NoCheckpointsException;
 import org.verwandlung.voj.judger.model.Checkpoint;
-import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.DigestUtils;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
@@ -60,8 +58,8 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * itself, or a bug), as the judger cannot tell for sure: its test data cannot be downloaded or
  * read, its source code cannot be written, the sandbox cannot run the compiler or the program, the
  * outcome cannot be recorded, an unexpected exception, or (see {@link Lease}) its judger stopped
- * while judging it or the judging ran past its deadline. Two budgets, independent of each other,
- * keep failed judgings from going on for ever:
+ * while judging it. Two budgets, independent of each other, keep failed judgings from going on for
+ * ever:
  *
  * <ul>
  *   <li>The submission's: a failed judging releases it to the end of the queue, so that it holds no
@@ -328,7 +326,6 @@ public class Dispatcher implements DisposableBean {
                     submissionId, DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
             .toString();
     try (Lease lease = new Lease(submission)) {
-      currentLease = lease;
       judge(submission, lease, baseDirectory);
       onJudged();
     } catch (FailedJudging ex) {
@@ -346,7 +343,6 @@ public class Dispatcher implements DisposableBean {
     } catch (Exception ex) {
       onFailedJudging(submission, INTERNAL_ERROR_REASON, ex);
     } finally {
-      currentLease = null;
       // Always remove the work directory (source, binary and program output), even when a stage
       // throws; otherwise it lingers in a shared location, readable by later submissions that
       // run as the same sandbox user.
@@ -355,20 +351,15 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Tells whether this judger takes submissions: it judges, fewer than {@value
-   * #MAX_FAILURES_IN_A_ROW} of its judgings in a row failed, and its judging (if any) has not run
-   * past the time the limits of its submission allow. Recorded with its heartbeat, for the web
-   * application, which judges a System Error the pending submissions in a language that no ready
-   * judger supports for a while.
+   * Tells whether this judger takes submissions: it judges, and fewer than {@value
+   * #MAX_FAILURES_IN_A_ROW} of its judgings in a row failed. Recorded with its heartbeat, for the
+   * web application, which judges a System Error the pending submissions in a language that no
+   * ready judger supports for a while.
    *
    * @return whether this judger takes submissions
    */
   public boolean isReady() {
-    Lease lease = currentLease;
-    return isJudging
-        && !isStopping
-        && localFailures < maxFailuresInARow
-        && (lease == null || !lease.isOverdue);
+    return isJudging && !isStopping && localFailures < maxFailuresInARow;
   }
 
   /** Records a judging that reached an outcome: this judger's failed judgings in a row are over. */
@@ -501,8 +492,9 @@ public class Dispatcher implements DisposableBean {
    *
    * <p>Between its steps (the download of the test data, the compilation, the run of each
    * checkpoint), and before reporting one, the judging stops once it was superseded (see {@link
-   * Lease}). A step itself runs to its end: its time is bounded by the sandbox's limits (e.g. at
-   * most the wall-clock limit of a run, see {@link Limits#wallTimeLimitMs}).
+   * Lease}). A step itself runs to its end, bounded by its own limit: the download timeout, the
+   * timeouts of the database statements, or the wall-clock limit of a compilation or run (see
+   * {@link Limits#wallTimeLimitMs}).
    *
    * @param submission - the submission object
    * @param lease - the lease of the judging
@@ -534,7 +526,6 @@ public class Dispatcher implements DisposableBean {
       onProblemWithoutTestData(submission);
       return;
     }
-    lease.setDeadline(checkpoints.size(), getRunTimeLimit(submission));
     lease.check();
     try {
       preprocessor.createTestCode(submission, workDirectory);
@@ -557,19 +548,6 @@ public class Dispatcher implements DisposableBean {
             "System Error in submission #%d: problem #%d has no test data.",
             submission.getSubmissionId(), submission.getProblem().getProblemId()));
     applicationDispatcher.onErrorOccurred(submission, NO_TEST_DATA_REASON);
-  }
-
-  /**
-   * Gets the time limit of a run of a submission, as the program runner applies it: the problem's,
-   * scaled by the language's time multiplier.
-   *
-   * @param submission - the submission object
-   * @return the time limit of a run, in milliseconds
-   */
-  private static long getRunTimeLimit(Submission submission) {
-    Language language = submission.getLanguage();
-    double multiplier = language == null ? 1.0 : language.getTimeMultiplier();
-    return (long) Math.ceil(submission.getProblem().getTimeLimit() * Math.max(multiplier, 1.0));
   }
 
   /**
@@ -646,46 +624,21 @@ public class Dispatcher implements DisposableBean {
    * stops the renewals; the lease then expires, which matters unless the judging recorded its
    * outcome or released the submission.
    *
-   * <p>The renewals stop too once the judging runs past its deadline, the longest a judging of the
-   * submission can take: the download of its test data, its compilation and its runs, each bounded
-   * by its timeout or the sandbox's wall-clock limit (see {@link Limits#wallTimeLimitMs}), plus a
-   * lease timeout. A judging past it is stuck (e.g. on a connection that went silent): the
-   * submission is taken by another judger once its lease expired (which counts the judging as a
-   * failed one), and this judger is not ready meanwhile (see {@link #isReady}).
-   *
    * <p>An Error in a renewal stops the judging, as one in the judging itself does (see {@link
    * #onFatalError}): without its renewals, the lease would expire under a judging that goes on.
    */
   final class Lease implements AutoCloseable {
     /**
-     * Starts renewing the lease of a judging. Until its checkpoints are known (see {@link
-     * #setDeadline}), the deadline of the judging allows for the download of its test data.
+     * Starts renewing the lease of a judging.
      *
      * @param submission - the submission, claimed by the judging
      */
     Lease(Submission submission) {
       this.submission = submission;
-      this.startTime = System.nanoTime();
-      this.deadline = startTime + (downloadTimeout * 1000 + leaseTimeout) * 1_000_000;
       long renewalInterval = Math.max(1, leaseTimeout / 4);
       renewal =
           leaseRenewer.scheduleWithFixedDelay(
               this::renew, renewalInterval, renewalInterval, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Sets the deadline of the judging, from the limits of its steps.
-     *
-     * @param numberOfCheckpoints - the number of checkpoints of the problem
-     * @param runTimeLimit - the time limit (ms) of a run of the submission
-     */
-    void setDeadline(int numberOfCheckpoints, long runTimeLimit) {
-      long budget =
-          downloadTimeout * 1000
-              + getWallTimeLimit(compileTimeLimit)
-              + numberOfCheckpoints * getWallTimeLimit(runTimeLimit)
-              + leaseTimeout;
-      deadline = startTime + budget * 1_000_000;
     }
 
     /**
@@ -695,19 +648,6 @@ public class Dispatcher implements DisposableBean {
      */
     private void renew() {
       try {
-        if (System.nanoTime() - deadline > 0) {
-          isOverdue = true;
-          renewal.cancel(false);
-          LOGGER.error(
-              String.format(
-                  "The judging of submission #%d still runs %d s after it started, longer than"
-                      + " the limits of the submission allow: its lease is no longer renewed, so"
-                      + " that another judger takes it, and this judger is not ready until the"
-                      + " judging is over.",
-                  submission.getSubmissionId(),
-                  (System.nanoTime() - startTime) / 1_000_000_000));
-          return;
-        }
         if (!applicationDispatcher.renewLease(submission, getLeaseSeconds())) {
           isSuperseded = true;
         }
@@ -744,30 +684,11 @@ public class Dispatcher implements DisposableBean {
     /** The submission, claimed by the judging. */
     private final Submission submission;
 
-    /** When the judging started, in {@link System#nanoTime()} terms. */
-    private final long startTime;
-
-    /** The deadline of the judging, in {@link System#nanoTime()} terms. */
-    private volatile long deadline;
-
     /** The scheduled renewals. */
     private final ScheduledFuture<?> renewal;
 
     /** Whether a renewal found the judging superseded. */
     private volatile boolean isSuperseded;
-
-    /** Whether the judging ran past its deadline. */
-    private volatile boolean isOverdue;
-  }
-
-  /**
-   * Gets the longest a step of a judging with a time limit may take, its wall-clock limit.
-   *
-   * @param timeLimit - the time limit (ms) of the step
-   * @return its wall-clock limit (ms)
-   */
-  private static long getWallTimeLimit(long timeLimit) {
-    return Limits.wallTimeLimitMs(timeLimit);
   }
 
   /**
@@ -903,14 +824,6 @@ public class Dispatcher implements DisposableBean {
   /** The autowired CheckpointStore, which caches a problem's checkpoints locally. */
   @Autowired private CheckpointStore checkpointStore;
 
-  /** How long (seconds) a download of a problem's test data may take. */
-  @Value("${judger.web.downloadTimeout:300}")
-  private long downloadTimeout;
-
-  /** The time limit (ms) of a compilation. */
-  @Value("${judger.compileTimeLimit:20000}")
-  private long compileTimeLimit;
-
   /*
    * The policy of the judging queue: the same on every judger, so not configurable. Fields rather
    * than constants only so that the tests can shorten the times.
@@ -951,9 +864,6 @@ public class Dispatcher implements DisposableBean {
 
   /** The submission this judger claimed and judges, or {@code null}. */
   private volatile Submission claimedSubmission;
-
-  /** The lease of the current judging, or {@code null}. */
-  private volatile Lease currentLease;
 
   /** Renews the leases of the judgings, on a daemon thread, which never keeps the judger alive. */
   private final ScheduledExecutorService leaseRenewer =

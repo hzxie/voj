@@ -80,8 +80,6 @@ public class DispatcherTest {
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
     ReflectionTestUtils.setField(dispatcher, "firstBackoff", 10L);
     ReflectionTestUtils.setField(dispatcher, "maxBackoff", 40L);
-    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 300L);
-    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 20000L);
     ReflectionTestUtils.setField(dispatcher, "isJudging", true);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
     when(checkpointStore.open()).thenReturn(cacheDirectory);
@@ -430,41 +428,6 @@ public class DispatcherTest {
     verify(applicationDispatcher).onCompileFinished(any(), any());
     Assertions.assertTrue(dispatcher.isReady());
     Assertions.assertEquals("0", readFailuresInARow());
-  }
-
-  /**
-   * Test case: tests the judgeNextSubmission and isReady methods. Test data: a compilation that
-   * runs past the deadline of its judging (a problem with a time limit of 100 ms and one checkpoint,
-   * compilations limited to 100 ms, no time to download the test data: 1300 + 1300 + 400 ms of
-   * lease timeout, 3 s). Expected result: the lease is no longer renewed after the deadline, and
-   * the judger is not ready while that judging runs; it is ready again once it is over.
-   */
-  @Test
-  public void testAJudgingPastItsDeadlineLosesItsLease() throws Exception {
-    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 0L);
-    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 100L);
-    Submission submission = buildSubmission();
-    submission.getProblem().setTimeLimit(100);
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
-        .thenReturn(submission);
-    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    AtomicBoolean wasReady = new AtomicBoolean(true);
-    when(compiler.getCompileResult(any(), anyString()))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(3000 + LEASE_TIMEOUT);
-              wasReady.set(dispatcher.isReady());
-              Thread.sleep(LEASE_TIMEOUT);
-              return compileResult(false);
-            });
-
-    dispatcher.judgeNextSubmission(LANGUAGES);
-
-    Assertions.assertFalse(wasReady.get());
-    Assertions.assertTrue(dispatcher.isReady());
-    // Renewed every 100 ms until the deadline, 3 s after the start, and not after it.
-    int renewals = numberOfRenewals();
-    Assertions.assertTrue(renewals >= 20 && renewals <= 31, "" + renewals);
   }
 
   /**

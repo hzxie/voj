@@ -111,8 +111,7 @@ public interface SubmissionMapper {
    * one does.
    *
    * <p>A submission that still has a claim token was held by a judging whose lease expired: its
-   * judger stopped (or was killed, or lost the database) while judging it, or the judging ran past
-   * its deadline. That judging failed, which is counted here, with its reason (both are set first,
+   * judger stopped (or was killed, or lost the database) while judging it. That judging failed, which is counted here, with its reason (both are set first,
    * while the claim token is still the old one). A submission a judging released (see {@link
    * #releaseSubmission} and {@link #requeueSubmission}), or that was rejudged, has none.
    *
