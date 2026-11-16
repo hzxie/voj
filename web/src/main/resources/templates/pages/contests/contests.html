@@ -82,44 +82,24 @@
     <script type="text/javascript" th:inline="javascript">
         var loadedContests = [[${loadedContests}]];
 
-        function setLoadingStatus(isLoading) {
-            if ( isLoading ) {
-                $('p', '#more-contests').addClass('hide');
-                $('.vw-spinner', '#more-contests').removeClass('hide');
-            } else {
-                $('.vw-spinner', '#more-contests').addClass('hide');
-                $('p', '#more-contests').removeClass('hide');
-            }
-        }
-        $('#more-contests').click(function() {
-            var isLoading     = $('.vw-spinner', this).is(':visible'),
-                hasNextRecord = $('p', this).hasClass('availble');
-            if ( !isLoading && hasNextRecord ) {
-                setLoadingStatus(true);
-                return getMoreContests(loadedContests);
+        createLoadMore('#more-contests', {
+            doneText: [[#{voj.contests.contests.no-more-contests}]],
+            load: function(done) {
+                $.ajax({
+                    type: 'GET',
+                    url: [[@{/contest/getContests.action}]],
+                    data: { 'startIndex': loadedContests },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( result['isSuccessful'] ) { done(displayPastContests(result['contests'], result['entrants'], result['problemCount']), true); }
+                        else { done([], false); }
+                    }
+                });
             }
         });
-        function getMoreContests(startIndex) {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/contest/getContests.action}]],
-                data: { 'startIndex': startIndex },
-                dataType: 'JSON',
-                success: function(result){ return processContestsResult(result); }
-            });
-        }
-        function processContestsResult(result) {
-            if ( result['isSuccessful'] ) {
-                displayPastContests(result['contests'], result['entrants'], result['problemCount']);
-            } else {
-                $('p', '#more-contests').removeClass('availble');
-                $('#more-contests').addClass('is-done');
-                $('p', '#more-contests').html([[#{voj.contests.contests.no-more-contests}]]);
-            }
-            setLoadingStatus(false);
-        }
         function displayPastContests(contests, entrants, problemCount) {
-            var typeClass = function(mode){ return mode === 'ACM' ? 'vw-ctype-acm' : 'vw-ctype-oi'; };
+            var typeClass = function(mode){ return mode === 'ACM' ? 'vw-ctype-acm' : 'vw-ctype-oi'; },
+                added     = [];
             for ( var i = 0; i < contests.length; ++ i ) {
                 var c = contests[i];
                 loadedContests += 1;
@@ -135,8 +115,9 @@
                     '<div class="vw-muted2">' + (entrants[cid] || 0) + '</div>' +
                     '<div class="vw-muted2">' + (problemCount[cid] || 0) + '</div>' +
                     '</a>';
-                $('#past-contests-body').append(html);
+                added.push($(html).appendTo('#past-contests-body')[0]);
             }
+            return added;
         }
     </script>
     </th:block>

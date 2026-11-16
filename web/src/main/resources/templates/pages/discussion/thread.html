@@ -116,41 +116,27 @@
             loadDiscussionReplies();
             /*[/]*/
         });
-        function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(replyOffset); }
-        $('#more-discussion-replies').click(function() {
-            var isLoading       = $('.vw-spinner', this).is(':visible'),
-                hasNextRecord   = $('p', this).hasClass('availble');
-            if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(replyOffset); }
-        });
-        function setLoadingStatus(isLoading) {
-            if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('.vw-spinner', '#more-discussion-replies').removeClass('hide'); }
-            else { $('.vw-spinner', '#more-discussion-replies').addClass('hide'); $('p', '#more-discussion-replies').removeClass('hide'); }
-        }
-        function getDiscussionReplies(startIndex) {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
-                data: { 'startIndex': startIndex },
-                dataType: 'JSON',
-                success: function(result){ return processDiscussionRepliesResult(result); }
-            });
-        }
-        function processDiscussionRepliesResult(result) {
-            if ( result['isSuccessful'] ) {
-                var replies = result['discussionReplies'];
-                replyOffset += replies.length;
-                for ( var i = 0; i < replies.length; ++ i ) {
-                    var replyId = replies[i]['discussionReplyId'];
-                    serverReplyIds[replyId] = true;
-                }
-                displayDiscussionReplyRecords(replies);
-            } else {
-                $('p', '#more-discussion-replies').removeClass('availble');
-                $('#more-discussion-replies').addClass('is-done');
-                $('p', '#more-discussion-replies').html([[#{voj.discussion.threads.no-more-discussion}]]);
+        var moreReplies = createLoadMore('#more-discussion-replies', {
+            doneText: [[#{voj.discussion.threads.no-more-discussion}]],
+            load: function(done) {
+                $.ajax({
+                    type: 'GET',
+                    url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
+                    data: { 'startIndex': replyOffset },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( !result['isSuccessful'] ) { done([], false); return; }
+                        var replies = result['discussionReplies'];
+                        replyOffset += replies.length;
+                        for ( var i = 0; i < replies.length; ++ i ) {
+                            serverReplyIds[replies[i]['discussionReplyId']] = true;
+                        }
+                        done(displayDiscussionReplyRecords(replies), true);
+                    }
+                });
             }
-            setLoadingStatus(false);
-        }
+        });
+        function loadDiscussionReplies() { moreReplies.load(); }
         function addParticipant(creator) {
             if ( seenParticipants[creator['uid']] ) { return; }
             seenParticipants[creator['uid']] = true;
@@ -158,6 +144,7 @@
             $('#participants').append('<a class="vw-participant" href="' + [[@{/accounts/user/}]] + encodeURIComponent(creator['uid']) + '" title="' + escapeHtml(creator['username']) + '">' + escapeHtml(initial) + '</a>');
         }
         function displayDiscussionReplyRecords(discussionReplies) {
+            var added = [];
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
                 var r = discussionReplies[i];
                 // A reply posted on this page may come back from the server in a later page (and the
@@ -166,7 +153,9 @@
                 var post = $(getDiscussionReplyContent(r)).appendTo('#discussion-replies');
                 typesetMath(post.find('.vw-post-body')[0]);
                 addParticipant(r['discussionReplyCreator']);
+                added.push(post[0]);
             }
+            return added;
         }
         function getDiscussionReplyContent(reply) {
             var replyId    = reply['discussionReplyId'],

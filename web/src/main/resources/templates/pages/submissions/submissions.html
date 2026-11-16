@@ -99,58 +99,39 @@
                 }
             });
         }
-        function setLoadingStatus(isLoading) {
-            if ( isLoading ) {
-                $('p', '#more-submissions').addClass('hide');
-                $('.vw-spinner', '#more-submissions').removeClass('hide');
-            } else {
-                $('.vw-spinner', '#more-submissions').addClass('hide');
-                $('p', '#more-submissions').removeClass('hide');
-            }
-        }
-        $('#more-submissions').click(function() {
-            var isLoading     = $('.vw-spinner', this).is(':visible'),
-                hasNextRecord = $('p', this).hasClass('availble'),
-                lastRecord    = $('#submission-body > .vw-table-row:last-child'),
-                lastId        = parseInt($(lastRecord).attr('data-value'));
-            if ( isNaN(lastId) ) { lastId = 0; }
-            if ( !isLoading && hasNextRecord ) {
-                setLoadingStatus(true);
-                return getMoreHistorySubmissions(lastId - 1);
+        createLoadMore('#more-submissions', {
+            doneText: [[#{voj.submissions.submissions.no-more-submission}]],
+            load: function(done) {
+                var lastId = parseInt($('#submission-body > .vw-table-row:last-child').attr('data-value'));
+                if ( isNaN(lastId) ) { lastId = 0; }
+                $.ajax({
+                    type: 'GET',
+                    url: [[@{/submission/getSubmissions.action}]],
+                    data: {
+                        'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                        'username': [[${param.username != null ? param.username[0] : ''}]],
+                        'startIndex': lastId - 1
+                    },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( result['isSuccessful'] ) { done(displayRecords(result['submissions'], false), true); }
+                        else { done([], false); }
+                    }
+                });
             }
         });
-        function getMoreHistorySubmissions(startIndex) {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/submission/getSubmissions.action}]],
-                data: {
-                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
-                    'username': [[${param.username != null ? param.username[0] : ''}]],
-                    'startIndex': startIndex
-                },
-                dataType: 'JSON',
-                success: function(result){ return processHistorySubmissionsResult(result); }
-            });
-        }
-        function processHistorySubmissionsResult(result) {
-            if ( result['isSuccessful'] ) {
-                displayRecords(result['submissions'], false);
-            } else {
-                $('p', '#more-submissions').removeClass('availble');
-                $('#more-submissions').addClass('is-done');
-                $('p', '#more-submissions').html([[#{voj.submissions.submissions.no-more-submission}]]);
-            }
-            setLoadingStatus(false);
-        }
         function displayRecords(submissions, prepend) {
+            var added = [];
             for ( var i = 0; i < submissions.length; ++ i ) {
                 var s = submissions[i];
-                var html = getSubmissionContent(s['submissionId'], s['judgeResult'], s['usedTime'],
-                                                s['usedMemory'], s['problem'], s['user'],
-                                                s['language'], s['submitTime']);
-                if ( prepend ) { $('#submission-body').prepend(html); }
-                else { $('#submission-body').append(html); }
+                var row = $(getSubmissionContent(s['submissionId'], s['judgeResult'], s['usedTime'],
+                                                 s['usedMemory'], s['problem'], s['user'],
+                                                 s['language'], s['submitTime']));
+                if ( prepend ) { row.prependTo('#submission-body'); }
+                else { row.appendTo('#submission-body'); }
+                added.push(row[0]);
             }
+            return added;
         }
         function getSubmissionContent(submissionId, judgeResult, usedTime, usedMemory, problem, user, language, submitTime) {
             // Names are stored as plain text, so escape them before building markup.

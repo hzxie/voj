@@ -91,6 +91,53 @@ function getTimeElapsed(dateTime, locale) {
     }
 }
 
+/* "Load more" pagination shared by the list pages. The container holds
+ *     <p class="availble"><button type="button" class="vw-loadmore-btn">More...</button></p>
+ *     <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
+ * and options.load(done) fetches the next page, renders it and calls
+ * done(newElements, hasMore). While loading, the spinner replaces the button; once the
+ * list is exhausted the paragraph shows options.doneText instead. Hiding the button
+ * drops keyboard focus, so when it had focus, focus moves to the first newly loaded item
+ * (or to the "no more" note). Returns { load: fn } to load a page without a click. */
+function createLoadMore(container, options) {
+    var $box     = $(container),
+        $p       = $('p', $box),
+        $spinner = $('.vw-spinner', $box),
+        loading  = false;
+
+    function setLoading(isLoading) {
+        loading = isLoading;
+        $p.toggleClass('hide', isLoading);
+        $spinner.toggleClass('hide', !isLoading);
+    }
+    function focusFirst(elements) {
+        var first = $(elements).first();
+        if ( first.length === 0 ) { return false; }
+        if ( !first.is('a[href], button, input, select, textarea, [tabindex]') ) {
+            first.attr('tabindex', '-1');
+        }
+        first[0].focus();
+        return true;
+    }
+    function load() {
+        if ( loading || !$p.hasClass('availble') ) { return; }
+        var hadFocus = $box[0].contains(document.activeElement);
+        setLoading(true);
+        options.load(function(newElements, hasMore) {
+            if ( !hasMore ) {
+                $p.removeClass('availble').attr('tabindex', '-1').text(options.doneText);
+                $box.addClass('is-done');
+            }
+            setLoading(false);
+            if ( hadFocus && !focusFirst(newElements || []) ) {
+                ( hasMore ? $('button', $p) : $p )[0].focus();
+            }
+        });
+    }
+    $box.on('click', '.vw-loadmore-btn', load);
+    return { load: load };
+}
+
 /* Live GitHub star count, shared across pages and cached in the browser for an
  * hour. Every .js-github-stars element is filled in; a fresh cache is used
  * first, so revisits (e.g. home -> about) never re-hit the API. The element

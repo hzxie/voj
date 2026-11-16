@@ -86,43 +86,21 @@
         $('span.reply-datetime').each(function() {
             $(this).html(getTimeElapsed($(this).html(), [[${language}]]));
         });
-        function setLoadingStatus(isLoading) {
-            if ( isLoading ) {
-                $('p', '#more-discussion-threads').addClass('hide');
-                $('.vw-spinner', '#more-discussion-threads').removeClass('hide');
-            } else {
-                $('.vw-spinner', '#more-discussion-threads').addClass('hide');
-                $('p', '#more-discussion-threads').removeClass('hide');
-            }
-        }
-        $('#more-discussion-threads').click(function() {
-            var isLoading       = $('.vw-spinner', this).is(':visible'),
-                hasNextRecord   = $('p', this).hasClass('availble'),
-                numberOfThreads = $('.discussion-thread').length;
-            if ( !isLoading && hasNextRecord ) {
-                setLoadingStatus(true);
-                return getMoreDiscussionThreads(numberOfThreads);
+        createLoadMore('#more-discussion-threads', {
+            doneText: [[#{voj.discussion.threads.no-more-discussion}]],
+            load: function(done) {
+                $.ajax({
+                    type: 'GET',
+                    url: [[@{/discussion/getDiscussionThreads.action}]],
+                    data: { 'startIndex': $('.discussion-thread').length, 'topicSlug': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( result['isSuccessful'] ) { done(displayDiscussionThreadRecords(result['discussionThreads']), true); }
+                        else { done([], false); }
+                    }
+                });
             }
         });
-        function getMoreDiscussionThreads(startIndex) {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/discussion/getDiscussionThreads.action}]],
-                data: { 'startIndex': startIndex, 'topicSlug': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
-                dataType: 'JSON',
-                success: function(result){ return processDiscussionThreadsResult(result); }
-            });
-        }
-        function processDiscussionThreadsResult(result) {
-            if ( result['isSuccessful'] ) {
-                displayDiscussionThreadRecords(result['discussionThreads']);
-            } else {
-                $('p', '#more-discussion-threads').removeClass('availble');
-                $('#more-discussion-threads').addClass('is-done');
-                $('p', '#more-discussion-threads').html([[#{voj.discussion.threads.no-more-discussion}]]);
-            }
-            setLoadingStatus(false);
-        }
         function categoryClass(slug) {
             slug = (slug || '').toLowerCase();
             if ( slug.indexOf('solution') !== -1 ) { return 'vw-cat-solutions'; }
@@ -131,12 +109,14 @@
             return 'vw-cat-default';
         }
         function displayDiscussionThreadRecords(discussionThreads) {
+            var added = [];
             for ( var i = 0; i < discussionThreads.length; ++ i ) {
                 var t = discussionThreads[i];
-                $('#discussion-threads').append(
-                    getDiscussionThreadContent(t['discussionThreadCreator'], t['discussionThreadId'], t['discussionThreadTitle'],
-                        t['discussionThreadCreateTime'], t['problem'], t['discussionTopic'], t['latestDiscussionReply'], t['numberOfReplies']));
+                added.push($(getDiscussionThreadContent(t['discussionThreadCreator'], t['discussionThreadId'], t['discussionThreadTitle'],
+                    t['discussionThreadCreateTime'], t['problem'], t['discussionTopic'], t['latestDiscussionReply'], t['numberOfReplies']))
+                    .appendTo('#discussion-threads')[0]);
             }
+            return added;
         }
         function getDiscussionThreadContent(creator, threadId, title, createTime, problem, topic, latestReply, numberOfReplies) {
             var rtime     = latestReply ? latestReply['discussionReplyCreateTime'] : createTime,
