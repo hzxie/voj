@@ -43,7 +43,7 @@
                     <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.used-time}">Time</span><span class="v" id="used-time" th:text="|${submission.usedTime} ms|">0 ms</span></div>
                     <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} KB|">0 KB</span></div>
                     <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.submit-time}">Submitted</span><span class="v" th:text="${submission.submitTime != null ? #dates.format(submission.submitTime, 'yyyy-MM-dd HH:mm:ss') : ''}">time</span></div>
-                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.execute-time}">Executed</span><span class="v" id="execute-time" th:text="${submission.executeTime != null ? #dates.format(submission.executeTime, 'yyyy-MM-dd HH:mm:ss') : ''}">time</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.execute-time}">Executed</span><span class="v" id="execute-time" th:text="${submission.executeTime != null ? @dateFormatter.dateTimeLongMedium(submission.executeTime, language) : ''}">time</span></div>
                 </div>
             </div>
         </div>
@@ -145,17 +145,12 @@
                         applyVerdict(submission['judgeResult']['judgeResultSlug'], submission['judgeResult']['judgeResultName']);
                         $('#used-time').html(submission['usedTime'] + " ms");
                         $('#used-memory').html(submission['usedMemory'] + " KB");
-                        $('#execute-time').html(getFormatedDateString(submission['executeTime']));
+                        $('#execute-time').text(getFormatedDateString(submission['executeTime'], [[${language}]]));
                         $('#judge-log').html(renderMarkdown(submission['judgeLog']));
                         clearInterval(getterInterval);
                     }
                 }
             });
-        }
-        function getFormatedDateString(dateTime) {
-            var d = new Date(dateTime), p = function(n) { return (n < 10 ? '0' : '') + n; };
-            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' '
-                 + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
         }
     </script>
     </th:block>

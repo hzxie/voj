@@ -23,6 +23,7 @@
     <meta name="description" th:content="${description}" />
     <meta name="robots" content="noindex" />
     <meta name="author" content="Haozhe Xie" />
+    <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
     <meta name="_csrf" th:content="${_csrf.token}" />
     <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <link th:href="|${cdnUrl}/img/favicon.svg?v=${version}|" rel="icon" type="image/svg+xml" />
@@ -53,21 +54,9 @@
     <!-- UI chrome behaviour (theme toggle) + admin chrome (drawer, tables). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/admin.js?v=${version}|"></script>
-    <!-- Common administration scripts (CSRF token wiring + %s formatter helper). -->
-    <script type="text/javascript" th:inline="javascript">
-        $(document).ajaxSend(function(event, jqXHR, settings) {
-            var method = (settings.type || 'GET').toUpperCase();
-            if ( !settings.crossDomain &&
-                 method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && method !== 'TRACE' ) {
-                jqXHR.setRequestHeader([[${_csrf.headerName}]], [[${_csrf.token}]]);
-            }
-        });
-        // Single pass: an argument containing "%s" is inserted verbatim, not re-substituted.
-        String.prototype.format = function() {
-            var args = arguments, i = 0;
-            return String(this).replace(/%s/g, function() { return String(args[i++]); });
-        };
-    </script>
+    <!-- Site-wide helpers shared with the public pages (CSRF header on AJAX, %s formatter,
+         date helpers, load-more). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
     <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
