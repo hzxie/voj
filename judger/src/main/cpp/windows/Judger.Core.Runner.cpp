@@ -36,12 +36,25 @@
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
 /**
- * The default maximum number of processes a sandboxed program (or compiler) may have running at
- * once, used when the caller does not pass one. This is enforced by the Job Object and primarily
- * blocks fork bombs; it must stay high enough for the compiler's helper-process chain (cc1, as, ld,
- * ...).
+ * The default maximum number of processes a compiler may have running at once, used when the
+ * caller does not pass one. This is enforced by the Job Object and primarily blocks fork bombs; it
+ * must stay high enough for the compiler's helper-process chain (cc1, as, ld, ...).
  */
 #define ACTIVE_PROCESS_LIMIT 64
+
+/**
+ * The maximum number of processes a run of the submission may have in its Job: a submission may not
+ * create processes (as on Linux), but its console host counts too. CreateProcessWithLogonW always
+ * gives the new process a console of its own (CREATE_NEW_CONSOLE is implied), and since Windows 8
+ * the console host (conhost.exe) is started by the console program itself while it initialises -
+ * after it has been assigned to the Job - so it becomes a member of the Job. With a limit of 1 the
+ * console host could not start and every console program would fail to initialise
+ * (STATUS_DLL_INIT_FAILED). With 2, the program plus its console host fill the Job, and any
+ * CreateProcess of the submission fails. (Should the console host not be in the Job, the program
+ * could have one child process at a time, still confined to the Job.)
+ * See https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithlogonw
+ */
+#define RUN_ACTIVE_PROCESS_LIMIT 2
 
 /**
  * Extra wall-clock time (ms) granted on top of the CPU time limit, so a process that blocks/sleeps
@@ -51,13 +64,25 @@
 
 /**
  * How often (ms) the parent checks the child's CPU time and peak memory while it runs. The memory
- * limit is enforced by polling the Job's peak accounting (a soft limit) rather than the Job's hard
- * ProcessMemoryLimit, so that an offending peak rises just above the limit before the process is
- * killed and the run is classified as MLE - matching the Linux runner. The hard cap is intentionally
- * not used: under it an allocation simply fails and the program crashes, which is indistinguishable
- * from a plain runtime error.
+ * limit is enforced by polling the Job's peak accounting (a soft limit), so that an offending peak
+ * rises just above the limit before the process is killed and the run is classified as MLE -
+ * matching the Linux runner.
  */
 #define POLL_INTERVAL_MS 2
+
+/**
+ * The Job's hard memory limit is the memory limit plus this headroom: max(limit / 4, 16 MB). The
+ * hard limit bounds what a program can allocate between two polls. It does not kill the program:
+ * an allocation that would exceed it fails, and the Job posts JOB_OBJECT_MSG_(JOB|PROCESS)_MEMORY_LIMIT
+ * to its completion port, which the runner treats as Memory Limit Exceeded (otherwise the failed
+ * allocation would surface as a crash, indistinguishable from a runtime error, or be survived by a
+ * program that checks for it). The headroom keeps the ordinary case - memory growing past the
+ * limit - on the precise polling path.
+ * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information
+ * and https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port
+ */
+static const unsigned long long MEMORY_HARD_LIMIT_MIN_HEADROOM_KB = 16ULL * 1024;
+static const unsigned long long MEMORY_HARD_LIMIT_HEADROOM_DIVISOR = 4;
 
 /**
  * The values of the result's "limitExceeded" key: the limit the program was killed for, or was found
@@ -119,12 +144,13 @@ typedef std::map<std::wstring, std::wstring, EnvironmentNameLess> EnvironmentMap
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
-HANDLE createJobObject(DWORD);
+HANDLE createJobObject(DWORD, jint, bool, HANDLE);
+bool drainJobMessages(HANDLE, bool&);
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&);
 bool buildEnvironmentBlock(HANDLE, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 std::wstring getWorkDirectory(const std::wstring&);
-jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess);
+bool getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess, bool jobWide, jint& memory);
 bool getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren, jint& cpuTime);
 unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
@@ -146,7 +172,8 @@ LPCWSTR getConstWideStringPointer(const std::wstring&);
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
- * @param  processLimit    - the maximum number of active processes (0 means the default)
+ * @param  processLimit    - the maximum number of active processes of a compilation (0 means the
+ *                           default); a run may not create processes (RUN_ACTIVE_PROCESS_LIMIT)
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
@@ -164,6 +191,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     HANDLE              hError              = NULL;
     HANDLE              hToken              = NULL;
     HANDLE              hJob                = NULL;
+    HANDLE              hCompletionPort     = NULL;
     PROCESS_INFORMATION processInfo         = {0};
     STARTUPINFOW        startupInfo         = {0};
 
@@ -192,6 +220,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         if ( hJob != NULL ) {
             CloseHandle(hJob);
             hJob = NULL;
+        }
+        if ( hCompletionPort != NULL ) {
+            CloseHandle(hCompletionPort);
+            hCompletionPort = NULL;
         }
         if ( hInput != NULL ) {
             CloseHandle(hInput);
@@ -232,11 +264,22 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     setupStartupInfo(startupInfo, hInput, hOutput, hError);
 
-    // The Job Object enforces the active-process limit (anti fork bomb) and the UI restrictions, and
-    // kills the whole process tree atomically when it is closed. The memory limit is enforced below
-    // by polling the Job's peak accounting (a soft limit), not the Job's hard ProcessMemoryLimit.
-    // Without a Job none of this holds, so the run is refused rather than started unconfined.
-    hJob = createJobObject(processLimit > 0 ? (DWORD) processLimit : ACTIVE_PROCESS_LIMIT);
+    // The Job's notifications (a refused allocation, see MEMORY_HARD_LIMIT_MIN_HEADROOM_KB) arrive on
+    // this completion port, which the poll loop drains.
+    hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+    if ( hCompletionPort == NULL ) {
+        return fail("CreateIoCompletionPort");
+    }
+    // The Job Object enforces the active-process limit (anti fork bomb), a hard memory cap above the
+    // memory limit and the UI restrictions, and kills the whole process tree atomically when it is
+    // closed. The memory limit itself is enforced below by polling the Job's peak accounting (a soft
+    // limit). Without a Job none of this holds, so the run is refused rather than started unconfined.
+    // A run of the submission may not create processes; a compiler may (cc1, as, ld, ...). For the
+    // same reason a run's memory is that of the whole Job, a compilation's that of its largest process.
+    DWORD activeProcessLimit = isCompilation
+                             ? ( processLimit > 0 ? (DWORD) processLimit : ACTIVE_PROCESS_LIMIT )
+                             : RUN_ACTIVE_PROCESS_LIMIT;
+    hJob = createJobObject(activeProcessLimit, memoryLimit, !isCompilation, hCompletionPort);
     if ( hJob == NULL ) {
         return fail("CreateJobObject");
     }
@@ -282,11 +325,13 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     //    alone would let a program use up to timeLimit + WALL_TIME_BUFFER_MS of CPU and, if it
     //    exits 0 in that window, be judged on its output;
     //  - memory, as a soft limit: the peak may rise just above the limit before the kill, so that
-    //    the run is classified as MLE (matching the Linux runner);
+    //    the run is classified as MLE (matching the Linux runner). An allocation refused by the
+    //    Job's hard cap is reported on the completion port and is a Memory Limit Exceeded too;
     //  - wall-clock time, a guard for a process that blocks or sleeps while using little CPU.
     DWORD     wallTimeLimit       = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
     jint      limitExceeded       = LIMIT_NONE;
     bool      killedByWallTimeout = false;
+    bool      memoryLimitHit      = false;
     ULONGLONG startTick           = GetTickCount64();
     for ( ;; ) {
         DWORD waitResult = WaitForSingleObject(processInfo.hProcess, POLL_INTERVAL_MS);
@@ -309,9 +354,17 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                 limitExceeded = LIMIT_TIME;
             }
         }
-        if ( limitExceeded == LIMIT_NONE && memoryLimit > 0 &&
-                getPeakMemoryUsage(hJob, processInfo.hProcess) > memoryLimit ) {
-            limitExceeded = LIMIT_MEMORY;
+        // Drained on every pass, so the messages of a compiler's many processes do not pile up.
+        if ( !drainJobMessages(hCompletionPort, memoryLimitHit) ) {
+            return fail("GetQueuedCompletionStatus");
+        }
+        if ( limitExceeded == LIMIT_NONE && memoryLimit > 0 ) {
+            if ( !getPeakMemoryUsage(hJob, processInfo.hProcess, !isCompilation, memoryUsage) ) {
+                return fail("GetPeakMemoryUsage");
+            }
+            if ( memoryLimitHit || memoryUsage > memoryLimit ) {
+                limitExceeded = LIMIT_MEMORY;
+            }
         }
         if ( limitExceeded == LIMIT_NONE && wallTimeLimit != INFINITE &&
                 GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit ) {
@@ -334,15 +387,22 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     if ( !getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation, timeUsage) ) {
         return fail("GetCpuTimeUsage");
     }
-    // Both the Job's and the process's peak accounting persist after the process exits.
-    memoryUsage = getPeakMemoryUsage(hJob, processInfo.hProcess);
+    // Both the Job's and the process's peak accounting persist after the process exits. A refused
+    // allocation is posted to the port before the allocating call returns, so a program that exits
+    // after one has its message queued by now.
+    if ( !getPeakMemoryUsage(hJob, processInfo.hProcess, !isCompilation, memoryUsage) ) {
+        return fail("GetPeakMemoryUsage");
+    }
+    if ( !drainJobMessages(hCompletionPort, memoryLimitHit) ) {
+        return fail("GetQueuedCompletionStatus");
+    }
 
     // The program may have exceeded a limit after the last poll and exited before the next one
     // (CPU time and memory accounting are only sampled): judge the final figures too.
     if ( limitExceeded == LIMIT_NONE ) {
         if ( timeLimit > 0 && timeUsage > timeLimit ) {
             limitExceeded = LIMIT_TIME;
-        } else if ( memoryLimit > 0 && memoryUsage > memoryLimit ) {
+        } else if ( memoryLimit > 0 && (memoryLimitHit || memoryUsage > memoryLimit) ) {
             limitExceeded = LIMIT_MEMORY;
         }
     }
@@ -420,16 +480,37 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
 }
 
 /**
- * Creates a Job Object that enforces the active-process limit and UI restrictions and kills the
- * whole tree when closed. No hard memory limit is set: memory is enforced by polling the Job's peak
- * accounting (see the run loop), which the Job tracks regardless of whether a memory limit is set.
+ * Creates a Job Object that enforces the active-process limit, a hard memory cap and the UI
+ * restrictions, reports its events to a completion port, and kills the whole tree when closed.
  * @param  activeProcessLimit - the maximum number of processes that may be active in the Job
+ * @param  memoryLimit        - the memory limit (KB, 0 means none); the hard cap is set above it
+ * @param  jobWideMemory      - whether the cap applies to all processes together (a run) or to
+ *                              each process (a compilation)
+ * @param  hCompletionPort    - the completion port that receives the Job's messages
  * @return the Job Object handle, or NULL on failure (GetLastError() tells why)
  */
-HANDLE createJobObject(DWORD activeProcessLimit) {
+HANDLE createJobObject(DWORD activeProcessLimit, jint memoryLimit, bool jobWideMemory,
+        HANDLE hCompletionPort) {
     HANDLE hJob = CreateJobObjectW(NULL, NULL);
     if ( hJob == NULL ) {
         return NULL;
+    }
+    // Closes the Job (nothing runs in it yet) while keeping the error of the call that failed.
+    auto failJob = [&]() -> HANDLE {
+        DWORD errorCode = GetLastError();
+        CloseHandle(hJob);
+        SetLastError(errorCode);
+        return NULL;
+    };
+
+    // Every message of the Job, among them JOB_OBJECT_MSG_(JOB|PROCESS)_MEMORY_LIMIT, is posted to
+    // the port with the Job's handle as the completion key. Associated before any process joins.
+    JOBOBJECT_ASSOCIATE_COMPLETION_PORT completionPort = {0};
+    completionPort.CompletionKey  = hJob;
+    completionPort.CompletionPort = hCompletionPort;
+    if ( !SetInformationJobObject(hJob, JobObjectAssociateCompletionPortInformation,
+            &completionPort, sizeof(completionPort)) ) {
+        return failJob();
     }
 
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
@@ -437,12 +518,26 @@ HANDLE createJobObject(DWORD activeProcessLimit) {
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
         JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
     jeli.BasicLimitInformation.ActiveProcessLimit = activeProcessLimit;
+    if ( memoryLimit > 0 ) {
+        unsigned long long limitKb    = (unsigned long long) memoryLimit;
+        unsigned long long headroomKb = limitKb / MEMORY_HARD_LIMIT_HEADROOM_DIVISOR;
+        if ( headroomKb < MEMORY_HARD_LIMIT_MIN_HEADROOM_KB ) {
+            headroomKb = MEMORY_HARD_LIMIT_MIN_HEADROOM_KB;
+        }
+        unsigned long long hardLimitBytes = (limitKb + headroomKb) * 1024ULL;
+        SIZE_T             hardLimit      = ( hardLimitBytes > (unsigned long long) SIZE_MAX )
+                                          ? SIZE_MAX : (SIZE_T) hardLimitBytes;
+        if ( jobWideMemory ) {
+            jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
+            jeli.JobMemoryLimit = hardLimit;
+        } else {
+            jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+            jeli.ProcessMemoryLimit = hardLimit;
+        }
+    }
     if ( !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)) ) {
         // Without these limits the Job would neither cap the process count nor kill the tree.
-        DWORD errorCode = GetLastError();
-        CloseHandle(hJob);
-        SetLastError(errorCode);
-        return NULL;
+        return failJob();
     }
 
     // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).
@@ -452,9 +547,34 @@ HANDLE createJobObject(DWORD activeProcessLimit) {
         JOB_OBJECT_UILIMIT_EXITWINDOWS | JOB_OBJECT_UILIMIT_GLOBALATOMS |
         JOB_OBJECT_UILIMIT_READCLIPBOARD | JOB_OBJECT_UILIMIT_WRITECLIPBOARD |
         JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS;
-    SetInformationJobObject(hJob, JobObjectBasicUIRestrictions, &uiRestrictions, sizeof(uiRestrictions));
+    if ( !SetInformationJobObject(hJob, JobObjectBasicUIRestrictions, &uiRestrictions, sizeof(uiRestrictions)) ) {
+        return failJob();
+    }
 
     return hJob;
+}
+
+/**
+ * Takes every message the Job has posted so far off its completion port. With a zero timeout,
+ * GetQueuedCompletionStatus returns FALSE with no packet (lpOverlapped NULL) and WAIT_TIMEOUT once
+ * the queue is empty. For a Job message, lpNumberOfBytesTransferred carries the message identifier.
+ * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port
+ * @param  hCompletionPort - the Job's completion port
+ * @param  memoryLimitHit  - set when an allocation was refused by the Job's hard memory cap
+ * @return whether the port could be read (GetLastError() tells why not)
+ */
+bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
+    for ( ;; ) {
+        DWORD        message    = 0;
+        ULONG_PTR    key        = 0;
+        LPOVERLAPPED overlapped = NULL;
+        if ( !GetQueuedCompletionStatus(hCompletionPort, &message, &key, &overlapped, 0) ) {
+            return overlapped == NULL && GetLastError() == WAIT_TIMEOUT;
+        }
+        if ( message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT || message == JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT ) {
+            memoryLimitHit = true;
+        }
+    }
 }
 
 /**
@@ -606,33 +726,39 @@ std::wstring getWorkDirectory(const std::wstring& outputFilePath) {
 }
 
 /**
- * Gets the peak memory usage of the run: the larger of the Job Object's peak (the most any process
- * in the Job ever committed) and the main process's own peak commit. The process's counter is an
- * independent second source, so a failed Job query can never make a run look like it used nothing.
+ * Gets the peak memory (commit) usage:
+ *  - of a run, the Job's PeakJobMemoryUsed: the peak of the memory committed by all its processes
+ *    together, so memory spread over several processes counts in full (as on Linux, where the
+ *    processes' PSS are summed). It includes the console host's own small commit (see
+ *    RUN_ACTIVE_PROCESS_LIMIT);
+ *  - of a compilation, its largest process: the Job's PeakProcessMemoryUsed. The compiler's
+ *    processes run in parallel by design, and the limit is a cap against a "compiler bomb".
+ * The main process's own peak commit is taken into account too; it can only be lower.
+ * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information
  * @param  hJob     - the Job Object handle
  * @param  hProcess - the main process handle
- * @return the peak memory usage (KB)
+ * @param  jobWide  - whether to measure all processes together (a run) or the largest one
+ * @param  memory   - receives the peak memory usage (KB)
+ * @return whether the memory could be measured (GetLastError() tells why not)
  */
-jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess) {
-    unsigned long long peakBytes = 0;
+bool getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess, bool jobWide, jint& memory) {
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
-    if ( hJob != NULL && QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation,
-            &jeli, sizeof(jeli), NULL) ) {
-        peakBytes = (unsigned long long) jeli.PeakProcessMemoryUsed;
+    if ( !QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli), NULL) ) {
+        return false;
     }
+    unsigned long long peakBytes = jobWide ? (unsigned long long) jeli.PeakJobMemoryUsed
+                                           : (unsigned long long) jeli.PeakProcessMemoryUsed;
     PROCESS_MEMORY_COUNTERS counters = {0};
     counters.cb = sizeof(counters);
-    if ( hProcess != NULL && GetProcessMemoryInfo(hProcess, &counters, sizeof(counters)) ) {
-        unsigned long long processPeak = (unsigned long long) counters.PeakPagefileUsage;
-        if ( processPeak > peakBytes ) {
-            peakBytes = processPeak;
-        }
+    if ( !GetProcessMemoryInfo(hProcess, &counters, sizeof(counters)) ) {
+        return false;
+    }
+    if ( (unsigned long long) counters.PeakPagefileUsage > peakBytes ) {
+        peakBytes = (unsigned long long) counters.PeakPagefileUsage;
     }
     unsigned long long peakKb = peakBytes >> 10;
-    if ( peakKb > (unsigned long long)INT32_MAX ) {
-        return INT32_MAX;
-    }
-    return (jint)peakKb;
+    memory = ( peakKb > (unsigned long long)INT32_MAX ) ? INT32_MAX : (jint)peakKb;
+    return true;
 }
 
 /**
