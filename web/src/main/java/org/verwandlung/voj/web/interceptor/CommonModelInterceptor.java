@@ -25,12 +25,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 /**
- * Decorates every rendered page with the shared model attributes via {@link CommonModelPopulator}.
- *
- * <p>Replaces the {@code @Around} ViewAspect: instead of an AspectJ pointcut that relied on the
- * {@code *View} naming convention and the {@code (.., request, response)} argument order, this hooks
- * the first-class Spring MVC extension point and decorates any handler that produced a
- * {@link ModelAndView}.
+ * Decorates every handler that produced a {@link ModelAndView} with the shared model attributes via
+ * {@link CommonModelPopulator}.
  *
  * @author Haozhe Xie
  */

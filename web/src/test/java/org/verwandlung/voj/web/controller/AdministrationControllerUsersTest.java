@@ -143,7 +143,7 @@ public class AdministrationControllerUsersTest {
   @Test
   public void testNewUserActionDelegates() {
     Map<String, Boolean> serviceResult = map("isSuccessful", true);
-    when(userService.createUser("zjhzxhz", "pw", "a@b.com", "users", "en_US", "Name", "Bio"))
+    when(userService.createUser("zjhzxhz", "pw", "a@b.com", "users", "en_US", "Name", "Bio", true))
         .thenReturn(serviceResult);
 
     Map<String, Boolean> result =

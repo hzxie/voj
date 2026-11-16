@@ -41,16 +41,10 @@ import org.verwandlung.voj.web.mapper.OptionMapper;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OffensiveWordFilterTest {
-  /** Test case: tests the filter() method. Test data: data containing offensive words. Expected: the data with the offensive words filtered out. */
-  @Test
-  public void testFilterUsingOffensiveWord() {
-    Assertions.assertNotNull(filter);
-    Assertions.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
-  }
-
   /** Test case: tests the censor() method. Test data: text containing an offensive word. Expected: the word is masked with plain asterisks. */
   @Test
   public void testCensorMasksWithPlainAsterisks() {
+    Assertions.assertNotNull(filter);
     Assertions.assertEquals("**大法好 你好", filter.censor("法轮大法好 你好"));
   }
 
@@ -90,16 +84,16 @@ public class OffensiveWordFilterTest {
     Assertions.assertTrue(hasWordBoundary("法轮功", 0, 2)); // "法轮" immediately followed by a CJK char
   }
 
-  /** Test case: tests the filter() method. Test data: a lower-case and a mixed-case dictionary entry, matched against text in other cases. Expected: matching ignores case and the original text around the masked words is preserved. */
+  /** Test case: tests the censor() method. Test data: a lower-case and a mixed-case dictionary entry, matched against text in other cases. Expected: matching ignores case and the original text around the masked words is preserved. */
   @Test
-  public void testFilterIsCaseInsensitive() {
+  public void testCensorIsCaseInsensitive() {
     OffensiveWordFilter caseFilter = newFilter(List.of("fuck", "BadWord"));
-    Assertions.assertEquals("**** you", caseFilter.filter("FUCK you"));
-    Assertions.assertEquals("Oh ****!", caseFilter.filter("Oh FuCk!"));
-    Assertions.assertEquals("a ******* b", caseFilter.filter("a badword b"));
-    Assertions.assertEquals("a ******* B", caseFilter.filter("a BADWORD B"));
+    Assertions.assertEquals("**** you", caseFilter.censor("FUCK you"));
+    Assertions.assertEquals("Oh ****!", caseFilter.censor("Oh FuCk!"));
+    Assertions.assertEquals("a ******* b", caseFilter.censor("a badword b"));
+    Assertions.assertEquals("a ******* B", caseFilter.censor("a BADWORD B"));
     // Word boundaries still apply after case folding.
-    Assertions.assertEquals("BADWORDS", caseFilter.filter("BADWORDS"));
+    Assertions.assertEquals("BADWORDS", caseFilter.censor("BADWORDS"));
   }
 
   /**

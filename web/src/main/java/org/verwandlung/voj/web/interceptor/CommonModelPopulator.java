@@ -46,10 +46,9 @@ import org.verwandlung.voj.web.util.LocaleUtils;
  * the display language, the asset CDN/version metadata and the logged-in user's profile and
  * answering status.
  *
- * <p>This used to live in an {@code @Around} aspect (ViewAspect) whose pointcut matched controller
- * {@code *View} methods. It is now a plain component invoked from {@link CommonModelInterceptor} for
- * regular page handlers, and directly from {@code ExceptionHandlingController} for the error pages
- * (whose {@code @ExceptionHandler} dispatch never reaches a {@code HandlerInterceptor.postHandle}).
+ * <p>Invoked from {@link CommonModelInterceptor} for regular page handlers, and directly from {@code
+ * ExceptionHandlingController} for the error pages (whose {@code @ExceptionHandler} dispatch never
+ * reaches a {@code HandlerInterceptor.postHandle}).
  *
  * @author Haozhe Xie
  */
@@ -67,18 +66,13 @@ public class CommonModelPopulator {
     view.addAllObjects(getSystemOptions());
     view.addObject("language", getUserLanguage(request, response));
 
-    // The CDN base URL and the cache-busting version key used by every page's
-    // asset references. Previously read per-page via <spring:eval> in the JSPs;
-    // now injected once here so the templates can rely on them being present.
+    // The CDN base URL and the cache-busting version key of every page's asset references.
     view.addObject("cdnUrl", applicationProperties.getProperty("url.cdn"))
         .addObject("version", applicationProperties.getProperty("build.version"))
         .addObject("productVersion", applicationProperties.getProperty("product.version"));
 
-    // The current request URI, used by the header/footer to build the "forward"
-    // parameter on the sign-in / sign-up / language links so the user returns to
-    // the current page afterwards. Under JSP this was read from the
-    // jakarta.servlet.forward.request_uri attribute set by the dispatcher's
-    // forward; Thymeleaf renders without that forward, so it is supplied here.
+    // The header/footer build the "forward" parameter of the sign-in / sign-up / language links
+    // from it, so the user returns to the current page afterwards.
     view.addObject("forwardUri", request.getRequestURI());
     addLanguageUrls(view, request);
 
@@ -86,11 +80,8 @@ public class CommonModelPopulator {
     if (user != null) {
       view.addObject("isLogin", true).addObject("myProfile", user);
     } else {
-      // Always expose isLogin so templates can use it inside compound boolean
-      // expressions (e.g. ${isLogin and ...}). The JSP views relied on EL
-      // coercing a missing/null value to false; Thymeleaf's SpEL instead throws
-      // EL1001E ("cannot convert from null to boolean") for null operands of
-      // 'and'/'or', so an explicit false is required for anonymous users.
+      // Templates use isLogin in compound expressions (${isLogin and ...}), where SpEL rejects a
+      // null operand.
       view.addObject("isLogin", false);
     }
   }
@@ -129,11 +120,8 @@ public class CommonModelPopulator {
       // ignoring the Accept-Language header).
       LocaleUtils.setLocale(request, response, getPreferNaturalLanguage(request, response));
     }
-    // The display language must follow Spring's *resolved* locale, which the ?language=xx_XX
-    // switch updates through the LocaleChangeInterceptor. The previous code returned the
-    // "language" session attribute, but that is only seeded on the first visit and is never
-    // updated by the switch: after switching to e.g. zh_CN the #{} labels rendered in Chinese
-    // while the dates (formatted via this attribute) stayed in the original en_US locale.
+    // The display language follows Spring's resolved locale, which the ?language=xx_XX switch
+    // updates through the LocaleChangeInterceptor, so the dates match the #{} labels.
     Locale locale = RequestContextUtils.getLocale(request);
     String language = locale.getLanguage() + "_" + locale.getCountry();
     session.setAttribute("language", language);

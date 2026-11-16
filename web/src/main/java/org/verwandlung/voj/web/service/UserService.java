@@ -208,11 +208,7 @@ public class UserService {
       }
       userMetaMap.put(key, value);
     }
-    // Ensure socialLinks is always present as a (possibly empty) map. New users
-    // have no socialLinks meta row, leaving the attribute null; the JSP views
-    // tolerated indexing a null map, but Thymeleaf's SpEL throws EL1012E
-    // ("Cannot index into a null value"). Defaulting to an empty map keeps
-    // socialLinks['Facebook'] et al. resolving to null as the templates expect.
+    // The templates index socialLinks['GitHub'] and the like, which fails on a null map.
     userMetaMap.putIfAbsent("socialLinks", new HashMap<String, Object>());
     return userMetaMap;
   }
@@ -341,72 +337,17 @@ public class UserService {
   }
 
   /**
-   * Validates the account and creates a user.
+   * Validates the account and creates a user, from the registration page or the administration
+   * console. The optional display name and bio are HTML-filtered and stored when not empty.
    *
    * @param username - the username
-   * @param password - the password (not encrypted with MD5)
+   * @param password - the plain-text password
    * @param email - the email address
    * @param userGroupSlug - the alias of the user group
    * @param languageSlug - the alias of the preferred language
-   * @param isAllowRegister - whether the system allows new user registration
-   * @return a Map<String, Boolean> object containing the account creation result
-   */
-  public Map<String, Boolean> createUser(
-      String username,
-      String password,
-      String email,
-      String userGroupSlug,
-      String languageSlug,
-      boolean isAllowRegister) {
-    UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
-    Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
-    User user =
-        new User(username, passwordEncoder.encode(password), email, userGroup, languagePreference);
-
-    Map<String, Boolean> result = getUserCreationResult(user, password, isAllowRegister);
-    if (result.get("isSuccessful")) {
-      userMapper.createUser(user);
-      createUserMeta(user);
-    }
-    return result;
-  }
-
-  /**
-   * [For administrators only] Validates the account and creates a user.
-   *
-   * @param username - the username
-   * @param password - the password (not encrypted with MD5)
-   * @param email - the email address
-   * @param userGroupSlug - the alias of the user group
-   * @param languageSlug - the alias of the preferred language
-   * @return a Map<String, Boolean> object containing the account creation result
-   */
-  public Map<String, Boolean> createUser(
-      String username, String password, String email, String userGroupSlug, String languageSlug) {
-    UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
-    Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
-    User user =
-        new User(username, passwordEncoder.encode(password), email, userGroup, languagePreference);
-
-    Map<String, Boolean> result = getUserCreationResult(user, password, true);
-    if (result.get("isSuccessful")) {
-      userMapper.createUser(user);
-      createUserMeta(user);
-    }
-    return result;
-  }
-
-  /**
-   * Creates a new user (from the admin console) and, when supplied, seeds the optional display name
-   * and bio. Both extras are HTML-filtered and only persisted when non-empty.
-   *
-   * @param username - the username
-   * @param password - the password (not encrypted with MD5)
-   * @param email - the email address
-   * @param userGroupSlug - the alias of the user group
-   * @param languageSlug - the alias of the preferred language
-   * @param displayName - the optional display name
-   * @param aboutMe - the optional personal bio
+   * @param displayName - the display name, or empty
+   * @param aboutMe - the personal bio, or empty
+   * @param isAllowRegister - whether the account may be created (registration may be closed)
    * @return a Map<String, Boolean> object containing the account creation result
    */
   public Map<String, Boolean> createUser(
@@ -416,13 +357,26 @@ public class UserService {
       String userGroupSlug,
       String languageSlug,
       String displayName,
-      String aboutMe) {
-    Map<String, Boolean> result =
-        createUser(username, password, email, userGroupSlug, languageSlug);
+      String aboutMe,
+      boolean isAllowRegister) {
+    UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
+    Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
+    User user =
+        new User(username, passwordEncoder.encode(password), email, userGroup, languagePreference);
+    displayName = HtmlTextFilter.filter(displayName);
+    aboutMe = HtmlTextFilter.filter(aboutMe);
+
+    Map<String, Boolean> result = getUserCreationResult(user, password, isAllowRegister);
+    result.put("isDisplayNameLegal", displayName.length() <= 64);
+    result.put("isAboutMeLegal", aboutMe.length() <= 256);
+    result.put(
+        "isSuccessful",
+        result.get("isSuccessful") && result.get("isDisplayNameLegal") && result.get("isAboutMeLegal"));
     if (result.get("isSuccessful")) {
-      User user = userMapper.getUserUsingUsername(username);
-      updateUserMeta(user, "displayName", HtmlTextFilter.filter(displayName));
-      updateUserMeta(user, "aboutMe", HtmlTextFilter.filter(aboutMe));
+      userMapper.createUser(user);
+      createUserMeta(user);
+      updateUserMeta(user, "displayName", displayName);
+      updateUserMeta(user, "aboutMe", aboutMe);
     }
     return result;
   }
@@ -450,7 +404,7 @@ public class UserService {
    */
   private Map<String, Boolean> getUserCreationResult(
       User user, String password, boolean isAllowRegister) {
-    Map<String, Boolean> result = new HashMap<>(13, 1);
+    Map<String, Boolean> result = new HashMap<>(16, 1);
     result.put("isUsernameEmpty", user.getUsername().isEmpty());
     result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
     result.put("isUsernameExists", isUsernameExists(user.getUsername()));
@@ -782,26 +736,6 @@ public class UserService {
             && result.get("isNewPasswordLegal")
             && result.get("isConfirmPasswordMatched");
     result.put("isSuccessful", isSuccessful);
-    return result;
-  }
-
-  /**
-   * Validates the programming language preference and changes it.
-   *
-   * @param user - the user object whose programming language preference is to be changed
-   * @param preferLanguageSlug - the alias of the programming language
-   * @return a Map<String, Boolean> object containing the programming language preference change
-   *     result
-   */
-  public Map<String, Boolean> changePreferLanguage(User user, String preferLanguageSlug) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
-    Language preferLanguage = languageMapper.getLanguageUsingSlug(preferLanguageSlug);
-
-    if (preferLanguage != null) {
-      user.setPreferLanguage(preferLanguage);
-      userMapper.updatePreferLanguage(user.getUid(), preferLanguage.getLanguageId());
-    }
-    result.put("isSuccessful", preferLanguage != null);
     return result;
   }
 

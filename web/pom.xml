@@ -39,12 +39,6 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<!-- AspectJ weaver enables Spring's @Aspect auto-proxying (Boot 4 no
-		     longer ships a dedicated spring-boot-starter-aop). -->
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-		</dependency>
 		<!-- Thymeleaf server-side templating (replaces JSP/JSTL), with the
 		     Layout Dialect for decorator-style page layouts. -->
 		<dependency>

@@ -55,8 +55,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   /* (non-Javadoc)
    * Registers the language switching interceptor (switches the display language via ?language=xx_XX),
-   * the maintenance-mode gate, and the interceptor that injects the shared page model attributes
-   * (formerly ViewAspect).
+   * the maintenance-mode gate, and the interceptor that injects the shared page model attributes.
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {

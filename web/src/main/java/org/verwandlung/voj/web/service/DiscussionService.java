@@ -753,46 +753,6 @@ public class DiscussionService {
   }
 
   /**
-   * [For administrators only] Edits a discussion topic.
-   *
-   * @param discussionTopicId - the unique identifier of the discussion topic
-   * @param discussionTopicSlug - the unique English abbreviation of the discussion topic
-   * @param discussionTopicName - the name of the discussion topic
-   * @param parentDiscussionTopic - the parent discussion topic object (may be null)
-   * @return a Map object containing the discussion topic editing result
-   */
-  public Map<String, Boolean> updateDiscussionTopic(
-      int discussionTopicId,
-      String discussionTopicSlug,
-      String discussionTopicName,
-      DiscussionTopic parentDiscussionTopic) {
-    DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingId(discussionTopicId);
-    Map<String, Boolean> result = new HashMap<>(7, 1);
-    result.put("isDiscussionTopicExists", dt != null);
-    result.put("isDiscussionTopicSlugEmpty", discussionTopicSlug.isEmpty());
-    result.put("isDiscussionTopicSlugLegal", discussionTopicSlug.length() <= 128);
-    result.put("isDiscussionTopicNameEmpty", discussionTopicName.isEmpty());
-    result.put("isDiscussionTopicNameLegal", discussionTopicName.length() <= 128);
-
-    boolean isSuccessful =
-        result.get("isDiscussionTopicExists")
-            && !result.get("isDiscussionTopicSlugEmpty")
-            && result.get("isDiscussionTopicSlugLegal")
-            && !result.get("isDiscussionTopicNameEmpty")
-            && result.get("isDiscussionTopicNameLegal");
-    result.put("isSuccessful", isSuccessful);
-    if (isSuccessful) {
-      int parentDiscussionTopicId =
-          parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getDiscussionTopicId();
-      dt.setDiscussionTopicSlug(discussionTopicSlug);
-      dt.setDiscussionTopicName(discussionTopicName);
-      dt.setParentDiscussionTopicId(parentDiscussionTopicId);
-      discussionTopicMapper.updateDiscussionTopic(dt);
-    }
-    return result;
-  }
-
-  /**
    * [For administrators only] Deletes a discussion topic.
    *
    * @param discussionTopicId - the unique identifier of the discussion topic

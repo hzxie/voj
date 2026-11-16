@@ -214,7 +214,9 @@ public class AccountsControllerTest {
 
     Assertions.assertEquals(Boolean.FALSE, result.get("isCaptchaValid"));
     verify(userService, never())
-        .createUser(anyString(), anyString(), anyString(), anyString(), anyString(), anyBoolean());
+        .createUser(
+            anyString(), anyString(), anyString(), anyString(), anyString(), anyString(),
+            anyString(), anyBoolean());
   }
 
   /** Test case: tests registerAction(...). Test data: a valid captcha with registration open and email verification off. Expected: the account is created under the "users" group, a security context is established and the service result is returned. */
@@ -226,7 +228,7 @@ public class AccountsControllerTest {
     when(optionService.getOption("requireEmailVerification"))
         .thenReturn(new Option("requireEmailVerification", "0", true));
     Map<String, Boolean> serviceResult = Map.of("isSuccessful", true);
-    when(userService.createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", true))
+    when(userService.createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", "", "", true))
         .thenReturn(serviceResult);
     User user = userWithGroup();
     when(userService.getUserUsingUsernameOrEmail("zjhzxhz")).thenReturn(user);
@@ -243,7 +245,7 @@ public class AccountsControllerTest {
 
     Assertions.assertSame(serviceResult, result);
     verify(userService)
-        .createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", true);
+        .createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", "", "", true);
     // Email verification is off, so it must not be required.
     verify(userService, never()).requireEmailVerification(any());
     // A security context is established for the freshly registered user.

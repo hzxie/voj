@@ -14,11 +14,6 @@
 	</resultMap>
 
 	<!-- Methods -->
-	<select id="getNumberOfCheckpoints" 
-		resultType="long">
-		SELECT COUNT(*) 
-		FROM voj_problem_checkpoints
-	</select>
 	<select id="getCheckpointsUsingProblemId" 
 		parameterType="long"
 		resultMap="CheckpointResultMap">

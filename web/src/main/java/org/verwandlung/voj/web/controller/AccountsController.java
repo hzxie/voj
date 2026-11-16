@@ -295,7 +295,7 @@ public class AccountsController {
     String userGroupSlug = "users";
     Map<String, Boolean> result =
         userService.createUser(
-            username, password, email, userGroupSlug, languageSlug, isAllowRegister);
+            username, password, email, userGroupSlug, languageSlug, "", "", isAllowRegister);
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);

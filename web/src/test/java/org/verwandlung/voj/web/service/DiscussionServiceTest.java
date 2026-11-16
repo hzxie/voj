@@ -353,23 +353,6 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the updateDiscussionTopic(...) method. Test data: an existing topic. Expected: the update succeeds. */
-  @Test
-  public void testUpdateDiscussionTopicSuccessfully() {
-    Map<String, Boolean> result =
-        discussionService.updateDiscussionTopic(3, "general", "General Discussion", null);
-    Assertions.assertTrue(result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the updateDiscussionTopic(...) method. Test data: a non-existing topic. Expected: the update fails. */
-  @Test
-  public void testUpdateDiscussionTopicNotExists() {
-    Map<String, Boolean> result =
-        discussionService.updateDiscussionTopic(999, "ghost", "Ghost", null);
-    Assertions.assertFalse(result.get("isDiscussionTopicExists"));
-    Assertions.assertFalse(result.get("isSuccessful"));
-  }
-
   /** Test case: tests the deleteDiscussionTopic(int) method. Test data: a topic that exists and is not referenced. Expected: deletion succeeds. */
   @Test
   public void testDeleteDiscussionTopicSuccessfully() {
@@ -835,7 +818,7 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(discussionService.editDiscussionReply(1, 1, adminUser(), "  ").get("isSuccessful"));
   }
 
-  /** Test case: tests the createDiscussionTopic(...) and updateDiscussionTopic(...) methods. Test data: a parent topic (topic 1, itself top-level). Expected: the new topic's parent is that topic, not the parent's own parent. */
+  /** Test case: tests the createDiscussionTopic(...) method. Test data: a parent topic (topic 1, itself top-level). Expected: the new topic's parent is that topic, not the parent's own parent. */
   @Test
   public void testDiscussionTopicParent() {
     DiscussionTopic parent = findTopic("solutions");
@@ -843,14 +826,6 @@ public class DiscussionServiceTest {
         discussionService.createDiscussionTopic("child", "Child", parent).get("isSuccessful"));
     DiscussionTopic child = findTopic("child");
     Assertions.assertEquals(parent.getDiscussionTopicId(), child.getParentDiscussionTopicId());
-
-    DiscussionTopic otherParent = findTopic("qa");
-    Assertions.assertTrue(
-        discussionService
-            .updateDiscussionTopic(child.getDiscussionTopicId(), "child", "Child", otherParent)
-            .get("isSuccessful"));
-    Assertions.assertEquals(
-        otherParent.getDiscussionTopicId(), findTopic("child").getParentDiscussionTopicId());
   }
 
   /** Returns the discussion topic with the given slug, or a null reference. */

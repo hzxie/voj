@@ -25,8 +25,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * Locale-aware date formatting for the Thymeleaf views, reproducing the JSTL {@code
- * <fmt:formatDate>} style-based output that the JSP views relied on. The display locale is derived
+ * Locale-aware, style-based (short / medium / long) date formatting for the Thymeleaf views. The
+ * display locale is derived
  * from the user's language slug (e.g. {@code en_US}, {@code zh_CN}), which every view receives as
  * the {@code language} model attribute.
  *
@@ -136,9 +136,7 @@ public class DateFormatter {
   }
 
   /**
-   * Parses a {@code yyyy-MM-dd HH:mm:ss} timestamp string and formats it with a long date style,
-   * equivalent to the JSP {@code <fmt:parseDate>} + {@code <fmt:formatDate type="date"
-   * dateStyle="long" />} pair.
+   * Parses a {@code yyyy-MM-dd HH:mm:ss} timestamp string and formats it with a long date style.
    *
    * @param dateTime - the timestamp string (e.g. 2026-06-25 13:45:00; may be {@code null}/empty)
    * @param language - the user's language slug (e.g. en_US)

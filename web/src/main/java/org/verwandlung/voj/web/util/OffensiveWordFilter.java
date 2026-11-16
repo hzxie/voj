@@ -59,7 +59,7 @@ public class OffensiveWordFilter {
 
   /**
    * Reloads the offensive word dictionary from the database and rebuilds the DFA. The freshly built
-   * model is swapped in atomically, so concurrent {@link #filter(String)} calls keep using the
+   * model is swapped in atomically, so concurrent {@link #censor(String)} calls keep using the
    * previous model until the new one is ready and never observe a half-built state.
    */
   public void reload() {
@@ -144,7 +144,7 @@ public class OffensiveWordFilter {
     if (text == null || text.isEmpty() || !isAutoCensorEnabled()) {
       return text;
     }
-    return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, replaceChar);
+    return mask(text, replaceChar);
   }
 
   /**
@@ -162,27 +162,15 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * Provides the offensive word filtering function. An overload of offensiveWordFilter(String, int,
-   * String). Sets the default values of the match rule (maxMatchType) and the replacement character
-   * ("*").
+   * Masks every offensive word of a text, matching the longest dictionary entry at each position.
    *
    * @param text - the string to filter
+   * @param replaceChar - the string each offensive character is replaced with
    * @return the filtered string
    */
-  public String filter(String text) {
-    return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, "*");
-  }
-
-  /**
-   * Provides the offensive word filtering function.
-   *
-   * @param text - the string to filter
-   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
-   * @return the filtered string
-   */
-  private String filter(String text, int matchType, String replaceChar) {
+  private String mask(String text, String replaceChar) {
     // Get the positions of all offensive words in the text
-    List<Position> offensiveWordsPosition = getOffensiveWordsPosition(text, matchType);
+    List<Position> offensiveWordsPosition = getOffensiveWordsPosition(text);
     // Replace all offensive words in the text with replaceChar
     StringBuilder resultStringBuilder = new StringBuilder(text);
 
@@ -199,15 +187,14 @@ public class OffensiveWordFilter {
    * Gets the positions of the offensive words.
    *
    * @param text - the string to filter
-   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
    * @return the positions of the offensive words
    */
-  private List<Position> getOffensiveWordsPosition(String text, int matchType) {
+  private List<Position> getOffensiveWordsPosition(String text) {
     List<Position> offensiveWordsPosition = new ArrayList<>();
     // Traverse the string to be filtered, and check whether the prefix of the substring of text
     // starting at i is an offensive word
     for (int i = 0; i < text.length(); ++i) {
-      int length = checkOffensiveWord(text, i, matchType);
+      int length = checkOffensiveWord(text, i);
       if (length > 0 && hasWordBoundary(text, i, length)) {
         Position position = new Position(i, length);
         offensiveWordsPosition.add(position);
@@ -255,22 +242,19 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * Checks whether the prefix of the string starting at beginIndex is an offensive word.
+   * Gets the length of the longest offensive word the string starting at beginIndex begins with.
    *
    * @param text - the text to filter
    * @param beginIndex - the start position of this check
-   * @param matchType the match mode, 1 for minimum match, 2 for maximum match
    * @return the length of the offensive word if one exists, or 0 if none exists
    */
   @SuppressWarnings("rawtypes")
-  private int checkOffensiveWord(String text, int beginIndex, int matchType) {
+  private int checkOffensiveWord(String text, int beginIndex) {
     /*
      * matchedLength is the length of the longest offensive word matched so far.
      * matchingLength is the length of the offensive word currently being matched.
-     * When a terminal symbol is matched, matchingLength is assigned to matchedLength.
-     * For a maximum match, matching continues to check whether the currently matched offensive word
-     * is part of a longer offensive word; if the match fails at this point, it falls back to
-     * matchedLength and ends the match.
+     * When a terminal symbol is matched, matchingLength is assigned to matchedLength, and matching
+     * continues in case a longer offensive word starts with it.
      */
     int matchedLength = 0;
     int matchingLength = 0;
@@ -288,10 +272,6 @@ public class OffensiveWordFilter {
         ++matchingLength;
         if ("1".equals(nowMap.get(IS_END))) { // Matched a terminal symbol; update the current max matched length
           matchedLength = matchingLength;
-          if (OffensiveWordFilter.MIN_MATCH_TYPE == matchType) {
-            // For the minimum match rule, end the match as soon as a terminal symbol is matched
-            break;
-          }
         }
       } else { // If the follow set of the current character is empty, the match ends
         break;
@@ -382,22 +362,12 @@ public class OffensiveWordFilter {
 
   /**
    * The HashMap (DFA model) that stores the offensive words. Marked {@code volatile} because {@link
-   * #reload()} replaces it wholesale while request threads read it through {@link #filter(String)}.
+   * #reload()} replaces it wholesale while request threads read it through {@link #censor(String)}.
    */
   private volatile HashMap<?, ?> offensiveWordMap;
 
   /** The flag in the HashMap indicating whether an offensive word terminates. */
   private static final String IS_END = "isEnd";
-
-  /**
-   * minMatchType: the minimum match rule (1). Once the terminal symbol of an offensive word is
-   * found, it no longer continues to look for whether it is contained in a longer offensive word.
-   * maxMatchType: the maximum match rule (2). Once the terminal symbol of an offensive word is
-   * found, it still continues to look for whether it is contained in a longer offensive word.
-   */
-  public static final int MIN_MATCH_TYPE = 1;
-
-  public static final int MAX_MATCH_TYPE = 2;
 
   /** The name of the system option that toggles automatic censoring of offensive words. */
   private static final String OPTION_AUTO_CENSOR = "autoCensorOffensiveWords";

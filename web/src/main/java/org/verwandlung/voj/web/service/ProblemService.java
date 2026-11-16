@@ -472,27 +472,6 @@ public class ProblemService {
   }
 
   /**
-   * [For administrators only] Gets the total number of all problem checkpoints in the system
-   * (including private problems).
-   *
-   * @return the total number of all problem checkpoints in the system
-   */
-  public long getNumberOfCheckpoints() {
-    return checkpointMapper.getNumberOfCheckpoints();
-  }
-
-  /**
-   * [For administrators only] Gets the test data set of a problem.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @return the test data list of the problem
-   */
-  public List<Checkpoint> getCheckpointsUsingProblemId(long problemId) {
-    List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
-    return checkpoints;
-  }
-
-  /**
    * [For administrators only] Gets lightweight metadata (id + byte size) of a problem's checkpoints,
    * without loading the input/output text. Used by the editor's test-data file list.
    *

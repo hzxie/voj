@@ -43,8 +43,7 @@ import org.verwandlung.voj.web.interceptor.CurrentUserRefreshFilter;
 import org.verwandlung.voj.web.service.UserService;
 
 /**
- * The Spring Security configuration. Replaces the home-grown {@code CsrfProtector}, the {@code
- * InterceptorAspect} authorisation aspect and the {@code SessionListener} online-user counter.
+ * The Spring Security configuration.
  *
  * <ul>
  *   <li><b>Authentication</b> is performed programmatically by {@code AccountsController} so that the

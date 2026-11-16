@@ -195,20 +195,6 @@ public class ProblemServiceTest {
     Assertions.assertEquals(2, tags.get(1001L).size());
   }
 
-  /** Test case: tests the getNumberOfCheckpoints() method. Test data: N/a. Expected: the number of all checkpoints. */
-  @Test
-  public void testGetNumberOfCheckpoints() {
-    Assertions.assertEquals(20, problemService.getNumberOfCheckpoints());
-  }
-
-  /** Test case: tests the getCheckpointsUsingProblemId(long) method. Test data: problem 1000 and problem 1002. Expected: the corresponding checkpoint lists. */
-  @Test
-  public void testGetCheckpointsUsingProblemId() {
-    List<Checkpoint> checkpoints = problemService.getCheckpointsUsingProblemId(1000);
-    Assertions.assertEquals(10, checkpoints.size());
-    Assertions.assertTrue(problemService.getCheckpointsUsingProblemId(1002).isEmpty());
-  }
-
   /** Test case: tests the createProblem(...) method. Test data: valid problem data. Expected: creation succeeds and the problem identifier is returned. */
   @Test
   public void testCreateProblemSuccessfully() {

@@ -331,15 +331,6 @@ public class AdministrationController {
   }
 
   /**
-   * Gets the total number of checkpoints of all problems (including private problems).
-   *
-   * @return the total number of checkpoints of all problems
-   */
-  private long getNumberOfCheckpoints() {
-    return problemService.getNumberOfCheckpoints();
-  }
-
-  /**
    * Gets the number of submissions today.
    *
    * @return the number of submissions today
@@ -647,7 +638,6 @@ public class AdministrationController {
   public ModelAndView newUserView(HttpServletRequest request, HttpServletResponse response) {
     List<UserGroup> userGroups = userService.getUserGroups();
     List<Language> languages = languageService.getAllLanguages();
-    // The create flow reuses the user editor template in "create" mode.
     ModelAndView view = new ModelAndView("pages/administration/edit-user");
     view.addObject("isCreate", true);
     view.addObject("userGroups", userGroups);
@@ -680,7 +670,14 @@ public class AdministrationController {
       HttpServletRequest request) {
     Map<String, Boolean> result =
         userService.createUser(
-            username, password, email, userGroupSlug, preferLanguageSlug, displayName, aboutMe);
+            username,
+            password,
+            email,
+            userGroupSlug,
+            preferLanguageSlug,
+            displayName,
+            aboutMe,
+            true);
 
     if (result.get("isSuccessful")) {
       String ipAddress = HttpRequestParser.getRemoteAddr(request);

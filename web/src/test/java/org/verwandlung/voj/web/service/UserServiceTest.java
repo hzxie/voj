@@ -200,23 +200,23 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (6-argument) method. Test data: valid registration information. Expected: creation succeeds. */
+  /** Test case: tests the createUser(...) method. Test data: valid registration information. Expected: creation succeeds. */
   @Test
   public void testCreateUserSuccessfully() {
     Map<String, Boolean> result =
         userService.createUser(
-            "newuser01", "password", "newuser01@example.com", "users", "text/x-java", true);
+            "newuser01", "password", "newuser01@example.com", "users", "text/x-java", "", "", true);
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("newuser01"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: valid info plus a display name and bio. Expected: creation succeeds and both extras persist as user meta. */
+  /** Test case: tests the createUser(...) method. Test data: valid info plus a display name and bio. Expected: creation succeeds and both extras persist as user meta. */
   @Test
   public void testCreateUserWithDisplayNameAndBio() {
     Map<String, Boolean> result =
         userService.createUser(
             "newuser02", "password", "newuser02@example.com", "users", "text/x-java",
-            "Display Name", "Hello world");
+            "Display Name", "Hello world", true);
     Assertions.assertTrue(result.get("isSuccessful"));
     User user = userService.getUserUsingUsernameOrEmail("newuser02");
     Assertions.assertNotNull(user);
@@ -225,53 +225,44 @@ public class UserServiceTest {
     Assertions.assertEquals("Hello world", meta.get("aboutMe"));
   }
 
-  /** Test case: tests the createUser (6-argument) method. Test data: the username already exists. Expected: creation fails. */
+  /** Test case: tests the createUser(...) method. Test data: the username already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingUsername() {
     Map<String, Boolean> result =
         userService.createUser(
-            "zjhzxhz", "password", "unique@example.com", "users", "text/x-java", true);
+            "zjhzxhz", "password", "unique@example.com", "users", "text/x-java", "", "", true);
     Assertions.assertTrue(result.get("isUsernameExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (6-argument) method. Test data: an illegal username. Expected: creation fails. */
+  /** Test case: tests the createUser(...) method. Test data: an illegal username. Expected: creation fails. */
   @Test
   public void testCreateUserWithIllegalUsername() {
     Map<String, Boolean> result =
         userService.createUser(
-            "ab1", "password", "unique@example.com", "users", "text/x-java", true);
+            "ab1", "password", "unique@example.com", "users", "text/x-java", "", "", true);
     Assertions.assertFalse(result.get("isUsernameLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (6-argument) method. Test data: the email already exists. Expected: creation fails. */
+  /** Test case: tests the createUser(...) method. Test data: the email already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingEmail() {
     Map<String, Boolean> result =
         userService.createUser(
-            "uniqueuser", "password", "cshzxie@gmail.com", "users", "text/x-java", true);
+            "uniqueuser", "password", "cshzxie@gmail.com", "users", "text/x-java", "", "", true);
     Assertions.assertTrue(result.get("isEmailExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (6-argument) method. Test data: the system does not allow registration. Expected: creation fails. */
+  /** Test case: tests the createUser(...) method. Test data: the system does not allow registration. Expected: creation fails. */
   @Test
   public void testCreateUserWhenRegisterDisallowed() {
     Map<String, Boolean> result =
         userService.createUser(
-            "newuser02", "password", "newuser02@example.com", "users", "text/x-java", false);
+            "newuser02", "password", "newuser02@example.com", "users", "text/x-java", "", "", false);
     Assertions.assertFalse(result.get("isAllowRegister"));
     Assertions.assertFalse(result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the createUser (5-argument, administrator) method. Test data: valid information. Expected: creation succeeds. */
-  @Test
-  public void testCreateUserByAdministrator() {
-    Map<String, Boolean> result =
-        userService.createUser(
-            "adminmade1", "password", "adminmade1@example.com", "users", "text/x-java");
-    Assertions.assertTrue(result.get("isSuccessful"));
   }
 
   /** Test case: tests the isAllowedToAccess(User) method. Test data: an administrator, a judger, a banned user and null. Expected: only users and administrators may access. */
@@ -283,14 +274,6 @@ public class UserServiceTest {
     userService.banUser(1000);
     Assertions.assertFalse(userService.isAllowedToAccess(userService.getUserUsingUid(1000)));
     Assertions.assertFalse(userService.isAllowedToAccess(null));
-  }
-
-  /** Test case: tests the changePreferLanguage(...) method. Test data: a legal / illegal language slug. Expected: success or failure accordingly. */
-  @Test
-  public void testChangePreferLanguage() {
-    User user = userService.getUserUsingUid(1000);
-    Assertions.assertTrue(userService.changePreferLanguage(user, "text/x-java").get("isSuccessful"));
-    Assertions.assertFalse(userService.changePreferLanguage(user, "no-lang").get("isSuccessful"));
   }
 
   /** Test case: tests the changePassword(...) method. Test data: the correct old password and a valid new password. Expected: the change succeeds. */
@@ -305,10 +288,10 @@ public class UserServiceTest {
   /**
    * Test case: the account operations of a user write only what they change. Test data: user 1002
    * loaded at the start of a request; meanwhile an administrator bans the user and another session
-   * changes the password; then the request changes the preferred language, the profile (with a new
-   * email address) and the password with the stale object. Expected: the ban stays, the language,
-   * email and password are those the request set, and the password change of the other session is
-   * overwritten only by the password change (not by the language or profile change).
+   * changes the password; then the request changes the profile (with a new email address) and the
+   * password with the stale object. Expected: the ban stays, the email and password are those the
+   * request set, and the password change of the other session is overwritten only by the password
+   * change (not by the profile change).
    */
   @Test
   public void testAccountOperationsDoNotRevertConcurrentChanges() {
@@ -317,13 +300,11 @@ public class UserServiceTest {
     String otherSessionPassword = "{bcrypt}changed-by-another-session";
     userMapper.updatePassword(1002, otherSessionPassword);
 
-    userService.changePreferLanguage(staleUser, "text/x-java");
     userService.updateProfile(
         staleUser, PLAINTEXT_PASSWORD, "changed-1002@example.com", "", "", "", "{}", "");
     User storedUser = userService.getUserUsingUid(1002);
     Assertions.assertEquals("forbidden", storedUser.getUserGroup().getUserGroupSlug());
     Assertions.assertEquals(otherSessionPassword, storedUser.getPassword());
-    Assertions.assertEquals("text/x-java", storedUser.getPreferLanguage().getLanguageSlug());
     Assertions.assertEquals("changed-1002@example.com", storedUser.getEmail());
 
     Assertions.assertTrue(
@@ -576,7 +557,7 @@ public class UserServiceTest {
 
     Map<String, Boolean> creation =
         userService.createUser(
-            "plusmail01", "password", "alice+oj@example.com", "users", "text/x-java", true);
+            "plusmail01", "password", "alice+oj@example.com", "users", "text/x-java", "", "", true);
     Assertions.assertTrue(creation.get("isEmailLegal"));
     Assertions.assertTrue(creation.get("isSuccessful"));
   }

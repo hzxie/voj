@@ -58,16 +58,6 @@ public class LanguageService {
   }
 
   /**
-   * Gets a programming language object by its alias.
-   *
-   * @param languageSlug - the alias of the programming language
-   * @return the programming language object
-   */
-  public Language getLanguageUsingSlug(String languageSlug) {
-    return languageMapper.getLanguageUsingSlug(languageSlug);
-  }
-
-  /**
    * Updates the programming language options.
    *
    * @param languages - the array containing the programming language settings

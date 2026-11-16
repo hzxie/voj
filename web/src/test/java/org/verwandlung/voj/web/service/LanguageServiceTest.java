@@ -28,6 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.util.JsonUtils;
 
@@ -47,7 +48,7 @@ public class LanguageServiceTest {
     // The seeded roster changes over time, so assert the seeded languages are returned rather than
     // a hard-coded count.
     Assertions.assertFalse(languages.isEmpty());
-    Assertions.assertNotNull(languageService.getLanguageUsingSlug("text/x-csrc"));
+    Assertions.assertNotNull(languageMapper.getLanguageUsingSlug("text/x-csrc"));
   }
 
   /** Test case: tests the getEnabledLanguages() method. Test data: Java is disabled. Expected: Java is left out of the enabled languages but still listed by getAllLanguages(). */
@@ -64,20 +65,6 @@ public class LanguageServiceTest {
     Assertions.assertTrue(
         languageService.getAllLanguages().stream()
             .anyMatch(l -> "text/x-java".equals(l.getLanguageSlug())));
-  }
-
-  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: an existing language slug. Expected: the corresponding programming language object. */
-  @Test
-  public void testGetLanguageUsingSlugExists() {
-    Language language = languageService.getLanguageUsingSlug("text/x-java");
-    Assertions.assertNotNull(language);
-    Assertions.assertEquals("Java", language.getLanguageName());
-  }
-
-  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: a non-existing language slug. Expected: a null reference. */
-  @Test
-  public void testGetLanguageUsingSlugNotExists() {
-    Assertions.assertNull(languageService.getLanguageUsingSlug("text/x-not-exist"));
   }
 
   /** Test case: tests the updateLanguageSettings(List) method. Test data: add a valid language on top of the existing ones. Expected: the update succeeds and the total number of languages increases by one. */
@@ -117,7 +104,7 @@ public class LanguageServiceTest {
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
 
-    Language created = languageService.getLanguageUsingSlug("text/x-haskell");
+    Language created = languageMapper.getLanguageUsingSlug("text/x-haskell");
     Assertions.assertNotNull(created);
     Assertions.assertEquals("ghc -o {filename}.exe {filename}.hs", created.getCompileCommand());
     Assertions.assertEquals("{filename}.exe", created.getRunCommand());
@@ -174,7 +161,7 @@ public class LanguageServiceTest {
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageUpdated")).size());
-    Assertions.assertEquals("C11", languageService.getLanguageUsingSlug("text/x-csrc").getLanguageName());
+    Assertions.assertEquals("C11", languageMapper.getLanguageUsingSlug("text/x-csrc").getLanguageName());
   }
 
   /** Test case: tests the updateLanguageSettings(List) method. Test data: delete a language that is not in use. Expected: the update succeeds and the total number of languages decreases by one. */
@@ -227,6 +214,9 @@ public class LanguageServiceTest {
 
   /** The LanguageService object under test. */
   @Autowired private LanguageService languageService;
+
+  /** The LanguageMapper object, used to read back the stored languages. */
+  @Autowired private LanguageMapper languageMapper;
 
   /** The DataSource of the test database, used to toggle a language's enabled flag. */
   @org.springframework.beans.factory.annotation.Autowired private javax.sql.DataSource dataSource;

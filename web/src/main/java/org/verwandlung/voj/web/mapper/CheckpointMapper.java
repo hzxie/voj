@@ -30,13 +30,6 @@ import org.verwandlung.voj.web.model.Checkpoint;
  */
 public interface CheckpointMapper {
   /**
-   * [For administrators only] Gets the total number of problem checkpoints in the system.
-   *
-   * @return the total number of problem checkpoints in the system
-   */
-  long getNumberOfCheckpoints();
-
-  /**
    * Gets all checkpoints of a problem.
    *
    * @param problemId - the unique identifier of the problem
