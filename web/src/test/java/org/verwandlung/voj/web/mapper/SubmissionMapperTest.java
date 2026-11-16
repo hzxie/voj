@@ -277,12 +277,12 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 10
+   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean) method. Test data: get 10
    * submissions with IDs starting from 1010 (ID From 1010 to 1000). Expected: the submission list.
    */
   @Test
   public void testGetSubmissionsFrom1010WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1010, 10);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1010, 10, false);
     Assertions.assertEquals(5, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -291,12 +291,12 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 2
+   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean) method. Test data: get 2
    * submissions with IDs starting from 1003. Expected: the submission list (2 submissions).
    */
   @Test
   public void testGetSubmissionsFrom1003WithLimit2() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1003, 2);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1003, 2, false);
     Assertions.assertEquals(2, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -305,12 +305,12 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 10
+   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean) method. Test data: get 10
    * submissions with IDs starting from 100 (ID From 100 to 90). Expected: an empty submission list.
    */
   @Test
   public void testGetSubmissionsFrom100WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 100, 10);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 100, 10, false);
     Assertions.assertEquals(0, submissions.size());
   }
 

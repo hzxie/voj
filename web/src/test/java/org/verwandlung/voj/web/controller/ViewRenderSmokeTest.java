@@ -430,7 +430,26 @@ class ViewRenderSmokeTest {
   /** The problem editorial (solution) page reuses the discussion-thread template. */
   @Test
   void problemSolutionViewRenders() throws Exception {
+    when(problemService.getProblem(1000L)).thenReturn(aPublishedProblem(1000L));
     when(discussionService.getSolutionThreadOfProblem(1000L)).thenReturn(aThread(5000L));
+    when(discussionService.isDiscussionThreadViewable(any(), any())).thenReturn(true);
+    mockMvc.perform(getWithCsrf("/p/1000/solution")).andExpect(status().isOk());
+  }
+
+  /** The solution page of an unpublished problem is not found for non-administrators. */
+  @Test
+  void draftProblemSolutionIsHiddenFromNonAdministrators() throws Exception {
+    Problem draftProblem = aPublishedProblem(1000L);
+    draftProblem.setStatus("DRAFT");
+    when(problemService.getProblem(1000L)).thenReturn(draftProblem);
+    when(discussionService.getSolutionThreadOfProblem(1000L)).thenReturn(aThread(5000L));
+    when(discussionService.isDiscussionThreadViewable(any(), any())).thenReturn(true);
+    mockMvc.perform(getWithCsrf("/p/1000/solution")).andExpect(status().isNotFound());
+
+    authenticateUser();
+    mockMvc.perform(getWithCsrf("/p/1000/solution")).andExpect(status().isNotFound());
+
+    authenticateAdmin();
     mockMvc.perform(getWithCsrf("/p/1000/solution")).andExpect(status().isOk());
   }
 
@@ -475,6 +494,7 @@ class ViewRenderSmokeTest {
   @Test
   void discussionThreadViewRenders() throws Exception {
     when(discussionService.getDiscussionThreadForDisplay(5000L)).thenReturn(aThread(5000L));
+    when(discussionService.isDiscussionThreadViewable(any(), any())).thenReturn(true);
     mockMvc.perform(getWithCsrf("/discussion/5000")).andExpect(status().isOk());
   }
 
@@ -542,6 +562,24 @@ class ViewRenderSmokeTest {
   @Test
   void submissionViewRenders() throws Exception {
     when(submissionService.getSubmission(7000L)).thenReturn(aSubmission(7000L));
+    mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isOk());
+  }
+
+  /**
+   * A submission to an unpublished problem is not found for non-administrators (even its owner), so
+   * the page does not reveal the problem's name, but still renders for administrators.
+   */
+  @Test
+  void submissionToDraftProblemIsHiddenFromNonAdministrators() throws Exception {
+    Submission submission = aSubmission(7000L);
+    submission.getProblem().setStatus("DRAFT");
+    when(submissionService.getSubmission(7000L)).thenReturn(submission);
+    mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isNotFound());
+
+    authenticateUser();
+    mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isNotFound());
+
+    authenticateAdmin();
     mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isOk());
   }
 

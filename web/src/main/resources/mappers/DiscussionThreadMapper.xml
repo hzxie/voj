@@ -61,6 +61,14 @@
 			</if>
 			<if test="visibleOnly">
 				AND discussion_thread_visible = 1
+				AND (
+					dt.problem_id IS NULL
+					OR dt.problem_id IN (
+						SELECT p.problem_id
+						FROM voj_problems p
+						WHERE p.problem_status = 'PUBLISHED'
+					)
+				)
 			</if>
 			<if test="reportHideThreshold > 0">
 				AND (

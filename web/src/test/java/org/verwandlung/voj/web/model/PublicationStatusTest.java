@@ -58,4 +58,29 @@ public class PublicationStatusTest {
     Assertions.assertFalse(PublicationStatus.isPublic("HIDDEN"));
     Assertions.assertFalse(PublicationStatus.isPublic(null));
   }
+
+  /** Test case: tests isVisibleTo(String, User). Test data: published content and anonymous / regular viewers. Expected: visible to everyone. */
+  @Test
+  public void testIsVisibleToForPublished() {
+    Assertions.assertTrue(PublicationStatus.isVisibleTo("PUBLISHED", null));
+    Assertions.assertTrue(PublicationStatus.isVisibleTo("PUBLISHED", userInGroup("users")));
+  }
+
+  /** Test case: tests isVisibleTo(String, User). Test data: unpublished content and every kind of viewer. Expected: visible to administrators only. */
+  @Test
+  public void testIsVisibleToForUnpublished() {
+    for (String status : new String[] {"DRAFT", "HIDDEN"}) {
+      Assertions.assertFalse(PublicationStatus.isVisibleTo(status, null));
+      Assertions.assertFalse(PublicationStatus.isVisibleTo(status, new User()));
+      Assertions.assertFalse(PublicationStatus.isVisibleTo(status, userInGroup("users")));
+      Assertions.assertTrue(PublicationStatus.isVisibleTo(status, userInGroup("administrators")));
+    }
+  }
+
+  /** Builds a user belonging to the user group with the given slug. */
+  private static User userInGroup(String userGroupSlug) {
+    User user = new User();
+    user.setUserGroup(new UserGroup(0, userGroupSlug, userGroupSlug));
+    return user;
+  }
 }

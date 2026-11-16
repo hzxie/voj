@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,6 +39,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -164,6 +166,42 @@ public class DiscussionControllerTest {
     controller.createDiscussionThreadAction("qa", "not-a-number", "Title", "Body", request());
 
     verify(discussionService).createDiscussionThread(user, "qa", -1L, "Title", "Body");
+  }
+
+  /** Test case: tests getDiscussionRepliesAction(...). Test data: a thread the viewer may not view (e.g. hidden, or attached to an unpublished problem). Expected: no replies are returned and none are loaded. */
+  @Test
+  public void testGetDiscussionRepliesOfUnviewableThread() {
+    DiscussionThread thread = new DiscussionThread();
+    when(discussionService.getDiscussionThreadUsingThreadId(5L)).thenReturn(thread);
+    when(discussionService.isDiscussionThreadViewable(eq(thread), nullable(User.class)))
+        .thenReturn(false);
+
+    Map<String, Object> result =
+        controller.getDiscussionRepliesAction(5L, 0L, new MockHttpServletRequest());
+
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+    Assertions.assertNull(result.get("discussionReplies"));
+    verify(discussionService, never())
+        .getDiscussionRepliesOfThread(anyLong(), anyLong(), anyLong(), anyInt(), anyBoolean());
+  }
+
+  /** Test case: tests getDiscussionRepliesAction(...). Test data: a viewable thread. Expected: its replies are returned. */
+  @Test
+  public void testGetDiscussionRepliesOfViewableThread() {
+    DiscussionThread thread = new DiscussionThread();
+    List<DiscussionReply> replies = List.of(new DiscussionReply());
+    when(discussionService.getDiscussionThreadUsingThreadId(5L)).thenReturn(thread);
+    when(discussionService.isDiscussionThreadViewable(eq(thread), nullable(User.class)))
+        .thenReturn(true);
+    when(discussionService.getDiscussionRepliesOfThread(
+            eq(5L), anyLong(), eq(0L), anyInt(), eq(true)))
+        .thenReturn(replies);
+
+    Map<String, Object> result =
+        controller.getDiscussionRepliesAction(5L, 0L, new MockHttpServletRequest());
+
+    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
+    Assertions.assertSame(replies, result.get("discussionReplies"));
   }
 
   /** Stubs createDiscussionThread for any arguments to return a successful result. */

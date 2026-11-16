@@ -351,6 +351,25 @@ public class DiscussionService {
   }
 
   /**
+   * Checks whether a user may view a discussion thread. Administrators may view every thread; for
+   * everyone else a thread is treated as not found when an administrator hid it, when it has
+   * collected enough reports to be hidden, or when it is attached to an unpublished problem.
+   *
+   * @param thread - the discussion thread to check
+   * @param user - the user viewing the thread (may be null for anonymous visitors)
+   * @return whether the user may view the discussion thread
+   */
+  public boolean isDiscussionThreadViewable(DiscussionThread thread, User user) {
+    if (PublicationStatus.isAdministrator(user)) {
+      return true;
+    }
+    Problem problem = thread.getProblem();
+    return thread.isVisible()
+        && !isDiscussionThreadHidden(thread.getDiscussionThreadId())
+        && (problem == null || problem.isPublic());
+  }
+
+  /**
    * Gets a discussion reply object by its unique identifier.
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
@@ -781,13 +800,16 @@ public class DiscussionService {
         (Map<String, Object>) getDiscussionThreadCreationResult(dt, discussionThreadContent);
 
     // The related problem is optional: a non-positive id means "no problem linked". When an id
-    // is supplied it must resolve to an existing problem, otherwise the thread is rejected rather
-    // than silently created with no problem attached.
+    // is supplied it must resolve to a problem the creator may view, otherwise the thread is
+    // rejected rather than silently created with no problem attached. An unpublished problem is
+    // reported as missing so the endpoint does not reveal which unpublished problem ids exist.
     Problem relatedProblem = null;
     boolean isRelatedProblemExists = true;
     if (relatedProblemId > 0) {
       relatedProblem = problemMapper.getProblem(relatedProblemId);
-      isRelatedProblemExists = relatedProblem != null;
+      isRelatedProblemExists =
+          relatedProblem != null
+              && PublicationStatus.isVisibleTo(relatedProblem.getStatus(), threadCreator);
     }
     result.put("isRelatedProblemExists", isRelatedProblemExists);
 

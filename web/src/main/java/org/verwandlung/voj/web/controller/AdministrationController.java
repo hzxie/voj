@@ -573,7 +573,8 @@ public class AdministrationController {
     Long userRank = userRanks.get(userId);
     Map<String, Long> submissionStats = submissionService.getSubmissionStatsOfUser(userId);
     List<Submission> recentSubmissions =
-        submissionService.getLatestSubmissions(0, user.getUsername(), 0, NUMBER_OF_RECENT_SUBMISSIONS);
+        submissionService.getLatestSubmissions(
+            0, user.getUsername(), 0, NUMBER_OF_RECENT_SUBMISSIONS, false);
     boolean isBanned = "forbidden".equals(user.getUserGroup().getUserGroupSlug());
     Date joinedDate = userService.getRegisterTimes(Collections.singletonList(userId)).get(userId);
 

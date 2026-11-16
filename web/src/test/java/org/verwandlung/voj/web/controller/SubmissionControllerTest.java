@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -35,6 +36,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -75,7 +77,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetSubmissionsActionNonEmpty() {
     List<Submission> submissions = List.of(new Submission());
-    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100)))
+    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100), eq(true)))
         .thenReturn(submissions);
 
     Map<String, Object> result =
@@ -88,7 +90,7 @@ public class SubmissionControllerTest {
   /** Test case: tests getSubmissionsAction(...). Test data: an empty submission list. Expected: isSuccessful is false. */
   @Test
   public void testGetSubmissionsActionEmpty() {
-    when(submissionService.getSubmissions(anyLong(), anyString(), anyLong(), anyInt()))
+    when(submissionService.getSubmissions(anyLong(), anyString(), anyLong(), anyInt(), anyBoolean()))
         .thenReturn(List.of());
 
     Map<String, Object> result =
@@ -101,7 +103,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetLatestSubmissionsActionNonEmpty() {
     List<Submission> submissions = List.of(new Submission());
-    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100)))
+    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100), eq(true)))
         .thenReturn(submissions);
 
     Map<String, Object> result =
@@ -115,7 +117,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetSubmissionsActionStripsCodeForOtherViewer() {
     Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100)))
+    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100), eq(true)))
         .thenReturn(List.of(submission));
 
     Map<String, Object> result =
@@ -130,7 +132,7 @@ public class SubmissionControllerTest {
   public void testGetSubmissionsActionKeepsCodeForOwner() {
     User owner = ownerUser();
     Submission submission = submissionWithCode(owner, "my code");
-    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100)))
+    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100), eq(true)))
         .thenReturn(List.of(submission));
     authenticate(owner);
 
@@ -143,7 +145,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetLatestSubmissionsActionStripsCodeForOtherViewer() {
     Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100)))
+    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100), eq(true)))
         .thenReturn(List.of(submission));
 
     controller.getLatestSubmissionsAction(1000L, "", 5L, new MockHttpServletRequest());
@@ -209,6 +211,56 @@ public class SubmissionControllerTest {
     Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
 
     Assertions.assertEquals("my code", ((Submission) result.get("submission")).getCode());
+  }
+
+  /** Test case: tests getSubmissionAction(...). Test data: the owner viewing their own submission to a draft problem. Expected: the submission is treated as not found, so the problem's name is not exposed. */
+  @Test
+  public void testGetSubmissionActionHidesSubmissionToUnpublishedProblem() {
+    User owner = ownerUser();
+    Submission submission = submissionWithCode(owner, "my code");
+    submission.setProblem(problemWithStatus("DRAFT"));
+    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    authenticate(owner);
+
+    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
+
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+    Assertions.assertNull(result.get("submission"));
+  }
+
+  /** Test case: tests getSubmissionAction(...). Test data: an administrator viewing a submission to a draft problem. Expected: the submission is returned. */
+  @Test
+  public void testGetSubmissionActionShowsSubmissionToUnpublishedProblemForAdministrator() {
+    Submission submission = submissionWithCode(ownerUser(), "secret code");
+    submission.setProblem(problemWithStatus("DRAFT"));
+    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    authenticate(administratorUser());
+
+    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
+
+    Assertions.assertSame(submission, result.get("submission"));
+  }
+
+  /** Test case: tests getSubmissionsAction(...). Test data: an administrator browsing the list. Expected: submissions to unpublished problems are included. */
+  @Test
+  public void testGetSubmissionsActionIncludesUnpublishedProblemsForAdministrator() {
+    List<Submission> submissions = List.of(new Submission());
+    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100), eq(false)))
+        .thenReturn(submissions);
+    authenticate(administratorUser());
+
+    Map<String, Object> result =
+        controller.getSubmissionsAction(0L, "", 0L, new MockHttpServletRequest());
+
+    Assertions.assertSame(submissions, result.get("submissions"));
+  }
+
+  /** Builds a problem with the given publication status. */
+  private static Problem problemWithStatus(String status) {
+    Problem problem = new Problem();
+    problem.setProblemId(1000);
+    problem.setStatus(status);
+    return problem;
   }
 
   /** Builds the submission owner (uid 1000, group "users"). */

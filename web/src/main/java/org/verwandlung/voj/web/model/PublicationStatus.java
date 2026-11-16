@@ -56,6 +56,30 @@ public final class PublicationStatus {
     return PUBLISHED.equals(status);
   }
 
+  /**
+   * Tests whether content with the given status is visible to a user: published content is visible
+   * to everyone, while unpublished (draft / hidden) content is visible to administrators only.
+   *
+   * @param status - the status string of the content
+   * @param user - the user viewing the content (may be null for anonymous visitors)
+   * @return {@code true} if the user may see the content
+   */
+  public static boolean isVisibleTo(String status, User user) {
+    return isPublic(status) || isAdministrator(user);
+  }
+
+  /**
+   * Tests whether a user belongs to the administrators user group.
+   *
+   * @param user - the user to test (may be null)
+   * @return {@code true} if the user is an administrator
+   */
+  public static boolean isAdministrator(User user) {
+    return user != null
+        && user.getUserGroup() != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
+  }
+
   /** Utility class: no instances. */
   private PublicationStatus() {}
 }

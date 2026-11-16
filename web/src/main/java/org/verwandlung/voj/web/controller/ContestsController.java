@@ -345,11 +345,7 @@ public class ContestsController {
     if (contest == null) {
       throw new ResourceNotFoundException();
     }
-    boolean isAdministrator =
-        currentUser != null
-            && currentUser.getUserGroup() != null
-            && "administrators".equals(currentUser.getUserGroup().getUserGroupSlug());
-    if (!PublicationStatus.isPublic(contest.getStatus()) && !isAdministrator) {
+    if (!PublicationStatus.isVisibleTo(contest.getStatus(), currentUser)) {
       throw new ResourceNotFoundException();
     }
     return contest;

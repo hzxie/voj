@@ -38,6 +38,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.OptionService;
@@ -69,9 +71,14 @@ public class SubmissionController {
       HttpServletResponse response) {
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
-        submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
-    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
+        submissionService.getSubmissions(
+            problemId,
+            username,
+            NUMBER_OF_SUBMISSION_PER_PAGE,
+            !PublicationStatus.isAdministrator(currentUser));
+    redactSubmissions(submissions, currentUser);
     return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
 
@@ -94,10 +101,15 @@ public class SubmissionController {
 
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
         submissionService.getSubmissions(
-            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
-    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
+            problemId,
+            username,
+            startIndex,
+            NUMBER_OF_SUBMISSION_PER_PAGE,
+            !PublicationStatus.isAdministrator(currentUser));
+    redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -123,10 +135,15 @@ public class SubmissionController {
 
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
-            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
-    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
+            problemId,
+            username,
+            startIndex,
+            NUMBER_OF_SUBMISSION_PER_PAGE,
+            !PublicationStatus.isAdministrator(currentUser));
+    redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -147,10 +164,10 @@ public class SubmissionController {
       HttpServletRequest request,
       HttpServletResponse response) {
     Submission submission = submissionService.getSubmission(submissionId);
-    if (submission == null) {
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    if (submission == null || !isSubmissionVisible(submission, currentUser)) {
       throw new ResourceNotFoundException();
     }
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     boolean canViewCode = canViewSourceCode(submission, currentUser);
     // The page template already gates the source code behind canViewCode (only its length stays
     // public), so the code itself is left in place here; only the compiler-error log, which echoes
@@ -220,8 +237,21 @@ public class SubmissionController {
     if (currentUser.equals(submission.getUser())) {
       return true;
     }
-    return currentUser.getUserGroup() != null
-        && "administrators".equals(currentUser.getUserGroup().getUserGroupSlug());
+    return PublicationStatus.isAdministrator(currentUser);
+  }
+
+  /**
+   * Determines whether the given viewer is allowed to see a submission at all. A submission to an
+   * unpublished (draft / hidden) problem is visible to administrators only, so that neither the
+   * submission nor the problem it names is exposed through the submission pages.
+   *
+   * @param submission - the submission record
+   * @param currentUser - the currently logged-in user, or null
+   * @return whether the viewer may see the submission
+   */
+  private boolean isSubmissionVisible(Submission submission, User currentUser) {
+    Problem problem = submission.getProblem();
+    return problem == null || PublicationStatus.isVisibleTo(problem.getStatus(), currentUser);
   }
 
   /**
@@ -245,6 +275,7 @@ public class SubmissionController {
     // submissions are enabled, everyone else. Without this, the administration console's
     // edit-submission page could never subscribe to another user's pending submission.
     if (submission == null
+        || !isSubmissionVisible(submission, currentUser)
         || !canViewSourceCode(submission, currentUser)
         || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
       throw new ResourceNotFoundException();
@@ -269,9 +300,12 @@ public class SubmissionController {
       @RequestParam(value = "submissionId") long submissionId, HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     Submission submission = submissionService.getSubmission(submissionId);
+    if (submission != null && !isSubmissionVisible(submission, currentUser)) {
+      submission = null;
+    }
     if (submission != null) {
-      User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
       boolean canViewCode = canViewSourceCode(submission, currentUser);
       if (!canViewCode) {
         submission.setCode(null);

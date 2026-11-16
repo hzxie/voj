@@ -36,7 +36,8 @@ public interface DiscussionThreadMapper {
    * @param limit - the number of threads to fetch
    * @param reportHideThreshold - threads whose total report count reaches this value are hidden; a
    *     value of {@code 0} or below disables hiding
-   * @param visibleOnly - when {@code true}, threads hidden by an administrator are excluded
+   * @param visibleOnly - when {@code true}, threads hidden by an administrator and threads attached
+   *     to an unpublished problem are excluded
    * @return a list containing discussion thread objects
    */
   List<DiscussionThread> getDiscussionThreads(

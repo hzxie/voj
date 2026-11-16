@@ -414,6 +414,55 @@ public class DiscussionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
+  /** Test case: tests the createDiscussionThread(...) method. Test data: a regular user relating the thread to the hidden problem 1002. Expected: the problem is reported as missing and creation fails. */
+  @Test
+  public void testCreateDiscussionThreadWithUnpublishedProblemByUser() {
+    Map<String, Object> result =
+        discussionService.createDiscussionThread(
+            userMapper.getUserUsingUid(1002), "qa", 1002, "Title", "Content");
+    Assertions.assertFalse((Boolean) result.get("isRelatedProblemExists"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the createDiscussionThread(...) method. Test data: an administrator relating the thread to the hidden problem 1002. Expected: creation succeeds. */
+  @Test
+  public void testCreateDiscussionThreadWithUnpublishedProblemByAdministrator() {
+    Map<String, Object> result =
+        discussionService.createDiscussionThread(adminUser(), "qa", 1002, "Title", "Content");
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the getDiscussionThreadsOfProblem(...) and isDiscussionThreadViewable(...) methods. Test data: a thread related to the hidden problem 1002. Expected: it is left out of the public lists and is viewable by administrators only. */
+  @Test
+  public void testDiscussionThreadOfUnpublishedProblemIsHidden() {
+    long threadId =
+        (Long)
+            discussionService
+                .createDiscussionThread(adminUser(), "qa", 1002, "Title", "Content")
+                .get("discussionThreadId");
+    DiscussionThread thread = discussionService.getDiscussionThreadUsingThreadId(threadId);
+
+    Assertions.assertTrue(discussionService.getDiscussionThreadsOfProblem(1002, 0, 10).isEmpty());
+    Assertions.assertTrue(
+        discussionService.getDiscussionThreadsOfTopic("", 0, 100).stream()
+            .noneMatch(t -> t.getDiscussionThreadId() == threadId));
+    Assertions.assertFalse(discussionService.isDiscussionThreadViewable(thread, null));
+    Assertions.assertFalse(
+        discussionService.isDiscussionThreadViewable(thread, userMapper.getUserUsingUid(1002)));
+    Assertions.assertTrue(discussionService.isDiscussionThreadViewable(thread, adminUser()));
+  }
+
+  /** Test case: tests the isDiscussionThreadViewable(...) method. Test data: a visible thread of the published problem 1000, then the same thread hidden by an administrator. Expected: viewable by everyone until hidden, then by administrators only. */
+  @Test
+  public void testIsDiscussionThreadViewableForPublishedProblem() {
+    DiscussionThread thread = discussionService.getDiscussionThreadUsingThreadId(1);
+    Assertions.assertTrue(discussionService.isDiscussionThreadViewable(thread, null));
+
+    thread.setVisible(false);
+    Assertions.assertFalse(discussionService.isDiscussionThreadViewable(thread, null));
+    Assertions.assertTrue(discussionService.isDiscussionThreadViewable(thread, adminUser()));
+  }
+
   /** Test case: tests the editDiscussionThread(...) method. Test data: edited by the thread creator. Expected: editing succeeds. */
   @Test
   public void testEditDiscussionThreadSuccessfully() {

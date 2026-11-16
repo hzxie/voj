@@ -201,23 +201,7 @@ public class ProblemsController {
       HttpServletResponse response) {
     HttpSession session = request.getSession();
     boolean isLoggedIn = isLoggedIn(session);
-    Problem problem = problemService.getProblem(problemId);
-
-    if (problem == null) {
-      throw new ResourceNotFoundException();
-    } else if (!problem.isPublic()) {
-      boolean isAllowToAccess = false;
-
-      if (isLoggedIn) {
-        User currentUser = HttpSessionParser.getCurrentUser(session);
-        if (currentUser.getUserGroup().getUserGroupSlug().equals("administrators")) {
-          isAllowToAccess = true;
-        }
-      }
-      if (!isAllowToAccess) {
-        throw new ResourceNotFoundException();
-      }
-    }
+    Problem problem = getVisibleProblem(problemId, HttpSessionParser.getCurrentUser(session));
 
     ModelAndView view = new ModelAndView("pages/problems/problem");
     // The main content is authored in a single language (see CommonModelPopulator).
@@ -262,8 +246,11 @@ public class ProblemsController {
       @PathVariable("problemId") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    getVisibleProblem(problemId, currentUser);
     DiscussionThread discussionThread = discussionService.getSolutionThreadOfProblem(problemId);
-    if (discussionThread == null) {
+    if (discussionThread == null
+        || !discussionService.isDiscussionThreadViewable(discussionThread, currentUser)) {
       throw new ResourceNotFoundException();
     }
 
@@ -308,6 +295,23 @@ public class ProblemsController {
               }));
     }
     return result;
+  }
+
+  /**
+   * Gets a problem the current user may view: unpublished (draft / hidden) problems are visible to
+   * administrators only and are treated as not found for everyone else.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param currentUser - the currently logged-in user (may be null)
+   * @return the problem
+   * @throws ResourceNotFoundException if the problem does not exist or is not visible to the user
+   */
+  private Problem getVisibleProblem(long problemId, User currentUser) {
+    Problem problem = problemService.getProblem(problemId);
+    if (problem == null || !PublicationStatus.isVisibleTo(problem.getStatus(), currentUser)) {
+      throw new ResourceNotFoundException();
+    }
+    return problem;
   }
 
   /** The default number of problems to load per request when the admin option is unset. */

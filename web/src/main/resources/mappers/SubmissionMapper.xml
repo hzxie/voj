@@ -142,6 +142,13 @@
 			<if test="username != null and username != ''">
 				AND username = #{username}
 			</if>
+			<if test="isPublicOnly">
+				AND problem_id IN (
+					SELECT problem_id
+					FROM voj_problems
+					WHERE problem_status = 'PUBLISHED'
+				)
+			</if>
 		</where>
 		ORDER BY submission_id DESC 
 		LIMIT #{limit}
@@ -162,6 +169,13 @@
 		<if test="judgeResult != null and judgeResult != ''">
 			AND submission_judge_result = #{judgeResult}
 		</if>
+		<if test="isPublicOnly">
+			AND problem_id IN (
+				SELECT problem_id
+				FROM voj_problems
+				WHERE problem_status = 'PUBLISHED'
+			)
+		</if>
 		ORDER BY submission_id DESC
 		LIMIT #{limit}
 	</select>
@@ -177,6 +191,13 @@
 		</if>
 		<if test="username != null and username != ''">
 			AND username = #{username} 
+		</if>
+		<if test="isPublicOnly">
+			AND problem_id IN (
+				SELECT problem_id
+				FROM voj_problems
+				WHERE problem_status = 'PUBLISHED'
+			)
 		</if>
 		ORDER BY submission_id 
 		LIMIT #{limit}

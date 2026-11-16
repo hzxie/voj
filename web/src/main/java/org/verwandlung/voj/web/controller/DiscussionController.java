@@ -141,11 +141,10 @@ public class DiscussionController {
     if (discussionThread == null) {
       throw new ResourceNotFoundException();
     }
-    // A thread hidden by reports or by an administrator is treated as not found for everyone
-    // except administrators.
-    if ((discussionService.isDiscussionThreadHidden(discussionThreadId)
-            || !discussionThread.isVisible())
-        && !isAdministrator(HttpSessionParser.getCurrentUser())) {
+    // A thread hidden by reports or by an administrator, or attached to an unpublished problem, is
+    // treated as not found for everyone except administrators.
+    if (!discussionService.isDiscussionThreadViewable(
+        discussionThread, HttpSessionParser.getCurrentUser())) {
       throw new ResourceNotFoundException();
     }
 
@@ -195,6 +194,11 @@ public class DiscussionController {
       Problem problem = null;
       if (problemId != -1) {
         problem = problemService.getProblem(problemId);
+        if (problem != null
+            && !PublicationStatus.isVisibleTo(
+                problem.getStatus(), HttpSessionParser.getCurrentUser())) {
+          problem = null;
+        }
       }
 
       view = new ModelAndView("pages/discussion/new-thread");
@@ -234,9 +238,18 @@ public class DiscussionController {
       startIndex = 0;
     }
 
-    List<DiscussionReply> discussionReplies =
-        discussionService.getDiscussionRepliesOfThread(
-            discussionThreadId, currentUserUid, startIndex, NUMBER_OF_REPLIES_PER_REQUEST, true);
+    // Replies follow the visibility of their thread, so a thread that would be treated as not
+    // found on its page cannot be read through this action either.
+    DiscussionThread discussionThread =
+        discussionService.getDiscussionThreadUsingThreadId(discussionThreadId);
+    List<DiscussionReply> discussionReplies = null;
+    if (discussionThread != null
+        && discussionService.isDiscussionThreadViewable(
+            discussionThread, HttpSessionParser.getCurrentUser())) {
+      discussionReplies =
+          discussionService.getDiscussionRepliesOfThread(
+              discussionThreadId, currentUserUid, startIndex, NUMBER_OF_REPLIES_PER_REQUEST, true);
+    }
     Map<String, Object> result = new HashMap<>(3, 1);
     result.put("isSuccessful", discussionReplies != null && !discussionReplies.isEmpty());
     result.put("discussionReplies", discussionReplies);
@@ -325,18 +338,6 @@ public class DiscussionController {
               }));
     }
     return result;
-  }
-
-  /**
-   * Checks whether a user belongs to the administrators user group.
-   *
-   * @param user - the user to check (may be null)
-   * @return whether the user is an administrator
-   */
-  private boolean isAdministrator(User user) {
-    return user != null
-        && user.getUserGroup() != null
-        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
   }
 
   /**

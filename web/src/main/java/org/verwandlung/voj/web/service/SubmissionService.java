@@ -42,6 +42,7 @@ import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
@@ -187,10 +188,12 @@ public class SubmissionService {
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
    * @param limit - the number of submissions to load each time
+   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
    * @return the list of submissions (a List<Submission> object)
    */
-  public List<Submission> getSubmissions(long problemId, String username, int limit) {
-    return submissionMapper.getSubmissions(problemId, username, limit);
+  public List<Submission> getSubmissions(
+      long problemId, String username, int limit, boolean isPublicOnly) {
+    return submissionMapper.getSubmissions(problemId, username, limit, isPublicOnly);
   }
 
   /**
@@ -200,14 +203,18 @@ public class SubmissionService {
    * @param username - the username of the user
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
+   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
    * @return the list of submissions (a List<Submission> object)
    */
-  public List<Submission> getSubmissions(long problemId, String username, long offset, int limit) {
-    return submissionMapper.getSubmissionsUsingOffset(problemId, username, "", offset, limit);
+  public List<Submission> getSubmissions(
+      long problemId, String username, long offset, int limit, boolean isPublicOnly) {
+    return submissionMapper.getSubmissionsUsingOffset(
+        problemId, username, "", offset, limit, isPublicOnly);
   }
 
   /**
-   * Gets the list of submissions filtered by judge result. Used to load submissions asynchronously.
+   * [For administrators only] Gets the list of submissions filtered by judge result, including the
+   * submissions to unpublished problems.
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
@@ -219,7 +226,7 @@ public class SubmissionService {
   public List<Submission> getSubmissions(
       long problemId, String username, String judgeResult, long offset, int limit) {
     return submissionMapper.getSubmissionsUsingOffset(
-        problemId, username, judgeResult, offset, limit);
+        problemId, username, judgeResult, offset, limit, false);
   }
 
   /**
@@ -238,11 +245,13 @@ public class SubmissionService {
    * @param username - the username of the user
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
+   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
    * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getLatestSubmissions(
-      long problemId, String username, long offset, int limit) {
-    return submissionMapper.getLatestSubmissionsUsingOffset(problemId, username, offset, limit);
+      long problemId, String username, long offset, int limit, boolean isPublicOnly) {
+    return submissionMapper.getLatestSubmissionsUsingOffset(
+        problemId, username, offset, limit, isPublicOnly);
   }
 
   /**
@@ -373,6 +382,12 @@ public class SubmissionService {
   public Map<String, Object> createSubmission(
       User user, long problemId, String languageSlug, String code) {
     Problem problem = problemMapper.getProblem(problemId);
+    // An unpublished (draft / hidden) problem only accepts submissions from administrators. For
+    // everyone else it is reported as missing, matching the problem page, so this endpoint does not
+    // reveal which unpublished problem ids exist.
+    if (problem != null && !PublicationStatus.isVisibleTo(problem.getStatus(), user)) {
+      problem = null;
+    }
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
 
     Submission submission = new Submission(problem, user, language, code);

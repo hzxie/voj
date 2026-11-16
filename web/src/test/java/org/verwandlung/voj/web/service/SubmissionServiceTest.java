@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.UserGroup;
 
 /**
  * The test class for SubmissionService.
@@ -84,10 +85,10 @@ public class SubmissionServiceTest {
     Assertions.assertNull(submissionService.getSubmission(0));
   }
 
-  /** Test case: tests the getSubmissions(long, String, int) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: exactly submissions 1000 and 1001, each belonging to problem 1000. */
+  /** Test case: tests the getSubmissions(long, String, int, boolean) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: exactly submissions 1000 and 1001, each belonging to problem 1000. */
   @Test
   public void testGetSubmissions() {
-    List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10);
+    List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10, true);
     Assertions.assertEquals(2, submissions.size());
 
     // Assert which submissions came back, not just how many: a wrong join or a
@@ -199,6 +200,62 @@ public class SubmissionServiceTest {
         submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", "");
     Assertions.assertTrue((Boolean) result.get("isCodeEmpty"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the createSubmission(...) method. Test data: a regular user submitting to the hidden problem 1002. Expected: the problem is reported as missing and creation fails. */
+  @Test
+  public void testCreateSubmissionToUnpublishedProblemByUser() {
+    Map<String, Object> result =
+        submissionService.createSubmission(userWithUid(1002), 1002, "text/x-java", "Code");
+    Assertions.assertFalse((Boolean) result.get("isProblemExists"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the createSubmission(...) method. Test data: an administrator submitting to the hidden problem 1002. Expected: creation succeeds. */
+  @Test
+  public void testCreateSubmissionToUnpublishedProblemByAdministrator() {
+    Map<String, Object> result =
+        submissionService.createSubmission(administrator(), 1002, "text/x-java", "Code");
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the getSubmissions / getLatestSubmissions methods. Test data: a submission to the hidden problem 1002. Expected: it is listed only when unpublished problems are included. */
+  @Test
+  public void testGetSubmissionsExcludesUnpublishedProblems() {
+    long submissionId =
+        (Long)
+            submissionService
+                .createSubmission(administrator(), 1002, "text/x-java", "Code")
+                .get("submissionId");
+
+    Assertions.assertFalse(
+        containsSubmission(submissionService.getSubmissions(0, "", 100, true), submissionId));
+    Assertions.assertTrue(
+        containsSubmission(submissionService.getSubmissions(0, "", 100, false), submissionId));
+    Assertions.assertFalse(
+        containsSubmission(
+            submissionService.getSubmissions(0, "", submissionId, 100, true), submissionId));
+    Assertions.assertTrue(
+        containsSubmission(
+            submissionService.getSubmissions(0, "", submissionId, 100, false), submissionId));
+    Assertions.assertFalse(
+        containsSubmission(
+            submissionService.getLatestSubmissions(0, "", 0, 100, true), submissionId));
+    Assertions.assertTrue(
+        containsSubmission(
+            submissionService.getLatestSubmissions(0, "", 0, 100, false), submissionId));
+  }
+
+  /** Tests whether a list of submissions contains the submission with the given identifier. */
+  private static boolean containsSubmission(List<Submission> submissions, long submissionId) {
+    return submissions.stream().anyMatch(s -> s.getSubmissionId() == submissionId);
+  }
+
+  /** Constructs a User object in the administrators user group. */
+  private User administrator() {
+    User user = userWithUid(1000);
+    user.setUserGroup(new UserGroup(8, "administrators", "Administrators"));
+    return user;
   }
 
   /** Test case: tests the deleteSubmission(long) method. Test data: a submission record not referenced by any contest. Expected: deletion succeeds and the submission record no longer exists. */
