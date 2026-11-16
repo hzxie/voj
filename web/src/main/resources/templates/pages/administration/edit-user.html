@@ -159,7 +159,7 @@
         }
         function processCreateUserResult(result) {
             if (result['isSuccessful']) {
-                $('#profile-form input, #profile-form textarea').val('');
+                $('#profile-form input:not([type=hidden]), #profile-form textarea').val('');
                 $('.alert-success', '#profile-form').removeClass('hide');
             } else {
                 var m = '';
