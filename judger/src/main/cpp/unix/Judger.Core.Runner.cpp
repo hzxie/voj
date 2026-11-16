@@ -1373,11 +1373,21 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sendto), {SCMP_A4(SCMP_CMP_EQ, 0)});
         // sched_setscheduler(pid, policy, param) only to SCHED_OTHER, the policy every process of
         // the run has: the C library calls it on a new thread created with PTHREAD_EXPLICIT_SCHED,
-        // which Free Pascal's threads are, and pthread_create fails if it does. It cannot target
-        // the caller alone (the C library passes the thread's id), but for a process of the same
-        // user that is SCHED_OTHER, as the judger and every other run are, it changes nothing: the
-        // policy stays, its priority must be 0, and the nice value is kept. The policy is an int
-        // (the lower 32 bits, SCHED_RESET_ON_FORK included).
+        // which Free Pascal's threads are, and pthread_create fails if it does. The policy is an
+        // int (the lower 32 bits, SCHED_RESET_ON_FORK included, so that flag is refused too). It
+        // cannot be confined to the run's own threads: the C library passes the new thread's id,
+        // not 0, and seccomp cannot tell a thread of the run from any other process. So a run may
+        // call it on any process of its user (the kernel refuses others): other runs and
+        // compilations of the sandbox user and, under a judger that is not root, the judger itself
+        // and every other process of the judger's user. On a process under SCHED_OTHER, as those
+        // of the judger and of every run are by default, it changes next to nothing: the policy
+        // stays, its priority must be 0 and the nice value is kept, but from Linux 6.12 on a time
+        // slice set with sched_setattr is reset to the default. A process under another policy is
+        // switched to SCHED_OTHER: SCHED_BATCH, or a real-time or deadline policy without
+        // SCHED_RESET_ON_FORK (which an unprivileged caller cannot clear), and SCHED_IDLE where the
+        // target's RLIMIT_NICE allows its nice value. That matters only for a judger that is not
+        // root and was given another policy (e.g. systemd's CPUSchedulingPolicy=batch), or for
+        // other processes of its user that were.
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sched_setscheduler),
                       {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) SCHED_OTHER)});
         allowlist.optimize();
