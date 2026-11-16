@@ -49,7 +49,7 @@ Judgers pull a problem's test data from the web app over HTTP rather than sharin
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.apiToken` | `change-me-shared-secret` | Shared secret a judger must send in the `X-Judger-Token` header to download test data from `/api/judger/checkpoints/{problemId}`. Must match `judger.apiToken` on every judger. An **empty value disables the endpoint** (all requests refused). Use a long random string in production. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret a judger must send in the `X-Judger-Token` header to download test data from `/api/judger/checkpoints/{problemId}`. Must match `judger.apiToken` on every judger. An **empty value disables the endpoint** (all requests refused). Use a long random string in production. |
 
 ### Web service
 
@@ -100,7 +100,7 @@ restarts with it):
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. |
-| `judger.apiToken` | `change-me-shared-secret` | Shared secret; **must match** `judger.apiToken` on the web app. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty, the web app refuses every download, so every submission is judged a System Error; the judger logs an error at startup. The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
 ### Sandbox
 

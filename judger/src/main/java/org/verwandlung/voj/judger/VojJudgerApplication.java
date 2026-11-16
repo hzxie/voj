@@ -26,6 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -70,6 +71,7 @@ public class VojJudgerApplication {
    * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
    * @param submissionTaskListenerContainer - the listener for the judging-task queue, started here
    *     only after the identity check passes
+   * @param apiToken - the shared secret for downloading test data from the web application
    * @return an ApplicationRunner instance
    */
   @Bean
@@ -77,8 +79,16 @@ public class VojJudgerApplication {
       LanguageMapper languageMapper,
       ApplicationHeartbeat heartbeat,
       CheckpointStore checkpointStore,
-      DefaultMessageListenerContainer submissionTaskListenerContainer) {
+      DefaultMessageListenerContainer submissionTaskListenerContainer,
+      @Value("${judger.apiToken:}") String apiToken) {
     return args -> {
+      if (apiToken == null || apiToken.isBlank()) {
+        // The web application refuses to hand out test data without a shared secret.
+        LOGGER.error(
+            "judger.apiToken (VOJ_JUDGER_API_TOKEN) is empty: the web application refuses every"
+                + " test data download, so every submission will be judged a System Error. Set it"
+                + " to the judger.apiToken of the web application.");
+      }
       // Fail fast: verify the judger's credentials against the shared user table before consuming
       // any task. Otherwise a misconfigured judger would accept submissions and abort them
       // mid-judging (leaving them stuck) once the heartbeat later detected the bad credentials.
@@ -151,7 +161,8 @@ public class VojJudgerApplication {
     for (Language language : languages) {
       String languageName = language.getLanguageName();
       String compileProgram = getCompileProgram(language.getCompileCommand());
-      String compilerVersion = getCompilerVersion(languageName, compileProgram);
+      String compilerVersion =
+          compileProgram == null ? null : getCompilerVersion(languageName, compileProgram);
       LOGGER.info(
           "\t" + languageName + ": " + (compilerVersion == null ? "Not Found" : compilerVersion));
       if (compilerVersion != null) {
@@ -183,14 +194,17 @@ public class VojJudgerApplication {
   }
 
   /**
-   * Gets the compiler program from the compile command line.
+   * Gets the compiler program from the compile command line: its first word (the whole command when
+   * it has no arguments).
    *
    * @param compileCommand - the command line of the compile command
-   * @return the compiler program
+   * @return the compiler program, or {@code null} if the command is empty
    */
-  private String getCompileProgram(String compileCommand) {
-    int firstSpaceIndex = compileCommand.indexOf(" ");
-    String compileProgram = compileCommand.substring(0, firstSpaceIndex);
+  static String getCompileProgram(String compileCommand) {
+    if (compileCommand == null || compileCommand.isBlank()) {
+      return null;
+    }
+    String compileProgram = compileCommand.trim().split("\\s+")[0];
 
     if ("javac".equalsIgnoreCase(compileProgram)) {
       return "java";
