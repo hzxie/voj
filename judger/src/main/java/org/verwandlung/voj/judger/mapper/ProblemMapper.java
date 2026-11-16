@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -37,7 +36,6 @@ public interface ProblemMapper {
    * @return a problem object
    */
   @Select("SELECT * FROM voj_problems WHERE problem_id = #{problemId}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "problemId", column = "problem_id"),
     @Result(property = "isPublic", column = "problem_is_public"),

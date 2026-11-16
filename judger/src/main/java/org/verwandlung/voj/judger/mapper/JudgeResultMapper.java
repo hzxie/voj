@@ -18,7 +18,6 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -38,7 +37,6 @@ public interface JudgeResultMapper {
    * @return a list of all judge result objects
    */
   @Select("SELECT * FROM voj_judge_results")
-  @Options(useCache = true)
   @Results({
     @Result(property = "judgeResultId", column = "judge_result_id"),
     @Result(property = "judgeResultSlug", column = "judge_result_slug"),
@@ -53,7 +51,6 @@ public interface JudgeResultMapper {
    * @return the expected judge result object, or a null reference
    */
   @Select("SELECT * FROM voj_judge_results WHERE judge_result_slug = #{judgeResultSlug}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "judgeResultId", column = "judge_result_id"),
     @Result(property = "judgeResultSlug", column = "judge_result_slug"),

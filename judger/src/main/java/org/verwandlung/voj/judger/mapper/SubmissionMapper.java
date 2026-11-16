@@ -17,7 +17,6 @@
 package org.verwandlung.voj.judger.mapper;
 
 import org.apache.ibatis.annotations.One;
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -41,7 +40,6 @@ public interface SubmissionMapper {
    * @return a submission object
    */
   @Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "submissionId", column = "submission_id"),
     @Result(
@@ -80,6 +78,5 @@ public interface SubmissionMapper {
           + " submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog},"
           + " judger_uid = #{judgerUid}, submission_code = #{code} WHERE submission_id ="
           + " #{submissionId}")
-  @Options(flushCache = Options.FlushCachePolicy.TRUE)
   void updateSubmission(Submission submission);
 }

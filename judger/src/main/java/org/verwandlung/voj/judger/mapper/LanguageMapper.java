@@ -18,7 +18,6 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -39,7 +38,6 @@ public interface LanguageMapper {
    * @return the expected programming language object, or a null reference
    */
   @Select("SELECT * FROM voj_languages WHERE language_id = #{languageId}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "languageId", column = "language_id"),
     @Result(property = "languageSlug", column = "language_slug"),
@@ -58,7 +56,6 @@ public interface LanguageMapper {
    * @return the expected programming language object, or a null reference
    */
   @Select("SELECT * FROM voj_languages WHERE language_slug = #{languageSlug}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "languageId", column = "language_id"),
     @Result(property = "languageSlug", column = "language_slug"),
@@ -76,7 +73,6 @@ public interface LanguageMapper {
    * @return the list of programming languages (a List<Language> object)
    */
   @Select("SELECT * FROM voj_languages")
-  @Options(useCache = true)
   @Results({
     @Result(property = "languageId", column = "language_id"),
     @Result(property = "languageSlug", column = "language_slug"),

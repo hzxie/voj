@@ -18,7 +18,6 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -39,7 +38,6 @@ public interface CheckpointMapper {
    * @return all checkpoints of the problem
    */
   @Select("SELECT * FROM voj_problem_checkpoints WHERE problem_id = #{problemId}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "problemId", column = "problem_id"),
     @Result(property = "checkpointId", column = "checkpoint_id"),

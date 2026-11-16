@@ -17,7 +17,6 @@
 package org.verwandlung.voj.judger.mapper;
 
 import org.apache.ibatis.annotations.One;
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -40,7 +39,6 @@ public interface UserMapper {
    * @return the expected user object, or a null reference
    */
   @Select("SELECT * FROM voj_users WHERE username = #{username}")
-  @Options(useCache = false)
   @Results(
       value = {
         @Result(

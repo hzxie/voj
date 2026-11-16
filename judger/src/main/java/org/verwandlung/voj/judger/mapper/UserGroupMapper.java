@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -37,7 +36,6 @@ public interface UserGroupMapper {
    * @return the expected user group object, or a null reference
    */
   @Select("SELECT * FROM voj_user_groups WHERE user_group_id = #{userGroupId}")
-  @Options(useCache = true)
   @Results({
     @Result(property = "userGroupId", column = "user_group_id"),
     @Result(property = "userGroupSlug", column = "user_group_slug"),
