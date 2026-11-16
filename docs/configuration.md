@@ -41,7 +41,7 @@ Email (verification, password reset, notifications) is disabled when `mail.host`
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app publishes judging tasks to. |
-| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) for a judging task. If no capable judger claims it within this window the task is dead-lettered and the submission is marked as a System Error ("no available judger supports this submission's language", or, when a judger had claimed it and handed the task back, that a judger took it but could not judge it before the task expired) instead of staying Pending forever. Keep it generous. |
+| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) for a judging task, and how long a submission may stay Pending. Every minute the web app marks as a System Error each pending submission that no judger took within this window after its task was queued (no running judger supports its language, all of them were busy, or the task was lost, e.g. when it could not be sent), or whose judging did not finish within it after a judger took it (the judger stopped, or handed the task back); an administrator can rejudge it. The judge log says which of the two happened. The time is measured by the database's clock, from the queued time the web app sets and the start time the judger sets, so a judger host's clock some seconds off does not matter. Keep it generous: a busy or briefly offline (but capable) cluster must not fail valid submissions. |
 
 ### Checkpoint distribution
 
@@ -83,17 +83,14 @@ restarts with it):
   judging failed waits before it asks again, 10 s after a failure and twice as
   long after each further failure in a row (up to 160 s), so an idle judger
   takes the task first, and a judger on its own retries it with a growing
-  delay (10 s, 20 s, 40 s, ...). After 5 redeliveries the task moves to
-  `ActiveMQ.DLQ`, where the web app marks the submission as a System Error
-  whose judge log says that judging it failed repeatedly (a task that expired
-  because no judger took it says instead that no available judger supports
-  the language). A task whose test data cannot be downloaded for now goes back
-  only while it can still be delivered again before it expires
-  (`jms.submissionTask.ttl`): within 220 s of its expiration (the longest pause
-  plus a minute), the judger judges the submission a System Error that says
-  the test data could not be downloaded, rather than let the task expire and
-  be reported as having no judger. The judger reads the expiration the web
-  app's broker client set, so the clocks of the hosts must roughly agree.
+  delay (10 s, 20 s, 40 s, ...). A task is delivered at most 6 times (5
+  redeliveries). On its last delivery, a judging that could succeed later
+  (e.g. the test data cannot be downloaded) is judged a System Error that says
+  why, instead of being handed back. A task that is handed back nevertheless
+  (the database is down, the judger dies) or expires (`jms.submissionTask.ttl`)
+  ends on `ActiveMQ.DLQ`, from which the web app removes it; the submission
+  is marked as a System Error once it waited too long (see
+  `jms.submissionTask.ttl`).
 
 ### Identity
 
