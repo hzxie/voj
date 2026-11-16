@@ -3,8 +3,9 @@
 # Run the Verwandlung Online Judge judger.
 #
 # Launches the self-contained Spring Boot executable JAR. It is a headless
-# (non-web) application that listens on ActiveMQ for submissions and judges them,
-# so it expects MySQL and ActiveMQ to be reachable (see
+# (non-web) application that takes the pending submissions from the database and
+# judges them, streaming their progress over ActiveMQ, so it expects MySQL and
+# ActiveMQ to be reachable (see
 # judger/src/main/resources/voj.properties).
 #
 # Build it first with scripts/build-jars.sh.

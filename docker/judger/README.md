@@ -1,11 +1,12 @@
 # Verwandlung Online Judge — Judger
 
 The judger component of [Verwandlung Online Judge](https://github.com/hzxie/voj),
-a self-hostable, open-source online judge for competitive programming. It pulls
-submissions off an [Apache ActiveMQ](https://activemq.apache.org/) queue, then
-compiles, runs and evaluates them against test data inside a sandbox, reporting
-correctness, run time and memory usage back to the
-[`zjhzxhz/voj.web`](https://hub.docker.com/r/zjhzxhz/voj.web) application.
+a self-hostable, open-source online judge for competitive programming. It takes
+the pending submissions from the shared database, then compiles, runs and
+evaluates them against test data inside a sandbox, recording the verdicts in the
+database and streaming the progress to the
+[`zjhzxhz/voj.web`](https://hub.docker.com/r/zjhzxhz/voj.web) application over
+[Apache ActiveMQ](https://activemq.apache.org/).
 
 The image ships the toolchains for every language enabled out of the box: C/C++,
 Pascal, Java, Python 3, Go, JavaScript/Node.js, Rust and Kotlin.
@@ -22,13 +23,14 @@ docker network create voj
 docker run -d --name voj.web --network voj -p 8080:8080 \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network; token must match the web's)
-docker run -d --name voj.judger --network voj \
+# Judger (resolves "voj.web" over the shared network; token must match the web's).
+# A judger that runs into a fatal error exits for Docker to restart it.
+docker run -d --name voj.judger --network voj --restart unless-stopped \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.judger
 ```
 
-You can run as many judgers in parallel as you need — they are decoupled from the
-web app through the queue. Judgers in containers on one host all run submissions
+You can run as many judgers in parallel as you need — they take the submissions
+from the shared database. Judgers in containers on one host all run submissions
 as `nobody`, the same uid on the host, so the thread cap of a run
 (`RLIMIT_NPROC`) counts the runs of all of them together; see
 [Several judgers on one host](https://github.com/hzxie/voj/blob/master/docs/deployment.md#several-judgers-on-one-host).

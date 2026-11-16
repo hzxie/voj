@@ -134,7 +134,9 @@ docker run -d --name voj.web --network "${NETWORK}" -p "${WEB_PORT}:8080" \
   "${WEB_IMAGE}" >/dev/null
 
 echo "==> Starting voj.judger ..."
-docker run -d --name voj.judger --network "${NETWORK}" \
+# A judger that runs into a fatal error (e.g. out of memory) exits for its
+# supervisor to start it again: here, Docker's restart policy.
+docker run -d --name voj.judger --network "${NETWORK}" --restart unless-stopped \
   -e "VOJ_DB_PASSWORD=${MYSQL_USER_PASS}" \
   -e "VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}" \
   "${JUDGER_IMAGE}" >/dev/null
