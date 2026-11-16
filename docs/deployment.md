@@ -112,21 +112,30 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   look like. A program that would have handled such a failed allocation is
   stopped there instead. (The judger tells this stop by the `SIGSYS` that ends
   the program, so a program that kills itself with `SIGSYS` is Memory Limit
-  Exceeded as well, which gains it nothing.) Allocations that exceed the backstop only together
-  with earlier untouched ones, or by growing with `brk`/`mremap`, still just
-  fail and are judged by how the program then ends; with the backstop at more
-  than twice the limit, that is rare. Memory that is reserved but never touched
-  does not count. A compilation's memory is that of the compiler's top-level
-  process, under `judger.compileMemoryLimit`; every process it runs is held to
-  the same `RLIMIT_DATA` backstop, derived from that limit. A program whose
-  static data alone (`static int a[1 << 30];`) exceeds the backstop cannot even
-  be loaded; it is not run and is Memory Limit Exceeded, rather than the
-  `SIGSEGV` the kernel would kill it with while loading it. A run cannot create
-  memory files (`memfd_create` is not on its allowlist) or shared anonymous
-  mappings, whose contents would count against no limit once dropped from its
-  resident set, nor push its pages out of that set (`madvise` with
-  `MADV_PAGEOUT` or `MADV_COLD`; `process_madvise` is not allowlisted) to keep
-  its peak low on a host with swap.
+  Exceeded as well, which gains it nothing.) Allocations that exceed the
+  backstop only together with earlier untouched ones, or by growing with
+  `brk`/`mremap`, still just fail and are judged by how the program then ends;
+  with the backstop at more than twice the limit, that is rare. Memory that is
+  reserved but never touched does not count. A compilation's memory is that of
+  the compiler's top-level process, under `judger.compileMemoryLimit`; every
+  process it runs is held to the same `RLIMIT_DATA` backstop, derived from that
+  limit. A program whose static data alone (`static int a[1 << 30];`) exceeds
+  the backstop cannot even be loaded; it is not run and is Memory Limit
+  Exceeded, rather than the `SIGSEGV` the kernel would kill it with while
+  loading it. A run cannot create memory files (`memfd_create` is not on its
+  allowlist) or shared anonymous mappings, whose contents would count against no
+  limit once dropped from its resident set, nor push its pages out of that set
+  (`madvise` with `MADV_PAGEOUT` or `MADV_COLD`; `process_madvise` is not
+  allowlisted) to keep its peak low on a host with swap. So the JVM's ZGC, which
+  maps its heap through a memory file, and Python's anonymous
+  `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
+  collectors do). Files a run writes in its work directory hold data outside its
+  memory limit, though: `RLIMIT_FSIZE` bounds each file (see below), not their
+  number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
+  file's size. On a `judger.workDir` on tmpfs (as `/tmp` is on many
+  distributions), that space is RAM: put the work directories on a disk-backed
+  file system, or on a tmpfs whose `size=` bounds what the runs on the host can
+  hold there.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
@@ -347,8 +356,12 @@ When the judger is not running as root it cannot drop privileges, so submissions
 run as the same user as the judger. The seccomp filter and the Landlock rules
 still apply (which needs Linux 6.2 or later, see
 [Kernel requirements](#kernel-requirements)), but the submission can read
-whatever the judger's account can. This is fine for development and continuous integration but is not
-isolation, so do not use it in production.
+whatever the judger's account can. Before Linux 6.12 (Landlock ABI 6), nothing
+keeps it from signalling the judger's own processes either, the judger itself
+(`kill(getppid(), SIGKILL)`) or every process of the account (`kill(-1, ...)`),
+which the sandbox user of a judger running as root cannot. This is fine for
+development and continuous integration but is not isolation, so do not use it
+in production.
 
 ## Windows native sandbox
 
