@@ -107,7 +107,7 @@
                         <div class="adm-multrow">
                             <div class="meta">
                                 <div class="t" th:text="#{voj.administration.judgers.time-multiplier}">Time limit multiplier</div>
-                                <div class="d" th:text="#{voj.administration.judgers.time-multiplier-desc}">Wall-clock limit is scaled by this factor.</div>
+                                <div class="d" th:text="#{voj.administration.judgers.time-multiplier-desc}">The time limit is scaled by this factor.</div>
                             </div>
                             <div class="adm-step time-mult" role="group" th:aria-label="#{voj.administration.judgers.time-multiplier}" th:attr="data-val=${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">
                                 <button type="button" class="btn dec">&minus;</button>
