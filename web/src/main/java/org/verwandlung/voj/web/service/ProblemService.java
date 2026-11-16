@@ -89,6 +89,16 @@ public class ProblemService {
   }
 
   /**
+   * Gets every problem, by identifier, with its name, status and difficulty only: for a list to
+   * pick problems from, which needs neither the statements nor the submission counts.
+   *
+   * @return the problems
+   */
+  public List<Problem> getProblemSummaries() {
+    return problemMapper.getProblemSummaries();
+  }
+
+  /**
    * Gets the number of problems matching a filter, consistent with {@link #getProblems}.
    *
    * @param filter - the conditions of the search

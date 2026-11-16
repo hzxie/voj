@@ -77,6 +77,24 @@ public class ProblemMapperTest {
     Assertions.assertEquals(1, acceptedSubmission);
   }
 
+  /**
+   * Test case: tests the getProblemSummaries() method. Test data: N/a. Expected: every problem, the
+   * hidden one included, by identifier, with its name and difficulty and without its statement.
+   */
+  @Test
+  public void testGetProblemSummaries() {
+    List<Problem> problems = problemMapper.getProblemSummaries();
+    Assertions.assertEquals(
+        List.of(1000L, 1001L, 1002L, 1003L),
+        problems.stream().map(Problem::getProblemId).toList());
+    Problem firstProblem = problems.get(0);
+    Assertions.assertEquals("A+B Problem", firstProblem.getProblemName());
+    Assertions.assertNotNull(firstProblem.getProblemDifficulty().getProblemDifficultySlug());
+    Assertions.assertNull(firstProblem.getDescription());
+    Assertions.assertEquals(
+        "hard", problems.get(2).getProblemDifficulty().getProblemDifficultySlug());
+  }
+
   /** Test case: tests the getProblem() method. Test data: a non-existing problem unique identifier. Expected: a null reference. */
   @Test
   public void testGetProblemNotExists() {

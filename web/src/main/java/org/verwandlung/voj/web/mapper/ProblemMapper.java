@@ -100,6 +100,14 @@ public interface ProblemMapper {
       @Param("limit") int limit);
 
   /**
+   * Gets every problem, by identifier, with its name, status and difficulty only (neither its
+   * statement nor its submission counts).
+   *
+   * @return the problems
+   */
+  List<Problem> getProblemSummaries();
+
+  /**
    * Creates a new problem object.
    *
    * @param problem - the problem object

@@ -160,6 +160,16 @@
 		ORDER BY p.problem_id
 		LIMIT #{offset}, #{limit}
 	</select>
+	<!-- Every problem, without its statement or its submission counts: what a list to pick
+	     problems from shows. -->
+	<select id="getProblemSummaries"
+		resultMap="ProblemResultMap">
+		SELECT p.problem_id, p.problem_name, p.problem_status, p.problem_difficulty_id,
+			d.problem_difficulty_slug, d.problem_difficulty_name
+		FROM voj_problems p
+		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
+		ORDER BY p.problem_id
+	</select>
 	<insert id="createProblem" 
 		parameterType="org.verwandlung.voj.web.model.Problem"
 		keyProperty="problemId" 
