@@ -552,9 +552,13 @@ public class SubmissionService {
             : null;
     // Rejudge path: clear the previous verdict/log so the record returns to pending before the new
     // task is enqueued. This makes the detail pages stream the live judging result again and lets
-    // the expired-task guard fall back to marking it unjudgeable if no judger ever claims it.
+    // the expired-task guard fall back to marking it unjudgeable if no judger ever claims it. The
+    // reset also increments the judge generation, which the new task carries (read back in this
+    // transaction, so it is the value this reset wrote), so that the judger, the dead-letter
+    // listener and the live judge log can tell the older tasks of the submission from this one.
     submissionMapper.resetSubmissionToPending(submissionId);
-    createSubmissionTask(submissionId, languageSlug);
+    Long generation = submissionMapper.getJudgeGenerationOfSubmission(submissionId);
+    createSubmissionTask(submissionId, languageSlug, generation == null ? 0 : generation);
   }
 
   /**
@@ -571,16 +575,29 @@ public class SubmissionService {
    *     tasks they can build
    */
   public void createSubmissionTask(long submissionId, String languageSlug) {
+    // The task of a new submission: its judge generation is still 0.
+    createSubmissionTask(submissionId, languageSlug, 0);
+  }
+
+  /**
+   * Creates a judging task for a judge generation of a submission; see {@link
+   * #createSubmissionTask(long, String)}.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param languageSlug - the slug of the submission's language
+   * @param generation - the judge generation of the submission the task is queued for
+   */
+  private void createSubmissionTask(long submissionId, String languageSlug, long generation) {
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
           new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-              sendSubmissionTask(submissionId, languageSlug);
+              sendSubmissionTask(submissionId, languageSlug, generation);
             }
           });
     } else {
-      sendSubmissionTask(submissionId, languageSlug);
+      sendSubmissionTask(submissionId, languageSlug, generation);
     }
   }
 
@@ -597,11 +614,13 @@ public class SubmissionService {
    *
    * @param submissionId - the unique identifier of the submission
    * @param languageSlug - the slug of the submission's language
+   * @param generation - the judge generation of the submission the task is queued for
    */
-  private void sendSubmissionTask(long submissionId, String languageSlug) {
+  private void sendSubmissionTask(long submissionId, String languageSlug, long generation) {
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "SubmissionCreated");
     mapMessage.put("submissionId", submissionId);
+    mapMessage.put("generation", generation);
 
     try {
       messageSender.sendMessage(mapMessage, languageSlug);
@@ -611,7 +630,7 @@ public class SubmissionService {
               "Failed to queue the judging task of submission #%d; marking it as a system error.",
               submissionId),
           ex);
-      markSubmissionTaskNotQueued(submissionId);
+      markSubmissionTaskNotQueued(submissionId, generation);
     }
   }
 
@@ -623,8 +642,10 @@ public class SubmissionService {
    * the error is logged and the submission stays pending, as before.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param generation - the judge generation of the task that could not be queued (a later rejudge,
+   *     whose task may have been queued, is left alone)
    */
-  private void markSubmissionTaskNotQueued(long submissionId) {
+  private void markSubmissionTaskNotQueued(long submissionId, long generation) {
     String judgeLog =
         "System Error.\n\nThe judging task could not be sent to the message queue. "
             + "An administrator can rejudge this submission.\n";
@@ -632,7 +653,8 @@ public class SubmissionService {
       TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
       transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
       transactionTemplate.executeWithoutResult(
-          status -> submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", judgeLog));
+          status ->
+              submissionMapper.markSubmissionUnjudgeable(submissionId, generation, "SE", judgeLog));
     } catch (RuntimeException ex) {
       LOGGER.error(
           String.format("Failed to mark submission #%d as a system error.", submissionId), ex);
@@ -642,15 +664,26 @@ public class SubmissionService {
   /**
    * Tests whether a judging is the current judging of a submission: a judger claims a pending
    * submission by setting its execute time (its start time, which identifies the judging), and a
-   * rejudge clears it. Used to drop the progress messages of a superseded judging.
+   * rejudge clears it and increments the judge generation, which the task of every judging carries.
+   * Used to drop the progress messages of a superseded judging.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param executeTime - the start time the judging set, in milliseconds
-   * @return whether the submission still carries that start time
+   * @param executeTime - the start time the judging set, in milliseconds, or null when unknown
+   * @param generation - the judge generation of the judging's task, or null when unknown
+   * @return whether the submission still carries that start time and that judge generation (an
+   *     unknown one is not compared)
    */
-  public boolean isCurrentJudging(long submissionId, long executeTime) {
-    Date currentExecuteTime = submissionMapper.getExecuteTimeOfSubmission(submissionId);
-    return currentExecuteTime != null && currentExecuteTime.getTime() == executeTime;
+  public boolean isCurrentJudging(long submissionId, Long executeTime, Long generation) {
+    Submission judging = submissionMapper.getJudgingOfSubmission(submissionId);
+    if (judging == null) {
+      return false;
+    }
+    Date currentExecuteTime = judging.getExecuteTime();
+    boolean isCurrentClaim =
+        executeTime == null
+            || (currentExecuteTime != null && currentExecuteTime.getTime() == executeTime);
+    boolean isCurrentGeneration = generation == null || judging.getJudgeGeneration() == generation;
+    return isCurrentClaim && isCurrentGeneration;
   }
 
   /** Why a judging task ended on the dead-letter queue. */
@@ -691,14 +724,21 @@ public class SubmissionService {
    * dead-letter queue, with a judge log that says why. Invoked from the dead-letter listener. The
    * update only touches submissions that are still pending, so it never overwrites a real verdict
    * (and is safe to apply more than once); a judging that is still running cannot record its
-   * verdict afterwards, as the judger only records a verdict over a pending submission.
+   * verdict afterwards, as the judger only records a verdict over a pending submission. Nor does it
+   * touch a submission rejudged since the task was queued (its judge generation moved on): the
+   * dead-lettered task is then a stale one, and the pending submission belongs to a newer task.
    *
    * @param submissionId - the unique identifier of the submission whose task was dead-lettered
+   * @param generation - the judge generation the task carried, or null for a task queued before
+   *     judge generations existed (the submission is then marked whatever its generation)
    * @param failure - why the task was dead-lettered
-   * @return whether the submission was marked (false when it was already judged or does not exist)
+   * @return whether the submission was marked (false when it was already judged, was rejudged since
+   *     the task was queued, or does not exist)
    */
-  public boolean markSubmissionUnjudgeable(long submissionId, JudgingTaskFailure failure) {
-    return submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", failure.getJudgeLog())
+  public boolean markSubmissionUnjudgeable(
+      long submissionId, Long generation, JudgingTaskFailure failure) {
+    return submissionMapper.markSubmissionUnjudgeable(
+            submissionId, generation, "SE", failure.getJudgeLog())
         > 0;
   }
 

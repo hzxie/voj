@@ -233,6 +233,26 @@ public class Submission implements Serializable {
   }
 
   /**
+   * Gets the judge generation of the submission: the number of times it was rejudged (0 for a new
+   * submission). Every judging task carries the generation it was queued with, so the task and the
+   * messages of a judging that a rejudge superseded can be told from those of the current one.
+   *
+   * @return the judge generation of the submission
+   */
+  public long getJudgeGeneration() {
+    return judgeGeneration;
+  }
+
+  /**
+   * Sets the judge generation of the submission.
+   *
+   * @param judgeGeneration - the judge generation of the submission
+   */
+  public void setJudgeGeneration(long judgeGeneration) {
+    this.judgeGeneration = judgeGeneration;
+  }
+
+  /**
    * Gets the total running time of the judging.
    *
    * @return the total running time of the judging
@@ -400,6 +420,9 @@ public class Submission implements Serializable {
 
   /** The time the judging started. */
   private Date executeTime;
+
+  /** The judge generation: the number of times the submission was rejudged. */
+  private long judgeGeneration;
 
   /** The total running time of the judging. */
   private long usedTime;

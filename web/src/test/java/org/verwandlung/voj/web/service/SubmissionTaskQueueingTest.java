@@ -117,6 +117,30 @@ public class SubmissionTaskQueueingTest {
   }
 
   /**
+   * Test case: creates a submission, then rejudges it twice, each in a transaction that commits.
+   * Test data: a valid submission. Expected: the task of the new submission carries the judge
+   * generation 0 and each rejudge's task the generation that rejudge wrote (1, then 2), which is
+   * also the submission's generation afterwards.
+   */
+  @Test
+  public void testRejudgeTasksCarryTheNewJudgeGeneration() {
+    long submissionId = transactionTemplate.execute(status -> createSubmission());
+    committedSubmissionIds.add(submissionId);
+    transactionTemplate.executeWithoutResult(
+        status -> submissionService.createSubmissionTask(submissionId));
+    transactionTemplate.executeWithoutResult(
+        status -> submissionService.createSubmissionTasks(List.of(submissionId)));
+
+    org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(messageSender);
+    for (long generation = 0; generation <= 2; ++generation) {
+      inOrder
+          .verify(messageSender)
+          .sendMessage(isTaskOf(submissionId, generation), eq("text/x-java"));
+    }
+    Assertions.assertEquals(2, submissionService.getSubmission(submissionId).getJudgeGeneration());
+  }
+
+  /**
    * Test case: creates a submission (outside any caller transaction, as the controller does) while
    * the message queue is unavailable. Test data: a valid submission; sending throws. Expected: the
    * user still gets the successful result, and the submission is marked as a system error rather
@@ -207,12 +231,18 @@ public class SubmissionTaskQueueingTest {
     return (Long) result.get("submissionId");
   }
 
-  /** Matches the judging task message of a submission. */
+  /** Matches the judging task message of a new submission (judge generation 0). */
   private static Map<String, Object> isTaskOf(long submissionId) {
+    return isTaskOf(submissionId, 0);
+  }
+
+  /** Matches the judging task message of a judge generation of a submission. */
+  private static Map<String, Object> isTaskOf(long submissionId, long generation) {
     return argThat(
         message ->
             "SubmissionCreated".equals(message.get("event"))
-                && Long.valueOf(submissionId).equals(message.get("submissionId")));
+                && Long.valueOf(submissionId).equals(message.get("submissionId"))
+                && Long.valueOf(generation).equals(message.get("generation")));
   }
 
   private static User userWithUid(long uid) {

@@ -54,12 +54,15 @@ public class MessageReceiverTest {
     MapMessage message = testPointFinished();
     when(message.itemExists("executeTime")).thenReturn(true);
     when(message.getLong("executeTime")).thenReturn(1700000000000L);
+    when(message.itemExists("generation")).thenReturn(true);
+    when(message.getLong("generation")).thenReturn(2L);
 
     receiver.onMessage(message);
 
     SubmissionEvent event = publishedEvent();
     Assertions.assertEquals(1000L, event.getSubmissionId());
     Assertions.assertEquals(1700000000000L, event.getExecuteTime());
+    Assertions.assertEquals(2L, event.getGeneration());
     Assertions.assertFalse(event.isCompleted());
   }
 
@@ -74,6 +77,7 @@ public class MessageReceiverTest {
     receiver.onMessage(message);
 
     Assertions.assertNull(publishedEvent().getExecuteTime());
+    Assertions.assertNull(publishedEvent().getGeneration());
   }
 
   /** Builds a TestPointFinished message of submission 1000. */

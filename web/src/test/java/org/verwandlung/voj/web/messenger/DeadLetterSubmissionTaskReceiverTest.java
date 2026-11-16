@@ -54,7 +54,24 @@ public class DeadLetterSubmissionTaskReceiverTest {
         deadLetteredTask(1000L, "java.lang.Throwable: Message Expired. Expiration:1763290000000"));
 
     verify(submissionService)
-        .markSubmissionUnjudgeable(1000L, JudgingTaskFailure.NO_JUDGER_AVAILABLE);
+        .markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.NO_JUDGER_AVAILABLE);
+  }
+
+  /**
+   * Test case: tests onMessage(Message). Test data: a dead-lettered task that carries the judge
+   * generation it was queued with. Expected: the submission is marked unjudgeable only for that
+   * generation (SubmissionService leaves a submission rejudged since then alone).
+   */
+  @Test
+  public void testOnMessagePassesTheJudgeGenerationOfTheTask() throws JMSException {
+    MapMessage message = deadLetteredTask(1000L, "java.lang.Throwable: Message Expired.");
+    when(message.itemExists("generation")).thenReturn(true);
+    when(message.getLong("generation")).thenReturn(3L);
+
+    receiver.onMessage(message);
+
+    verify(submissionService)
+        .markSubmissionUnjudgeable(1000L, 3L, JudgingTaskFailure.NO_JUDGER_AVAILABLE);
   }
 
   /** Test case: tests onMessage(Message). Test data: a SubmissionCreated task the broker dead-lettered after the judgers failed it up to the redelivery limit. Expected: the submission is marked unjudgeable because judging it failed repeatedly, not because no judger is available. */
@@ -67,7 +84,7 @@ public class DeadLetterSubmissionTaskReceiverTest {
                 + " {maximumRedeliveries=5}, cause:null"));
 
     verify(submissionService)
-        .markSubmissionUnjudgeable(1000L, JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY);
+        .markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY);
   }
 
   /** Test case: tests onMessage(Message). Test data: a dead-lettered task without a recorded cause. Expected: the submission is marked unjudgeable without claiming a reason. */
@@ -75,7 +92,7 @@ public class DeadLetterSubmissionTaskReceiverTest {
   public void testOnMessageMarksSubmissionWithUnknownCause() throws JMSException {
     receiver.onMessage(deadLetteredTask(1000L, null));
 
-    verify(submissionService).markSubmissionUnjudgeable(1000L, JudgingTaskFailure.UNKNOWN);
+    verify(submissionService).markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.UNKNOWN);
   }
 
   /** Test case: tests the judge logs of the failures. Expected: each says what happened, and only the expired task mentions the language. */
@@ -112,7 +129,9 @@ public class DeadLetterSubmissionTaskReceiverTest {
 
     verify(submissionService, never())
         .markSubmissionUnjudgeable(
-            org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
   }
 
   /** Test case: tests onMessage(Message). Test data: a message that is not a MapMessage. Expected: the message is ignored without touching the submission service. */
@@ -124,7 +143,9 @@ public class DeadLetterSubmissionTaskReceiverTest {
 
     verify(submissionService, never())
         .markSubmissionUnjudgeable(
-            org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
   }
 
   /** Test case: tests onMessage(Message). Test data: a MapMessage that throws while being read. Expected: the JMSException is swallowed rather than propagated. */
@@ -138,7 +159,9 @@ public class DeadLetterSubmissionTaskReceiverTest {
 
     verify(submissionService, never())
         .markSubmissionUnjudgeable(
-            org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
   }
 
   /** The mocked SubmissionService the receiver finalizes submissions through. */

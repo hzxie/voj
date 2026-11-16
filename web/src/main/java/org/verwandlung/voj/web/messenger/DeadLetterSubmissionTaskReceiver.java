@@ -67,9 +67,15 @@ public class DeadLetterSubmissionTaskReceiver implements MessageListener {
         return;
       }
       long submissionId = mapMessage.getLong("submissionId");
+      // The judge generation the task was queued with: a task that a rejudge superseded must not
+      // fail the submission the newer task is judging. Tasks queued before generations existed
+      // carry none.
+      Long generation =
+          mapMessage.itemExists("generation") ? mapMessage.getLong("generation") : null;
       String cause = mapMessage.getStringProperty(DLQ_DELIVERY_FAILURE_CAUSE);
       JudgingTaskFailure failure = getJudgingTaskFailure(cause);
-      boolean marked = submissionService.markSubmissionUnjudgeable(submissionId, failure);
+      boolean marked =
+          submissionService.markSubmissionUnjudgeable(submissionId, generation, failure);
 
       if (marked) {
         LOGGER.warn(
@@ -79,7 +85,8 @@ public class DeadLetterSubmissionTaskReceiver implements MessageListener {
       } else {
         LOGGER.info(
             String.format(
-                "Ignored dead-lettered judging task #%d; it was already judged or no longer exists.",
+                "Ignored dead-lettered judging task #%d; it was already judged, rejudged since or"
+                    + " no longer exists.",
                 submissionId));
       }
     } catch (JMSException ex) {

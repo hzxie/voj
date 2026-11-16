@@ -35,7 +35,7 @@ public class SubmissionEvent extends ApplicationEvent {
    */
   public SubmissionEvent(
       Object source, long submissionId, String judgeResult, String message, boolean isCompleted) {
-    this(source, submissionId, judgeResult, message, isCompleted, null);
+    this(source, submissionId, judgeResult, message, isCompleted, null, null);
   }
 
   /**
@@ -48,6 +48,8 @@ public class SubmissionEvent extends ApplicationEvent {
    * @param isCompleted - whether judging has completed
    * @param executeTime - the claim of the judging that sent the message: the start time it set on
    *     the submission, in milliseconds; null when the judger did not send it
+   * @param generation - the judge generation of the task of the judging that sent the message;
+   *     null when the judger did not send it
    */
   public SubmissionEvent(
       Object source,
@@ -55,13 +57,15 @@ public class SubmissionEvent extends ApplicationEvent {
       String judgeResult,
       String message,
       boolean isCompleted,
-      Long executeTime) {
+      Long executeTime,
+      Long generation) {
     super(source);
     this.submissionId = submissionId;
     this.judgeResult = judgeResult;
     this.message = message;
     this.isCompleted = isCompleted;
     this.executeTime = executeTime;
+    this.generation = generation;
   }
 
   /**
@@ -109,6 +113,15 @@ public class SubmissionEvent extends ApplicationEvent {
     return executeTime;
   }
 
+  /**
+   * Gets the judge generation of the task of the judging that sent the message.
+   *
+   * @return the judge generation, or null if unknown
+   */
+  public Long getGeneration() {
+    return generation;
+  }
+
   /** The unique identifier of the submission record. */
   private final long submissionId;
 
@@ -123,6 +136,9 @@ public class SubmissionEvent extends ApplicationEvent {
 
   /** The claim of the judging that sent the message, or null if unknown. */
   private final Long executeTime;
+
+  /** The judge generation of the task of the judging that sent the message, or null if unknown. */
+  private final Long generation;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 4808514481370058683L;

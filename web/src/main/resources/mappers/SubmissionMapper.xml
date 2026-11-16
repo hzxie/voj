@@ -8,6 +8,7 @@
 		<result property="submissionId" column="submission_id" />
 		<result property="submitTime" column="submission_submit_time" />
 		<result property="executeTime" column="submission_execute_time" />
+		<result property="judgeGeneration" column="submission_judge_generation" />
 		<result property="usedTime" column="submission_used_time" />
 		<result property="usedMemory" column="submission_used_memory" />
 		<result property="judgeScore" column="submission_judge_score" />
@@ -168,10 +169,17 @@
 		FROM voj_submissions 
 		WHERE submission_id = #{submissionId}
 	</select>
-	<select id="getExecuteTimeOfSubmission"
+	<select id="getJudgingOfSubmission"
 		parameterType="long"
-		resultType="java.util.Date">
-		SELECT submission_execute_time
+		resultType="org.verwandlung.voj.web.model.Submission">
+		SELECT submission_execute_time AS executeTime, submission_judge_generation AS judgeGeneration
+		FROM voj_submissions
+		WHERE submission_id = #{submissionId}
+	</select>
+	<select id="getJudgeGenerationOfSubmission"
+		parameterType="long"
+		resultType="java.lang.Long">
+		SELECT submission_judge_generation
 		FROM voj_submissions
 		WHERE submission_id = #{submissionId}
 	</select>
@@ -361,13 +369,16 @@
 		SET submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog},
 			submission_execute_time = COALESCE(submission_execute_time, NOW())
 		WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'
+		<if test="generation != null">
+			AND submission_judge_generation = #{generation}
+		</if>
 	</update>
 	<update id="resetSubmissionToPending"
 		parameterType="long">
 		UPDATE voj_submissions
 		SET submission_judge_result = 'PD', submission_judge_log = NULL, submission_judge_score = NULL,
 			submission_used_time = NULL, submission_used_memory = NULL, submission_execute_time = NULL,
-			judger_uid = NULL
+			judger_uid = NULL, submission_judge_generation = submission_judge_generation + 1
 		WHERE submission_id = #{submissionId}
 	</update>
 	<delete id="deleteSubmission"

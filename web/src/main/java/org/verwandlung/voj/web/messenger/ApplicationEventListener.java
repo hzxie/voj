@@ -64,10 +64,13 @@ public class ApplicationEventListener {
     }
     // A judging that a rejudge (or a later delivery of its task) superseded may still be running
     // and sending progress: its messages would show the old judging on the page of the new one.
-    // The submission's execute time is the claim of its current judging, so a message with another
-    // claim is dropped (the streams stay open for the current judging's messages).
-    if (event.getExecuteTime() != null
-        && !submissionService.isCurrentJudging(submissionId, event.getExecuteTime())) {
+    // The submission's execute time is the claim of its current judging and its judge generation
+    // that of its current task, so a message with another claim or generation is dropped (the
+    // streams stay open for the current judging's messages). A message without either (from a
+    // judger that predates them) cannot be checked, so it is passed on without a query.
+    if ((event.getExecuteTime() != null || event.getGeneration() != null)
+        && !submissionService.isCurrentJudging(
+            submissionId, event.getExecuteTime(), event.getGeneration())) {
       LOGGER.info(
           String.format(
               "Dropped a message of a superseded judging of submission #%d.", submissionId));

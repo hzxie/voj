@@ -129,13 +129,23 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Gets the execute time of a submission: the start time of its current judging, or null while no
-   * judging claimed it.
+   * Gets what identifies the current judging of a submission: its execute time (the start time of
+   * the judging that claimed it, or null while none did) and its judge generation. Only these two
+   * fields of the returned object are set.
    *
    * @param submissionId - the unique identifier of the submission
-   * @return the execute time, or null
+   * @return a Submission object with the execute time and the judge generation, or null when the
+   *     submission does not exist
    */
-  Date getExecuteTimeOfSubmission(@Param("submissionId") long submissionId);
+  Submission getJudgingOfSubmission(@Param("submissionId") long submissionId);
+
+  /**
+   * Gets the judge generation of a submission (the number of times it was rejudged).
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the judge generation, or null when the submission does not exist
+   */
+  Long getJudgeGenerationOfSubmission(@Param("submissionId") long submissionId);
 
   /**
    * Gets the submissions of a user for a problem.
@@ -343,12 +353,16 @@ public interface SubmissionMapper {
    * claimed the submission is kept; otherwise it becomes the current time.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param generation - the judge generation of the failed task: the submission is only marked
+   *     while it still has this generation (a rejudge queued a newer task otherwise); null marks it
+   *     whatever its generation (a task queued before generations existed)
    * @param judgeResultSlug - the terminal judge-result slug to set
    * @param judgeLog - the judge log explaining the failure
    * @return the number of rows updated (1 when the submission was still pending, 0 otherwise)
    */
   int markSubmissionUnjudgeable(
       @Param("submissionId") long submissionId,
+      @Param("generation") Long generation,
       @Param("judgeResultSlug") String judgeResultSlug,
       @Param("judgeLog") String judgeLog);
 
@@ -357,7 +371,8 @@ public interface SubmissionMapper {
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
    * rejudge flow: without this, the record would keep its old verdict, the detail pages would not
    * show the live judging stream, and the expired-task guard (which only touches pending rows) could
-   * never mark it as unjudgeable.
+   * never mark it as unjudgeable. The judge generation is incremented in the same statement, so the
+   * task queued for this rejudge is told apart from the tasks queued before it.
    *
    * @param submissionId - the unique identifier of the submission
    * @return the number of rows updated

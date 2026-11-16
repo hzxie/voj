@@ -302,7 +302,8 @@ public class SubmissionServiceTest {
     jdbcTemplate.update(insertAccepted, 1003);
     // The rows were inserted behind MyBatis's back: any MyBatis update (this one changes no row)
     // clears the query results it cached in this transaction.
-    submissionService.markSubmissionUnjudgeable(0, SubmissionService.JudgingTaskFailure.UNKNOWN);
+    submissionService.markSubmissionUnjudgeable(
+        0, null, SubmissionService.JudgingTaskFailure.UNKNOWN);
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1002).get("rank"));
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1000).get("rank"));
     Assertions.assertEquals(
@@ -369,9 +370,10 @@ public class SubmissionServiceTest {
   }
 
   /**
-   * Test case: tests isCurrentJudging(long, long). Test data: submission 1001 claimed by a judging
-   * with the judger's claim statement, then rejudged. Expected: only that judging's start time is
-   * current, and after the rejudge none is.
+   * Test case: tests isCurrentJudging(long, Long, Long). Test data: submission 1001 (judge
+   * generation 0) claimed by a judging with the judger's claim statement, then rejudged. Expected:
+   * only that judging's start time and generation are current, and after the rejudge neither is;
+   * an unknown start time or generation is not compared.
    */
   @Test
   public void testIsCurrentJudging() {
@@ -382,15 +384,68 @@ public class SubmissionServiceTest {
         "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
     jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
 
-    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime()));
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime() - 1000));
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), 0L));
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), null));
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, null, 0L));
+    Assertions.assertFalse(
+        submissionService.isCurrentJudging(1001, judging.getTime() - 1000, 0L));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), 1L));
+    Assertions.assertFalse(submissionService.isCurrentJudging(0, null, 0L));
 
     submissionService.createSubmissionTasks(List.of(1001L));
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime()));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), null));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, null, 0L));
+    // The judging of the rejudge's task (generation 1) claims the submission in the same second.
+    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
+    // The claim was made behind MyBatis's back: any MyBatis update (this one changes no row) clears
+    // the query results it cached in this transaction.
+    submissionService.markSubmissionUnjudgeable(
+        0, null, SubmissionService.JudgingTaskFailure.UNKNOWN);
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), 0L));
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), 1L));
   }
 
   /**
-   * Test case: tests markSubmissionUnjudgeable(long, JudgingTaskFailure). Test data: a pending
+   * Test case: tests a rejudge (createSubmissionTasks) followed by the dead-lettering of the task
+   * queued before it. Test data: submission 1001 (judge generation 0) rejudged twice. Expected:
+   * each rejudge increments the judge generation; the dead-lettered task of an older generation
+   * leaves the pending submission alone, the task of the current generation marks it, and a task
+   * without a generation (queued before generations existed) marks any pending submission.
+   */
+  @Test
+  public void testStaleDeadLetteredTaskDoesNotFailARejudge() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    Assertions.assertEquals(0, submissionService.getSubmission(1001).getJudgeGeneration());
+    submissionService.createSubmissionTasks(List.of(1001L));
+    submissionService.createSubmissionTasks(List.of(1001L));
+    Assertions.assertEquals(2, submissionService.getSubmission(1001).getJudgeGeneration());
+
+    for (long staleGeneration : new long[] {0, 1}) {
+      Assertions.assertFalse(
+          submissionService.markSubmissionUnjudgeable(
+              1001, staleGeneration, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
+    }
+    Assertions.assertEquals(
+        "PD",
+        jdbcTemplate.queryForObject(
+            "SELECT submission_judge_result FROM voj_submissions WHERE submission_id = 1001",
+            String.class));
+
+    Assertions.assertTrue(
+        submissionService.markSubmissionUnjudgeable(
+            1001, 2L, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
+    Assertions.assertEquals(
+        "SE", submissionService.getSubmission(1001).getJudgeResult().getJudgeResultSlug());
+
+    submissionService.createSubmissionTasks(List.of(1001L));
+    Assertions.assertTrue(
+        submissionService.markSubmissionUnjudgeable(
+            1001, null, SubmissionService.JudgingTaskFailure.UNKNOWN));
+  }
+
+  /**
+   * Test case: tests markSubmissionUnjudgeable(long, Long, JudgingTaskFailure). Test data: a pending
    * submission a judging claimed, which then failed repeatedly; a judged submission. Expected: the
    * pending one becomes SE with the log of that failure and keeps the claim's execute time, and the
    * judging can no longer record a verdict; the judged one is left alone.
@@ -406,7 +461,7 @@ public class SubmissionServiceTest {
 
     Assertions.assertTrue(
         submissionService.markSubmissionUnjudgeable(
-            1001, SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY));
+            1001, 0L, SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY));
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
             "SELECT submission_judge_result, submission_judge_log, submission_execute_time"
@@ -420,7 +475,7 @@ public class SubmissionServiceTest {
 
     Assertions.assertFalse(
         submissionService.markSubmissionUnjudgeable(
-            1000, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
+            1000, null, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
   }
 
   /** Tests whether a list of submissions contains the submission with the given identifier. */

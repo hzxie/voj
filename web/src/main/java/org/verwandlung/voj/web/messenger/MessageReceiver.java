@@ -75,10 +75,11 @@ public class MessageReceiver implements MessageListener {
    */
   private void errorHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    Long executeTime = getExecuteTime(mapMessage);
+    Long executeTime = getOptionalLong(mapMessage, "executeTime");
+    Long generation = getOptionalLong(mapMessage, "generation");
     eventPublisher.publishEvent(
         new SubmissionEvent(
-            this, submissionId, "System Error", "System Error.", true, executeTime));
+            this, submissionId, "System Error", "System Error.", true, executeTime, generation));
     LOGGER.info(String.format("Submission #%d returned [System Error].", submissionId));
   }
 
@@ -90,18 +91,21 @@ public class MessageReceiver implements MessageListener {
    */
   private void compileFinishedHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    Long executeTime = getExecuteTime(mapMessage);
+    Long executeTime = getOptionalLong(mapMessage, "executeTime");
+    Long generation = getOptionalLong(mapMessage, "generation");
     boolean isSuccessful = mapMessage.getBoolean("isSuccessful");
     String log = mapMessage.getString("log");
 
     if (isSuccessful) {
       String message = "Compile Successfully.\n\n";
       eventPublisher.publishEvent(
-          new SubmissionEvent(this, submissionId, "Running", message, false, executeTime));
+          new SubmissionEvent(
+              this, submissionId, "Running", message, false, executeTime, generation));
       LOGGER.info(String.format("Submission #%d returned [Compile Successfully].", submissionId));
     } else {
       eventPublisher.publishEvent(
-          new SubmissionEvent(this, submissionId, "Compiler Error", log, true, executeTime));
+          new SubmissionEvent(
+              this, submissionId, "Compiler Error", log, true, executeTime, generation));
       LOGGER.info(
           String.format(
               "Submission #%d returned [Compile Error].\n\tError Message:%s",
@@ -117,7 +121,8 @@ public class MessageReceiver implements MessageListener {
    */
   private void testPointFinishedHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    Long executeTime = getExecuteTime(mapMessage);
+    Long executeTime = getOptionalLong(mapMessage, "executeTime");
+    Long generation = getOptionalLong(mapMessage, "generation");
     int checkpointId = mapMessage.getInt("checkpointId");
     String runtimeResult = mapMessage.getString("runtimeResult");
     int usedTime = mapMessage.getInt("usedTime");
@@ -129,7 +134,8 @@ public class MessageReceiver implements MessageListener {
             "- Test Point #%d: %s, Time = %d ms, Memory = %d KB, Score = %d\n",
             new Object[] {checkpointId, runtimeResult, usedTime, usedMemory, score});
     eventPublisher.publishEvent(
-        new SubmissionEvent(this, submissionId, "Running", message, false, executeTime));
+        new SubmissionEvent(
+            this, submissionId, "Running", message, false, executeTime, generation));
 
     LOGGER.info(
         String.format(
@@ -153,7 +159,8 @@ public class MessageReceiver implements MessageListener {
    */
   private void allTestPointsFinishedHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    Long executeTime = getExecuteTime(mapMessage);
+    Long executeTime = getOptionalLong(mapMessage, "executeTime");
+    Long generation = getOptionalLong(mapMessage, "generation");
     String runtimeResult = mapMessage.getString("runtimeResult");
     int usedTime = mapMessage.getInt("totalTime");
     int usedMemory = mapMessage.getInt("maxMemory");
@@ -164,7 +171,8 @@ public class MessageReceiver implements MessageListener {
             "\n%s, Time = %d ms, Memory = %d KB, Score = %d\n",
             new Object[] {runtimeResult, usedTime, usedMemory, score});
     eventPublisher.publishEvent(
-        new SubmissionEvent(this, submissionId, runtimeResult, message, true, executeTime));
+        new SubmissionEvent(
+            this, submissionId, runtimeResult, message, true, executeTime, generation));
 
     LOGGER.info(
         String.format(
@@ -204,15 +212,17 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * Gets the claim of the judging that sent a progress message: the start time it set on the
-   * submission (judgers that predate it do not send one).
+   * Gets an optional long entry of a progress message. The judging that sent the message names
+   * itself by its claim ({@code executeTime}, the start time it set on the submission) and by the
+   * judge generation of its task ({@code generation}); judgers that predate them send neither.
    *
    * @param mapMessage - the MapMessage object received from the message queue
-   * @return the start time of the judging in milliseconds, or null if the message has none
+   * @param name - the name of the entry
+   * @return the value of the entry, or null if the message has none
    * @throws JMSException
    */
-  private static Long getExecuteTime(MapMessage mapMessage) throws JMSException {
-    return mapMessage.itemExists("executeTime") ? mapMessage.getLong("executeTime") : null;
+  private static Long getOptionalLong(MapMessage mapMessage, String name) throws JMSException {
+    return mapMessage.itemExists(name) ? mapMessage.getLong(name) : null;
   }
 
   /**
