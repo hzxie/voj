@@ -667,6 +667,38 @@ public class DiscussionServiceTest {
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
   }
 
+  /** Test case: tests getIdsOfVisibleDiscussionThreads(int). Test data: the seeded threads, then thread #3 hidden by an administrator. Expected: the ids of the threads listed publicly, without the hidden one. */
+  @Test
+  public void testGetIdsOfVisibleDiscussionThreads() {
+    List<Long> ids = discussionService.getIdsOfVisibleDiscussionThreads(100);
+    List<Long> listed = new java.util.ArrayList<>();
+    for (DiscussionThread thread : discussionService.getDiscussionThreadsOfTopic("", 0, 100)) {
+      listed.add(thread.getDiscussionThreadId());
+    }
+    java.util.Collections.sort(listed);
+    Assertions.assertEquals(listed, ids);
+
+    Assertions.assertTrue(discussionService.setThreadVisibility(3, false));
+    Assertions.assertFalse(discussionService.getIdsOfVisibleDiscussionThreads(100).contains(3L));
+  }
+
+  /** Test case: tests getDiscussionRepliesOfThread(...). Test data: thread #2, whose replies #2 and #3 have one up and one down vote and none, seen by user 1000 who upvoted reply #2. Expected: the counts and user 1000's own vote. */
+  @Test
+  public void testRepliesCarryTheirVotes() {
+    List<DiscussionReply> replies =
+        discussionService.getDiscussionRepliesOfThread(2, 1000, 0, 10, true);
+    DiscussionReply voted =
+        replies.stream().filter(r -> r.getDiscussionReplyId() == 2).findFirst().orElseThrow();
+    DiscussionReply unvoted =
+        replies.stream().filter(r -> r.getDiscussionReplyId() == 3).findFirst().orElseThrow();
+    Assertions.assertEquals(1, voted.getNumberOfVoteUp());
+    Assertions.assertEquals(1, voted.getNumberOfVoteDown());
+    Assertions.assertTrue(voted.getIsVotedUp());
+    Assertions.assertFalse(voted.getIsVotedDown());
+    Assertions.assertEquals(0, unvoted.getNumberOfVoteUp());
+    Assertions.assertFalse(unvoted.getIsVotedUp());
+  }
+
   /** Test case: tests the getDiscussionThreadsOfTopic(...) method. Test data: a topic slug that does not exist. Expected: an empty list instead of a NullPointerException (or every topic's threads). */
   @Test
   public void testGetDiscussionThreadsOfUnknownTopic() {

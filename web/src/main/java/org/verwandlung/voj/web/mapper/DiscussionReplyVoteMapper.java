@@ -31,26 +31,16 @@ import org.verwandlung.voj.web.model.DiscussionReplyVote;
  */
 public interface DiscussionReplyVoteMapper {
   /**
-   * Gets the number of votes of a given type on a discussion reply.
+   * Gets the up/down votes of some discussion replies, and the one a user cast on each. Replies
+   * without any vote are left out.
    *
-   * @param discussionReplyId - the unique identifier of the discussion reply
-   * @param voteType - the type of the vote ({@code DiscussionReplyVote.VOTE_UP} or {@code
-   *     DiscussionReplyVote.VOTE_DOWN})
-   * @return the number of votes of the given type on the discussion reply
+   * @param discussionReplyIds - the unique identifiers of the discussion replies (not empty)
+   * @param voterUid - the unique identifier of the user (-1 for nobody)
+   * @return for each reply with votes: {@code replyId}, {@code voteUp} and {@code voteDown} (the
+   *     numbers of votes) and {@code myVote} (the user's vote type, or null)
    */
-  int getNumberOfVotes(
-      @Param("discussionReplyId") long discussionReplyId, @Param("voteType") int voteType);
-
-  /**
-   * Gets the type of the up/down vote a user has cast on a discussion reply. Report rows are ignored,
-   * so this returns only {@code VOTE_UP}, {@code VOTE_DOWN} or {@code null}.
-   *
-   * @param discussionReplyId - the unique identifier of the discussion reply
-   * @param voterUid - the unique identifier of the voting user
-   * @return the up/down vote type the user has cast, or a {@code null} reference if none
-   */
-  Integer getVoteType(
-      @Param("discussionReplyId") long discussionReplyId, @Param("voterUid") long voterUid);
+  List<Map<String, Object>> getVoteStatisticsOfReplies(
+      @Param("discussionReplyIds") List<Long> discussionReplyIds, @Param("voterUid") long voterUid);
 
   /**
    * Gets the total number of reports across all replies of a discussion thread. Used to decide

@@ -32,6 +32,41 @@
 	</resultMap>
 
 	<!-- Methods -->
+	<!-- The threads the public may see: visible, not on an unpublished problem, and (with a threshold)
+	     not hidden by reports. -->
+	<sql id="visibleThreadConditions">
+			<if test="visibleOnly">
+				AND discussion_thread_visible = 1
+				AND (
+					dt.problem_id IS NULL
+					OR dt.problem_id IN (
+						SELECT p.problem_id
+						FROM voj_problems p
+						WHERE p.problem_status = 'PUBLISHED'
+					)
+				)
+			</if>
+			<if test="reportHideThreshold > 0">
+				AND (
+					SELECT COUNT(*)
+					FROM voj_discussion_reply_votes v
+					JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+					WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
+				) &lt; #{reportHideThreshold}
+			</if>
+	</sql>
+	<select id="getIdsOfVisibleDiscussionThreads"
+		parameterType="map"
+		resultType="long">
+		SELECT dt.discussion_thread_id
+		FROM voj_discussion_threads dt
+		<where>
+			<bind name="visibleOnly" value="true" />
+			<include refid="visibleThreadConditions" />
+		</where>
+		ORDER BY dt.discussion_thread_id
+		LIMIT #{limit}
+	</select>
 	<select id="getDiscussionThreads" 
 		parameterType="map"
 		resultMap="DiscussionThreadResultMap">
@@ -64,25 +99,7 @@
 			<if test="discussionTopicId != 0">
 				AND discussion_topic_id = #{discussionTopicId}
 			</if>
-			<if test="visibleOnly">
-				AND discussion_thread_visible = 1
-				AND (
-					dt.problem_id IS NULL
-					OR dt.problem_id IN (
-						SELECT p.problem_id
-						FROM voj_problems p
-						WHERE p.problem_status = 'PUBLISHED'
-					)
-				)
-			</if>
-			<if test="reportHideThreshold > 0">
-				AND (
-					SELECT COUNT(*)
-					FROM voj_discussion_reply_votes v
-					JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
-					WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
-				) &lt; #{reportHideThreshold}
-			</if>
+			<include refid="visibleThreadConditions" />
 		</where>
 		ORDER BY discussion_thread_pinned DESC, latest_discussion_reply_id DESC
 		LIMIT #{offset}, #{limit}

@@ -158,6 +158,17 @@ public class DiscussionService {
   }
 
   /**
+   * Gets the unique identifiers of the threads the public may see, in ascending order (for the
+   * sitemap).
+   *
+   * @param limit - the maximum number of identifiers
+   * @return the unique identifiers of the threads
+   */
+  public List<Long> getIdsOfVisibleDiscussionThreads(int limit) {
+    return discussionThreadMapper.getIdsOfVisibleDiscussionThreads(getReportHideThreshold(), limit);
+  }
+
+  /**
    * Gets all discussion threads within a discussion topic.
    *
    * @param discussionTopicSlug - the unique English abbreviation of the discussion topic
@@ -205,36 +216,50 @@ public class DiscussionService {
       // which the page renders with markdown-it (html: false), so it needs no HTML filtering here.
       dr.setDiscussionReplyContent(
           offensiveWordFilter.censorMarkdown(dr.getDiscussionReplyContent()));
-      // Aggregate the voting information of the reply for the current user
-      populateVoteStatistics(dr, currentUserUid);
     }
+    populateVoteStatistics(replies, currentUserUid);
     return replies;
   }
 
   /**
-   * Populates the aggregated voting information (vote counts and the current user's own vote) of a
-   * discussion reply, reading directly from the discussion reply vote table.
+   * Populates the vote counts of discussion replies and the votes the current user cast, in one
+   * query.
    *
-   * @param discussionReply - the discussion reply whose voting statistics are populated
+   * @param replies - the discussion replies
    * @param currentUserUid - the unique identifier of the currently logged-in user (-1 means not
    *     logged in)
    */
-  private void populateVoteStatistics(DiscussionReply discussionReply, long currentUserUid) {
-    long discussionReplyId = discussionReply.getDiscussionReplyId();
-    discussionReply.setNumberOfVoteUp(
-        discussionReplyVoteMapper.getNumberOfVotes(
-            discussionReplyId, DiscussionReplyVote.VOTE_UP));
-    discussionReply.setNumberOfVoteDown(
-        discussionReplyVoteMapper.getNumberOfVotes(
-            discussionReplyId, DiscussionReplyVote.VOTE_DOWN));
-    if (currentUserUid != -1) {
-      Integer currentUserVote =
-          discussionReplyVoteMapper.getVoteType(discussionReplyId, currentUserUid);
-      discussionReply.setIsVotedUp(
-          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_UP);
-      discussionReply.setIsVotedDown(
-          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_DOWN);
+  private void populateVoteStatistics(List<DiscussionReply> replies, long currentUserUid) {
+    if (replies.isEmpty()) {
+      return;
     }
+    List<Long> replyIds = new ArrayList<>(replies.size());
+    for (DiscussionReply reply : replies) {
+      replyIds.add(reply.getDiscussionReplyId());
+    }
+    Map<Long, Map<String, Object>> statistics = new HashMap<>();
+    for (Map<String, Object> row :
+        discussionReplyVoteMapper.getVoteStatisticsOfReplies(replyIds, currentUserUid)) {
+      statistics.put(((Number) row.get("replyId")).longValue(), row);
+    }
+    for (DiscussionReply reply : replies) {
+      Map<String, Object> row = statistics.getOrDefault(reply.getDiscussionReplyId(), Map.of());
+      Number myVote = (Number) row.get("myVote");
+      reply.setNumberOfVoteUp(toInt(row.get("voteUp")));
+      reply.setNumberOfVoteDown(toInt(row.get("voteDown")));
+      reply.setIsVotedUp(myVote != null && myVote.intValue() == DiscussionReplyVote.VOTE_UP);
+      reply.setIsVotedDown(myVote != null && myVote.intValue() == DiscussionReplyVote.VOTE_DOWN);
+    }
+  }
+
+  /**
+   * Coerces a counted value (null when nothing was counted) to an int.
+   *
+   * @param value - the value
+   * @return the int value, or 0
+   */
+  private static int toInt(Object value) {
+    return value instanceof Number ? ((Number) value).intValue() : 0;
   }
 
   /**

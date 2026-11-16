@@ -485,10 +485,11 @@ class ViewRenderSmokeTest {
                 .string(containsString("Sitemap: https://oj.example.edu/voj/sitemap.xml\n")));
   }
 
-  /** sitemap.xml lists the public problems and the published contests. */
+  /** sitemap.xml lists the public problems, the published contests and the visible threads. */
   @Test
   void sitemapXmlRenders() throws Exception {
     when(problemService.getIdsOfPublicProblems(anyInt())).thenReturn(List.of(1000L));
+    when(discussionService.getIdsOfVisibleDiscussionThreads(anyInt())).thenReturn(List.of(7L));
     when(contestService.getContests(any(), eq(true), anyLong(), anyInt()))
         .thenReturn(List.of(aContest(1L, "ACM", future(), farFuture())));
     mockMvc
@@ -497,7 +498,10 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(containsString("<loc>https://oj.example.edu/voj/p/1000</loc>")))
         .andExpect(
             content()
-                .string(containsString("<loc>https://oj.example.edu/voj/contest/1</loc>")));
+                .string(containsString("<loc>https://oj.example.edu/voj/contest/1</loc>")))
+        .andExpect(
+            content()
+                .string(containsString("<loc>https://oj.example.edu/voj/discussion/7</loc>")));
   }
 
   /** The auth pages are kept out of search results. */

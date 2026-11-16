@@ -28,6 +28,17 @@ import java.util.List;
  */
 public interface DiscussionThreadMapper {
   /**
+   * Gets the unique identifiers of the threads the public may see (see {@code
+   * visibleThreadConditions}), in ascending order.
+   *
+   * @param reportHideThreshold - the number of reports that hides a thread (0: reports hide none)
+   * @param limit - the maximum number of identifiers
+   * @return the unique identifiers of the threads
+   */
+  List<Long> getIdsOfVisibleDiscussionThreads(
+      @Param("reportHideThreshold") int reportHideThreshold, @Param("limit") int limit);
+
+  /**
    * Gets all discussion threads.
    *
    * @param problemId - the unique identifier of the problem

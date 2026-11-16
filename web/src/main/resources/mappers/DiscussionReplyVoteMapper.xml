@@ -4,19 +4,20 @@
 		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper">
 	<!-- Methods -->
-	<select id="getNumberOfVotes"
+	<!-- The up/down votes of each reply, and the one a user cast (report rows are not votes). -->
+	<select id="getVoteStatisticsOfReplies"
 		parameterType="map"
-		resultType="int">
-		SELECT COUNT(*)
+		resultType="java.util.HashMap">
+		SELECT discussion_reply_id AS replyId,
+			SUM(vote_type = 1) AS voteUp,
+			SUM(vote_type = -1) AS voteDown,
+			MAX(CASE WHEN voter_uid = #{voterUid} AND vote_type IN (1, -1) THEN vote_type END) AS myVote
 		FROM voj_discussion_reply_votes
-		WHERE discussion_reply_id = #{discussionReplyId} AND vote_type = #{voteType}
-	</select>
-	<select id="getVoteType"
-		parameterType="map"
-		resultType="java.lang.Integer">
-		SELECT vote_type
-		FROM voj_discussion_reply_votes
-		WHERE discussion_reply_id = #{discussionReplyId} AND voter_uid = #{voterUid} AND vote_type IN (1, -1)
+		WHERE discussion_reply_id IN
+		<foreach collection="discussionReplyIds" item="discussionReplyId" open="(" separator="," close=")">
+			#{discussionReplyId}
+		</foreach>
+		GROUP BY discussion_reply_id
 	</select>
 	<select id="getNumberOfReportsOfThread"
 		parameterType="long"

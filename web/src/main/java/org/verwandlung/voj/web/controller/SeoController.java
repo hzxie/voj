@@ -17,7 +17,6 @@
 package org.verwandlung.voj.web.controller;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Properties;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.util.HtmlUtils;
 import org.verwandlung.voj.web.model.Contest;
-import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.ProblemService;
@@ -87,10 +85,8 @@ public class SeoController {
     for (Contest contest : contestService.getContests(null, true, 0, MAX_URLS_PER_TYPE)) {
       appendUrl(sitemap, baseUrl + "/contest/" + contest.getContestId());
     }
-    List<DiscussionThread> threads =
-        discussionService.getDiscussionThreadsOfTopic(null, 0, MAX_URLS_PER_TYPE);
-    for (DiscussionThread thread : threads) {
-      appendUrl(sitemap, baseUrl + "/discussion/" + thread.getDiscussionThreadId());
+    for (long threadId : discussionService.getIdsOfVisibleDiscussionThreads(MAX_URLS_PER_TYPE)) {
+      appendUrl(sitemap, baseUrl + "/discussion/" + threadId);
     }
     sitemap.append("</urlset>\n");
     return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(sitemap.toString());

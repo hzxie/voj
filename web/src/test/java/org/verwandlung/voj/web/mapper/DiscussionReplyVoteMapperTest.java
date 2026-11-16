@@ -16,6 +16,9 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,25 +41,25 @@ import org.verwandlung.voj.web.model.DiscussionReplyVote;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionReplyVoteMapperTest {
-  /** Test case: tests getNumberOfVotes(...). Test data: replies with and without votes. Expected: the per-type vote counts. */
+  /** Test case: tests getVoteStatisticsOfReplies(...), the vote counts. Test data: replies with and without votes. Expected: the per-type vote counts. */
   @Test
   public void testGetNumberOfVotes() {
     Assertions.assertEquals(
-        1, discussionReplyVoteMapper.getNumberOfVotes(1, DiscussionReplyVote.VOTE_UP));
+        1, numberOfVotes(1, DiscussionReplyVote.VOTE_UP));
     Assertions.assertEquals(
-        1, discussionReplyVoteMapper.getNumberOfVotes(1, DiscussionReplyVote.VOTE_DOWN));
+        1, numberOfVotes(1, DiscussionReplyVote.VOTE_DOWN));
     Assertions.assertEquals(
-        0, discussionReplyVoteMapper.getNumberOfVotes(3, DiscussionReplyVote.VOTE_UP));
+        0, numberOfVotes(3, DiscussionReplyVote.VOTE_UP));
   }
 
-  /** Test case: tests getVoteType(...). Test data: users who upvoted / downvoted / did not vote. Expected: the up/down vote type, or null. */
+  /** Test case: tests getVoteStatisticsOfReplies(...), the vote of a user. Test data: users who upvoted / downvoted / did not vote. Expected: the up/down vote type, or null. */
   @Test
   public void testGetVoteTypeReturnsUpOrDown() {
     Assertions.assertEquals(
-        DiscussionReplyVote.VOTE_UP, discussionReplyVoteMapper.getVoteType(1, 1000).intValue());
+        DiscussionReplyVote.VOTE_UP, voteType(1, 1000));
     Assertions.assertEquals(
-        DiscussionReplyVote.VOTE_DOWN, discussionReplyVoteMapper.getVoteType(1, 1002).intValue());
-    Assertions.assertNull(discussionReplyVoteMapper.getVoteType(3, 1000));
+        DiscussionReplyVote.VOTE_DOWN, voteType(1, 1002));
+    Assertions.assertNull(voteType(3, 1000));
   }
 
   /** Test case: tests castVote(...). Test data: a new vote on a reply with no votes. Expected: the vote is inserted. */
@@ -64,7 +67,7 @@ public class DiscussionReplyVoteMapperTest {
   public void testCastVoteInsertsNewVote() {
     discussionReplyVoteMapper.castVote(new DiscussionReplyVote(3, 1002, DiscussionReplyVote.VOTE_UP));
     Assertions.assertEquals(
-        1, discussionReplyVoteMapper.getNumberOfVotes(3, DiscussionReplyVote.VOTE_UP));
+        1, numberOfVotes(3, DiscussionReplyVote.VOTE_UP));
   }
 
   /** Test case: tests castVote(...). Test data: the same vote cast twice. Expected: only one vote is recorded (idempotent upsert). */
@@ -73,7 +76,7 @@ public class DiscussionReplyVoteMapperTest {
     discussionReplyVoteMapper.castVote(new DiscussionReplyVote(3, 1002, DiscussionReplyVote.VOTE_UP));
     discussionReplyVoteMapper.castVote(new DiscussionReplyVote(3, 1002, DiscussionReplyVote.VOTE_UP));
     Assertions.assertEquals(
-        1, discussionReplyVoteMapper.getNumberOfVotes(3, DiscussionReplyVote.VOTE_UP));
+        1, numberOfVotes(3, DiscussionReplyVote.VOTE_UP));
   }
 
   /** Test case: tests withdrawVote(...). Test data: a withdrawal of a non-matching then matching type. Expected: only the matching vote type is removed. */
@@ -82,10 +85,10 @@ public class DiscussionReplyVoteMapperTest {
     // User 1000 has an upvote on reply 1; withdrawing a downvote must leave the upvote untouched.
     discussionReplyVoteMapper.withdrawVote(1, 1000, DiscussionReplyVote.VOTE_DOWN);
     Assertions.assertEquals(
-        DiscussionReplyVote.VOTE_UP, discussionReplyVoteMapper.getVoteType(1, 1000).intValue());
+        DiscussionReplyVote.VOTE_UP, voteType(1, 1000));
     // Withdrawing the upvote removes it.
     discussionReplyVoteMapper.withdrawVote(1, 1000, DiscussionReplyVote.VOTE_UP);
-    Assertions.assertNull(discussionReplyVoteMapper.getVoteType(1, 1000));
+    Assertions.assertNull(voteType(1, 1000));
   }
 
   /** Test case: tests that a vote and a report on the same reply by the same user coexist. Expected: the upvote survives and the report is counted separately. */
@@ -93,11 +96,11 @@ public class DiscussionReplyVoteMapperTest {
   public void testVoteAndReportCoexist() {
     // User 1000 already upvoted reply 1; the same user now also reports it.
     discussionReplyVoteMapper.castVote(new DiscussionReplyVote(1, 1000, DiscussionReplyVote.VOTE_REPORT));
-    // The upvote is untouched, and getVoteType ignores the report row.
+    // The upvote is untouched, and the vote of a user ignores the report row.
     Assertions.assertEquals(
-        DiscussionReplyVote.VOTE_UP, discussionReplyVoteMapper.getVoteType(1, 1000).intValue());
+        DiscussionReplyVote.VOTE_UP, voteType(1, 1000));
     Assertions.assertEquals(
-        1, discussionReplyVoteMapper.getNumberOfVotes(1, DiscussionReplyVote.VOTE_UP));
+        1, numberOfVotes(1, DiscussionReplyVote.VOTE_UP));
     Assertions.assertEquals(1, discussionReplyVoteMapper.getNumberOfReportsOfThread(1));
   }
 
@@ -107,6 +110,27 @@ public class DiscussionReplyVoteMapperTest {
     Assertions.assertEquals(0, discussionReplyVoteMapper.getNumberOfReportsOfThread(1));
     discussionReplyVoteMapper.castVote(new DiscussionReplyVote(1, 1002, DiscussionReplyVote.VOTE_REPORT));
     Assertions.assertEquals(1, discussionReplyVoteMapper.getNumberOfReportsOfThread(1));
+  }
+
+  /** Gets the number of votes of a type on a reply, from getVoteStatisticsOfReplies. */
+  private int numberOfVotes(long replyId, int voteType) {
+    for (Map<String, Object> row :
+        discussionReplyVoteMapper.getVoteStatisticsOfReplies(List.of(replyId), -1)) {
+      Number count =
+          (Number) row.get(voteType == DiscussionReplyVote.VOTE_UP ? "voteUp" : "voteDown");
+      return count == null ? 0 : count.intValue();
+    }
+    return 0;
+  }
+
+  /** Gets the up/down vote a user cast on a reply, from getVoteStatisticsOfReplies. */
+  private Integer voteType(long replyId, long voterUid) {
+    for (Map<String, Object> row :
+        discussionReplyVoteMapper.getVoteStatisticsOfReplies(List.of(replyId), voterUid)) {
+      Number myVote = (Number) row.get("myVote");
+      return myVote == null ? null : myVote.intValue();
+    }
+    return null;
   }
 
   /** The DiscussionReplyVoteMapper object under test. */
