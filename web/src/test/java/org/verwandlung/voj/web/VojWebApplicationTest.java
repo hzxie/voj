@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
 import org.verwandlung.voj.web.util.MailSender;
@@ -28,12 +29,23 @@ import org.verwandlung.voj.web.util.MailSender;
 /**
  * The test class for VojWebApplication: the application as it starts in production, every bean of
  * it, against the test database (the other tests assemble only some of them, from
- * test-spring-context.xml).
+ * test-spring-context.xml). The application reads the database as it starts, so it provisions the
+ * database first, with the scripts test-spring-context.xml runs, whichever test runs first. Its
+ * context is closed after the test, so that its scheduled jobs do not change the data of the tests
+ * that follow.
  *
  * @author Haozhe Xie
  */
-@SpringBootTest(classes = VojWebApplication.class)
+@SpringBootTest(
+    classes = VojWebApplication.class,
+    properties = {
+      "spring.sql.init.mode=always",
+      "spring.sql.init.encoding=UTF-8",
+      "spring.sql.init.schema-locations=classpath:db/schema.sql",
+      "spring.sql.init.data-locations=classpath:db/seed.sql,classpath:db/test-data.sql"
+    })
 @TestPropertySource(locations = "classpath:voj-test.properties")
+@DirtiesContext
 public class VojWebApplicationTest {
   /**
    * Test case: the application starts. Expected result: every bean is created, which a cycle among
