@@ -572,12 +572,12 @@ public class SandboxBehaviorTest {
   }
 
   /**
-   * Test case: a run on Windows that lists the privileges of its token, names its window station
-   * and desktop, tries to open the operator's window station (WinSta0) and counts the top-level
-   * windows it can see that belong to a process outside its Job. Expected result: the run holds no
-   * privilege but SeChangeNotifyPrivilege (not SeShutdownPrivilege and the others of Users), runs
-   * on the judger's private window station and desktop, may not open WinSta0, and sees no window
-   * of another process.
+   * Test case: a run on Windows that lists the privileges of its token, names its desktop, tries to
+   * open its window station (WinSta0) to list its desktops and the operator's desktop (Default),
+   * and counts the top-level windows it can see that belong to a process outside its Job. Expected result: the run holds no privilege but
+   * SeChangeNotifyPrivilege (not SeShutdownPrivilege and the others of Users), runs on the judger's
+   * private desktop, may neither list the desktops nor open the operator's, and sees no window of
+   * another process. (The test runs in an interactive session, as the judger must.)
    */
   @Test
   public void testRunIsIsolatedFromTheDesktopOnWindows() throws Exception {
@@ -588,9 +588,9 @@ public class SandboxBehaviorTest {
         String.join(
             "\n",
             "privileges: SeChangeNotifyPrivilege",
-            "window station: private",
-            "desktop: default",
+            "desktop: private",
             "WinSta0: denied",
+            "Default desktop: denied",
             "windows of other processes: 0",
             ""),
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900044", "output.txt"))
@@ -2012,10 +2012,10 @@ public class SandboxBehaviorTest {
       """;
 
   /**
-   * A Windows program that reports the privileges of its token, whether its window station is the
-   * judger's private one, the name of its desktop, whether it may open the operator's window
-   * station (WinSta0), and how many top-level windows it sees that belong to a process outside its
-   * Job.
+   * A Windows program that reports the privileges of its token, whether its desktop is the judger's
+   * private one, whether it may open its window station (WinSta0) to list its desktops and the
+   * operator's desktop, and how many top-level windows it sees that belong to a process outside
+   * its Job.
    */
   private static final String WINDOWS_ISOLATION_CODE =
       """
@@ -2070,18 +2070,17 @@ public class SandboxBehaviorTest {
               std::printf(" %s", name.c_str());
           }
           std::printf("\\n");
-          char station[256] = "";
           char desktop[256] = "";
           DWORD length = 0;
-          GetUserObjectInformationA(GetProcessWindowStation(), UOI_NAME, station, sizeof(station),
-                                    &length);
           GetUserObjectInformationA(GetThreadDesktop(GetCurrentThreadId()), UOI_NAME, desktop,
                                     sizeof(desktop), &length);
-          std::printf("window station: %s\\n",
-                      std::string(station).rfind("voj-judger-", 0) == 0 ? "private" : station);
-          std::printf("desktop: %s\\n", desktop);
+          std::printf("desktop: %s\\n",
+                      std::string(desktop).rfind("voj-judger-", 0) == 0 ? "private" : desktop);
           HWINSTA operatorStation = OpenWindowStationA("WinSta0", FALSE, WINSTA_ENUMDESKTOPS);
           std::printf("WinSta0: %s\\n", operatorStation != NULL ? "opened"
+                      : GetLastError() == ERROR_ACCESS_DENIED ? "denied" : "failed");
+          HDESK operatorDesktop = OpenDesktopA("Default", 0, FALSE, DESKTOP_READOBJECTS);
+          std::printf("Default desktop: %s\\n", operatorDesktop != NULL ? "opened"
                       : GetLastError() == ERROR_ACCESS_DENIED ? "denied" : "failed");
           EnumWindows(countWindow, 0);
           std::printf("windows of other processes: %d\\n", foreignWindows);
