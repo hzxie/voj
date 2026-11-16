@@ -269,6 +269,45 @@ public class IsolateRunnerTest {
   }
 
   /**
+   * Test case: runs whose output reaches the file size limit (--fsize), as when the program ignores
+   * SIGXFSZ, so that it is not killed but its writes fail and it exits on its own, normally or
+   * not. Expected result: Output Limit Exceeded, as with the native runner; an output below the
+   * limit and a compile log of any size are judged as usual.
+   */
+  @Test
+  public void testOutputThatReachedTheFileSizeLimitIsOutputLimitExceeded() throws Exception {
+    ReflectionTestUtils.setField(runner, "fileSizeLimitKb", 1);
+    Path outputFile = workDirectory.resolve("output#1.txt");
+    Path logFile = workDirectory.resolve("random-compile.log");
+
+    Path exitsNormally = writeProgram("normal.sh", "#!/bin/sh\nhead -c 1024 /dev/zero\n");
+    Path exitsWithError = writeProgram("error.sh", "#!/bin/sh\nhead -c 1024 /dev/zero\nexit 1\n");
+    Path smallOutput = writeProgram("small.sh", "#!/bin/sh\nhead -c 1023 /dev/zero\n");
+
+    Assertions.assertEquals(
+        Verdict.OUTPUT_LIMIT_EXCEEDED,
+        runner.run(exitsNormally.toString(), null, outputFile.toString(), 1000, 0, false)
+            .getVerdict());
+    Assertions.assertEquals(
+        Verdict.OUTPUT_LIMIT_EXCEEDED,
+        runner.run(exitsWithError.toString(), null, outputFile.toString(), 1000, 0, false)
+            .getVerdict());
+    Assertions.assertEquals(
+        Verdict.NORMAL,
+        runner.run(smallOutput.toString(), null, outputFile.toString(), 1000, 0, false)
+            .getVerdict());
+    Assertions.assertEquals(
+        Verdict.NORMAL,
+        runner.run(exitsNormally.toString(), null, logFile.toString(), 1000, 0, true).getVerdict());
+    // A program killed for exceeding another limit keeps that verdict.
+    Assertions.assertEquals(
+        Verdict.TIME_LIMIT_EXCEEDED,
+        runner
+            .applyOutputLimit(new RunResult(Verdict.TIME_LIMIT_EXCEEDED, 1000, 0, 0), 1024)
+            .getVerdict());
+  }
+
+  /**
    * Test case: the sandboxed program replaces its captured output with a symbolic link to a file
    * outside the box. Expected result: the link is not followed; the output is treated as empty.
    */

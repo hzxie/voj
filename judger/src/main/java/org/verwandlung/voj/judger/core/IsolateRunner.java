@@ -25,6 +25,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -137,7 +138,11 @@ public class IsolateRunner implements SandboxRunner {
 
       RunResult result = parseMeta(metaFile, memoryLimitKb);
       if (hasOutput) {
-        copyOutOfBox(boxDirectory.resolve(BOX_STDOUT_FILE), Paths.get(outputFilePath));
+        Path boxOutputFile = boxDirectory.resolve(BOX_STDOUT_FILE);
+        if (!isCompilation) {
+          result = applyOutputLimit(result, sizeOf(boxOutputFile));
+        }
+        copyOutOfBox(boxOutputFile, Paths.get(outputFilePath));
       }
       return result;
     } catch (Exception ex) {
@@ -517,6 +522,45 @@ public class IsolateRunner implements SandboxRunner {
       return Verdict.MEMORY_LIMIT_EXCEEDED;
     }
     return Verdict.RUNTIME_ERROR;
+  }
+
+  /**
+   * Judges a run whose output reached the file size limit (--fsize) Output Limit Exceeded, as the
+   * native runner does. A program that ignores (or blocks) SIGXFSZ is not killed by it: its writes
+   * past the limit fail with EFBIG, and it may then exit normally or with an error, with its output
+   * cut off at the limit. That is no Wrong Answer or Runtime Error but an output that was too large.
+   *
+   * @param result - the result of the run, as isolate reports it
+   * @param outputSize - the size (bytes) of the captured output
+   * @return the result, Output Limit Exceeded if the output reached the limit
+   */
+  RunResult applyOutputLimit(RunResult result, long outputSize) {
+    Verdict verdict = result.getVerdict();
+    boolean exitedOnItsOwn = verdict == Verdict.NORMAL || verdict == Verdict.RUNTIME_ERROR;
+    if (!exitedOnItsOwn || fileSizeLimitKb <= 0 || outputSize < fileSizeLimitKb * 1024L) {
+      return result;
+    }
+    return new RunResult(
+        Verdict.OUTPUT_LIMIT_EXCEEDED,
+        result.getCpuTimeMs(),
+        result.getPeakMemoryKb(),
+        result.getExitCode());
+  }
+
+  /**
+   * Gets the size of a file in the box without following a link the program may have planted.
+   *
+   * @param file - the file
+   * @return its size (bytes), 0 if it is missing or not a regular file
+   */
+  private static long sizeOf(Path file) {
+    try {
+      BasicFileAttributes attributes =
+          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      return attributes.isRegularFile() ? attributes.size() : 0;
+    } catch (IOException ex) {
+      return 0;
+    }
   }
 
   /** The signal raised when a file outgrows the file size limit (SIGXFSZ on Linux). */

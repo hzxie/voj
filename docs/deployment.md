@@ -237,8 +237,9 @@ Go, Kotlin, JavaScript and Rust).
 - **Network.** isolate gives each box its own, empty network namespace.
 - **Limits and verdicts.** A run may have `judger.processLimit` processes and
   threads at once (`--processes`), a compilation `judger.compileProcessLimit`.
-  Files are capped at `judger.isolate.fileSizeLimitKb` (`--fsize`): a program
-  killed for writing past it (`SIGXFSZ`) is judged Output Limit Exceeded. A
+  Files are capped at `judger.isolate.fileSizeLimitKb` (`--fsize`): a run whose
+  output reaches it is judged Output Limit Exceeded, whether `SIGXFSZ` kills it
+  or it ignores the signal, so that its writes fail and it exits on its own. A
   program killed by the out-of-memory killer of its box's cgroup
   (`cg-oom-killed`), or that fails at or above its memory limit, is judged
   Memory Limit Exceeded.
