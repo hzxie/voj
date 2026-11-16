@@ -132,10 +132,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   collectors do). Files a run writes in its work directory hold data outside its
   memory limit, though: `RLIMIT_FSIZE` bounds each file (see below), not their
   number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
-  file's size. On a `judger.workDir` on tmpfs (as `/tmp` is on many
-  distributions), that space is RAM: put the work directories on a disk-backed
-  file system, or on a tmpfs whose `size=` bounds what the runs on the host can
-  hold there.
+  file's size. The work directories are under `judger.checkpointDir`; on tmpfs
+  (as `/tmp`, its default parent, is on many distributions), that space is RAM:
+  put `judger.checkpointDir` on a disk-backed file system, or on a tmpfs whose
+  `size=` bounds what the runs on the host can hold there.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
