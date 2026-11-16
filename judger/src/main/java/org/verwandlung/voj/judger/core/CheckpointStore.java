@@ -79,7 +79,7 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * <ul>
  *   <li>its cache, {@code judger-<n>/}, so that several judgers on one host never replace a
  *       problem's copy while another one reads it. Within a judger, judging is serialised (see
- *       {@code Dispatcher#createNewTask}), so a problem's copy is never replaced while it is read.
+ *       {@code Dispatcher}: one judging at a time), so a problem's copy is never replaced while it is read.
  *   <li>its work directory, {@code work-<n>/}, which holds the work directory of each judging (see
  *       {@link #getWorkDirectory}). A judger that died while judging (killed, out of memory) leaves
  *       the work directory of that judging behind, with a submission's source and binary in it: it
