@@ -736,6 +736,29 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a Java program that runs 100 tasks, each sleeping 20 ms, with CompletableFuture's
+   * supplyAsync (no executor), and one that sums a parallel stream, under the run's 64 threads.
+   * Expected result: Accepted, with the right output: the common fork-join pool, which runs both,
+   * has a parallelism of 2 (see JavaOptions), rather than 1, with which supplyAsync would start a
+   * thread for every task (OpenJDK 21), past the thread limit.
+   */
+  @Test
+  public void testJavaConcurrencyKeepsToTheThreadLimit() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Map<String, Object> result =
+        judge(900038L, "text/x-java", JAVA_COMPLETABLE_FUTURE_CODE, 5000, 262144, "");
+    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
+    Assertions.assertEquals(
+        "4950 2\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900038", "output.txt")));
+    result = judge(900039L, "text/x-java", JAVA_PARALLEL_STREAM_CODE, 5000, 262144, "");
+    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
+    Assertions.assertEquals(
+        "149999998\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900039", "output.txt")));
+  }
+
+  /**
    * Test case: a Java program that dies of an uncaught exception, a C++ program that exits with 3
    * (the exit code of a JVM that ran out of memory), and a C++ program that touches 192 MB of its
    * 256 MB and then crashes (SIGSEGV). Expected result: Runtime Error for all three: none is a JVM
@@ -921,6 +944,52 @@ public class SandboxBehaviorTest {
           public static void main(String[] args) {
               long[] values = new long[200_000_000];
               System.out.println(values.length);
+          }
+      }
+      """;
+
+  /**
+   * A Java program that runs 100 tasks, each sleeping 20 ms, with CompletableFuture.supplyAsync
+   * without an executor, and prints the sum of their results and the common pool's parallelism.
+   */
+  private static final String JAVA_COMPLETABLE_FUTURE_CODE =
+      """
+      import java.util.ArrayList;
+      import java.util.List;
+      import java.util.concurrent.CompletableFuture;
+      import java.util.concurrent.ForkJoinPool;
+
+      public class Main {
+          public static void main(String[] args) {
+              List<CompletableFuture<Integer>> tasks = new ArrayList<>();
+              for (int i = 0; i < 100; ++i) {
+                  final int value = i;
+                  tasks.add(CompletableFuture.supplyAsync(() -> {
+                      try {
+                          Thread.sleep(20);
+                      } catch (InterruptedException ex) {
+                          Thread.currentThread().interrupt();
+                      }
+                      return value;
+                  }));
+              }
+              int sum = 0;
+              for (CompletableFuture<Integer> task : tasks) {
+                  sum += task.join();
+              }
+              System.out.println(sum + " " + ForkJoinPool.getCommonPoolParallelism());
+          }
+      }
+      """;
+
+  /** A Java program that sums a parallel stream. */
+  private static final String JAVA_PARALLEL_STREAM_CODE =
+      """
+      import java.util.stream.LongStream;
+
+      public class Main {
+          public static void main(String[] args) {
+              System.out.println(LongStream.rangeClosed(1, 50_000_000L).parallel().map(x -> x % 7).sum());
           }
       }
       """;

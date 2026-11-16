@@ -378,9 +378,15 @@ is *L*:
   by the CPU count. On a host with 64 CPUs, a parallel stream would start 63
   workers and fail at a run's 64 threads (`judger.processLimit`), a runtime
   error on that host only. With one CPU a run's JVM keeps to a handful of
-  threads on any host, and a parallel stream costs the CPU time of a sequential
-  one, the time a run is charged for, rather than ten times that spread over
-  many threads.
+  threads on any host (14, its own included), and a parallel stream costs
+  about the CPU time of a sequential one, the time a run is charged for,
+  rather than ten times that spread over many threads.
+- `-Djava.util.concurrent.ForkJoinPool.common.parallelism=2`: with one CPU,
+  the common fork-join pool would have a parallelism of 1, and
+  `CompletableFuture`'s async methods without an executor would then start a
+  thread for every task (OpenJDK 21): 100 tasks that sleep took 114 threads and
+  the run died at its 64. With 2, they run in the common pool, as parallel
+  streams do: 16 threads in all, for either.
 - `-XX:+ExitOnOutOfMemoryError`: a program that runs out of heap (or class
   metadata), or asks for an array larger than the JVM allows, prints
   `Terminating due to java.lang.OutOfMemoryError: ...` on standard output and

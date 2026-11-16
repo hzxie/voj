@@ -34,7 +34,9 @@ import org.junit.jupiter.api.io.TempDir;
 public class JavaOptionsTest {
   /** The options of every run that do not depend on its limits. */
   private static final String OTHER_OPTIONS =
-      "-XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError";
+      "-XX:+UseSerialGC -XX:ActiveProcessorCount=1"
+          + " -Djava.util.concurrent.ForkJoinPool.common.parallelism=2"
+          + " -XX:+ExitOnOutOfMemoryError";
 
   /**
    * Test case: the options of runs with memory limits, and without one. Expected result: the JVM

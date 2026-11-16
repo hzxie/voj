@@ -71,9 +71,16 @@ import java.nio.file.attribute.BasicFileAttributes;
  *       parallelism of the program (parallel streams, the common fork-join pool) by the host's CPU
  *       count. A run may have {@code judger.processLimit} (64) threads: on a host with 64 CPUs, a
  *       parallel stream fails to start its 63 workers and the run dies of it, a runtime error on
- *       that host only. With one CPU the JVM keeps to a handful of threads on any host (7 at most
- *       for a parallel stream), and a parallel stream costs the CPU time of a sequential one (0.2 s
- *       rather than 2 s spread over 24 threads), the time the run is charged for.
+ *       that host only. With one CPU the JVM keeps to a handful of threads on any host (14 in all,
+ *       its own included), and a parallel stream does not cost much more CPU time than a sequential
+ *       one (0.2 s rather than 2 s spread over 24 threads), the time the run is charged for.
+ *   <li>{@code -Djava.util.concurrent.ForkJoinPool.common.parallelism=}{@value
+ *       #COMMON_POOL_PARALLELISM}: with one CPU, the common fork-join pool would have a parallelism
+ *       of 1, and CompletableFuture's async methods without an executor then start a new thread
+ *       for every task (OpenJDK 21): 100 tasks that each sleep 20 ms took 114 threads, past a run's
+ *       64, and the run died of it; 100 that compute, 72 threads and 1.7 s of CPU time rather than
+ *       0.2 s. With 2, they run in the common pool, as a parallel stream does: 16 threads in all
+ *       for either, and for a parallel stream (OpenJDK 21 and 25).
  *   <li>{@code -XX:+ExitOnOutOfMemoryError}: a program whose heap (or class metadata) runs out, or
  *       that asks for an array larger than the JVM allows, writes "{@value #OUT_OF_MEMORY_REPORT}..."
  *       on standard output and exits at once with {@value #OUT_OF_MEMORY_EXIT_CODE}, which the
@@ -107,6 +114,9 @@ final class JavaOptions {
    * than failing to start (a Runtime Error).
    */
   static final int MIN_MAX_HEAP_KB = 16 * 1024;
+
+  /** The parallelism of the common fork-join pool (parallel streams, CompletableFuture). */
+  static final int COMMON_POOL_PARALLELISM = 2;
 
   /** The exit code of a JVM that ran out of memory ({@code -XX:+ExitOnOutOfMemoryError}). */
   static final int OUT_OF_MEMORY_EXIT_CODE = 3;
@@ -146,7 +156,10 @@ final class JavaOptions {
           .append("k ");
     }
     return options
-        .append("-XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError")
+        .append("-XX:+UseSerialGC -XX:ActiveProcessorCount=1")
+        .append(" -Djava.util.concurrent.ForkJoinPool.common.parallelism=")
+        .append(COMMON_POOL_PARALLELISM)
+        .append(" -XX:+ExitOnOutOfMemoryError")
         .toString();
   }
 
