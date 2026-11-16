@@ -26,13 +26,13 @@
                         <span class="vw-cat-badge" id="thread-cat-badge"
                               th:classappend="${#strings.containsIgnoreCase(topicSlug,'solution')} ? 'vw-cat-solutions' : (${#strings.containsIgnoreCase(topicSlug,'announce')} ? 'vw-cat-announce' : (${#strings.containsIgnoreCase(topicSlug,'help')} ? 'vw-cat-help' : 'vw-cat-default'))"
                               th:text="${discussionThread.discussionTopic.discussionTopicName}">Help</span>
-                        <span id="edit-topic-chips" class="vw-composer-cats hide" th:if="${discussionTopics != null}">
-                            <span th:each="discussionTopic : ${discussionTopics}"
+                        <span id="edit-topic-chips" class="vw-composer-cats hide" th:if="${discussionTopics != null}" role="group" th:aria-label="#{voj.discussion.new-thread.discussion-topic}">
+                            <button type="button" aria-pressed="false" th:each="discussionTopic : ${discussionTopics}"
                                   th:if="${discussionThread.problem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
                                   class="vw-cat-chip"
                                   th:attr="data-slug=${discussionTopic.discussionTopicSlug}"
                                   th:classappend="${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'solution')} ? 'is-solutions' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'announce')} ? 'is-announce' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'help')} ? 'is-help' : 'is-default'))"
-                                  th:text="${discussionTopic.discussionTopicName}">Help</span>
+                                  th:text="${discussionTopic.discussionTopicName}">Help</button>
                         </span>
                         <input type="hidden" id="discussion-thread-topic" th:value="${topicSlug}" />
                         <a class="vw-thread-crumb-link" th:if="${discussionThread.problem != null}"
@@ -360,11 +360,13 @@
             saveLabel = [[#{voj.discussion.thread.save-changes}]];
 
         // Topic chip picker (only active while editing).
-        $('#edit-topic-chips').on('click', '.vw-cat-chip', function() {
-            $('#edit-topic-chips .vw-cat-chip').removeClass('active');
-            $(this).addClass('active');
-            $('#discussion-thread-topic').val($(this).attr('data-slug'));
-        });
+        // Single-select topic buttons: .active is the look, aria-pressed the state.
+        function selectTopicChip($chip) {
+            $('#edit-topic-chips .vw-cat-chip').removeClass('active').attr('aria-pressed', 'false');
+            $chip.addClass('active').attr('aria-pressed', 'true');
+            $('#discussion-thread-topic').val($chip.attr('data-slug'));
+        }
+        $('#edit-topic-chips').on('click', '.vw-cat-chip', function() { selectTopicChip($(this)); });
 
         $('#edit-discussion-btn').click(function() {
             if ( $('#discussion-thread-title').is(':visible') ) { saveDiscussion(); }
@@ -374,8 +376,7 @@
 
         function enterEditMode() {
             $('#discussion-thread-title').val($('#discussion-thread-head .header h1').text());
-            $('#edit-topic-chips .vw-cat-chip').removeClass('active')
-                .filter('[data-slug="' + $('#discussion-thread-topic').val() + '"]').addClass('active');
+            selectTopicChip($('#edit-topic-chips .vw-cat-chip').filter('[data-slug="' + $('#discussion-thread-topic').val() + '"]'));
             $('#discussion-thread-head .header h1').addClass('hide');
             $('#discussion-thread-title-wrap').removeClass('hide');
             $('#thread-cat-badge').addClass('hide');

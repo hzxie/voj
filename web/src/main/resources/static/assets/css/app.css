@@ -1360,7 +1360,7 @@ dialog::backdrop { background:rgba(0,0,0,.6); overflow:hidden; overscroll-behavi
 .vw-composer-problem-input { width:200px; max-width:100%; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:11px 14px; font-family:var(--mono); font-size:13.5px; color:var(--accent); outline:none; }
 .vw-composer-problem-input:focus { border-color:var(--accent); }
 .vw-composer-cats { display:flex; gap:8px; flex-wrap:wrap; }
-.vw-cat-chip { font-size:12.5px; font-weight:600; padding:9px 15px; border:1px solid var(--line); border-radius:8px; color:var(--text2); background:transparent; cursor:pointer; }
+.vw-cat-chip { font:inherit; font-size:12.5px; font-weight:600; padding:9px 15px; border:1px solid var(--line); border-radius:8px; color:var(--text2); background:transparent; cursor:pointer; }
 .vw-cat-chip:hover { border-color:var(--text2); }
 .vw-cat-chip.active { background:var(--accent-soft); }
 .vw-cat-chip.active.is-help { color:var(--info); border-color:var(--info); }

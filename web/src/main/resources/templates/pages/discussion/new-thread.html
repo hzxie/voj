@@ -43,13 +43,13 @@
                             <label class="vw-composer-label">
                                 <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.discussion-topic}">category</span></span>
                             </label>
-                            <div class="vw-composer-cats" id="discussion-topics">
-                                <span th:each="discussionTopic : ${discussionTopics}"
+                            <div class="vw-composer-cats" id="discussion-topics" role="group" th:aria-label="#{voj.discussion.new-thread.discussion-topic}">
+                                <button type="button" aria-pressed="false" th:each="discussionTopic : ${discussionTopics}"
                                       th:if="${relatedProblem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
                                       class="vw-cat-chip"
                                       th:attr="data-slug=${discussionTopic.discussionTopicSlug}"
                                       th:classappend="${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'solution')} ? 'is-solutions' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'announce')} ? 'is-announce' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'help')} ? 'is-help' : 'is-default'))"
-                                      th:text="${discussionTopic.discussionTopicName}">Help</span>
+                                      th:text="${discussionTopic.discussionTopicName}">Help</button>
                             </div>
                             <input type="hidden" id="discussion-topic" />
                         </div>
@@ -134,16 +134,16 @@
 
         $(function() {
             // Select the first (server-filtered) category chip and seed the hidden topic field.
-            var firstChip = $('.vw-cat-chip').first();
-            firstChip.addClass('active');
-            $('#discussion-topic').val(firstChip.attr('data-slug'));
+            selectTopicChip($('.vw-cat-chip').first());
             $('#title-count').text(($('#discussion-thread-title').val() || '').length);
         });
-        $('#discussion-topics').on('click', '.vw-cat-chip', function() {
-            $('.vw-cat-chip').removeClass('active');
-            $(this).addClass('active');
-            $('#discussion-topic').val($(this).attr('data-slug'));
-        });
+        // Single-select topic buttons: .active is the look, aria-pressed the state.
+        function selectTopicChip($chip) {
+            $('.vw-cat-chip').removeClass('active').attr('aria-pressed', 'false');
+            $chip.addClass('active').attr('aria-pressed', 'true');
+            $('#discussion-topic').val($chip.attr('data-slug'));
+        }
+        $('#discussion-topics').on('click', '.vw-cat-chip', function() { selectTopicChip($(this)); });
         $('#discussion-thread-title').on('input', function() {
             $('#title-count').text(($(this).val() || '').length);
         });
