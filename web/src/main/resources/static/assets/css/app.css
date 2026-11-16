@@ -575,9 +575,9 @@ a.vw-card:hover { border-color:var(--accent); }
 .vw-contest-name { font-size:14.5px; font-weight:600; }
 .vw-contest-meta { font-size:11px; margin-top:3px; }
 .vw-bulletin { list-style:none; margin:0; padding:0; }
-.vw-bulletin-item { padding:11px 17px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:13px; font-size:12.5px; cursor:pointer; }
+.vw-bulletin-item { border-bottom:1px solid var(--line2); font-size:12.5px; }
 .vw-bulletin-item:last-child { border-bottom:0; }
-.vw-bulletin-link { display:flex; align-items:center; gap:13px; width:100%; color:inherit; padding:0; border:0; background:none; font:inherit; text-align:start; cursor:pointer; }
+.vw-bulletin-link { display:flex; align-items:center; gap:13px; width:100%; color:inherit; padding:11px 17px; border:0; background:none; font:inherit; text-align:start; cursor:pointer; }
 .vw-bulletin-date { width:60px; flex-shrink:0; }
 .vw-bulletin-title { color:var(--text); flex:1; }
 .vw-card-empty { padding:18px; }
