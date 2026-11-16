@@ -269,6 +269,27 @@ public class PreprocessorUnitTest {
   }
 
   /**
+   * Test case: tests the createTestCode(Submission, String) method. Test data: the native sandbox
+   * with a sandbox account that does not exist. Expected result: the program directory cannot be
+   * handed to it, which fails the judging rather than leaving the compiler a directory it may not
+   * write to. Needs root.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testCreateTestCodeFailsWhenTheDirectoryCannotBeHandedOver() {
+    Assumptions.assumeTrue(FileSystemUtils.isRunningAsRoot(), "Needs root.");
+    ReflectionTestUtils.setField(preprocessor, "sandbox", "native");
+    ReflectionTestUtils.setField(preprocessor, "sandboxUsername", "voj-no-such-account");
+
+    Assertions.assertThrows(
+        IOException.class,
+        () ->
+            preprocessor.createTestCode(
+                submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
+                tempDir.resolve("voj-1006").toString()));
+  }
+
+  /**
    * Builds a submission in the given language.
    *
    * @param languageName - the name of the programming language

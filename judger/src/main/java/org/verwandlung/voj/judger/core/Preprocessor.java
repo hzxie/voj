@@ -355,34 +355,23 @@ public class Preprocessor {
    * judger runs as root the directory is then handed to the sandbox user, so that the compiler and
    * the submitted program, which run with dropped privileges, can write there: the native sandbox
    * runs them as system.username, isolate as the box's own user, whose UID is isolate's first_uid
-   * plus the box id (see {@link #isolateUid()}).
+   * plus the box id (see {@link #isolateUid()}). A directory that cannot be handed over fails the
+   * judging: the compiler or the program could not write there.
    *
    * @param workDirectory the directory the sandbox writes in
+   * @throws IOException if the directory cannot be handed to the sandbox user
    */
-  private void setWorkDirectoryOwner(Path workDirectory) {
-    if (!isPosix()) {
+  private void setWorkDirectoryOwner(Path workDirectory) throws IOException {
+    if (!isPosix() || !FileSystemUtils.isRunningAsRoot()) {
       return;
     }
-    if (FileSystemUtils.isRunningAsRoot() && "isolate".equalsIgnoreCase(sandbox)) {
-      try {
-        Files.setAttribute(workDirectory, "unix:uid", isolateUid(), LinkOption.NOFOLLOW_LINKS);
-      } catch (IOException ex) {
-        LOGGER.warn("Failed to hand work directory to isolate's box user " + isolateUid(), ex);
-      }
-      return;
-    }
-    if (FileSystemUtils.isRunningAsRoot()
-        && sandboxUsername != null
-        && !sandboxUsername.isEmpty()) {
-      try {
-        UserPrincipal owner =
-            FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName(
-                sandboxUsername);
-        Files.setOwner(workDirectory, owner);
-      } catch (IOException ex) {
-        LOGGER.warn(
-            "Failed to hand work directory to sandbox user '" + sandboxUsername + "'", ex);
-      }
+    if ("isolate".equalsIgnoreCase(sandbox)) {
+      Files.setAttribute(workDirectory, "unix:uid", isolateUid(), LinkOption.NOFOLLOW_LINKS);
+    } else if (sandboxUsername != null && !sandboxUsername.isEmpty()) {
+      UserPrincipal owner =
+          FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName(
+              sandboxUsername);
+      Files.setOwner(workDirectory, owner);
     }
   }
 
