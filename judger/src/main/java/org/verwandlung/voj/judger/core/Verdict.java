@@ -89,10 +89,10 @@ public enum Verdict {
       default:
         break;
     }
-    if (limits.timeLimitMs() > 0 && result.cpuTimeMs() > limits.timeLimitMs()) {
+    if (result.cpuTimeMs() > limits.timeLimitMs()) {
       return TIME_LIMIT_EXCEEDED;
     }
-    if (limits.memoryLimitKb() > 0 && result.peakMemoryKb() > limits.memoryLimitKb()) {
+    if (result.peakMemoryKb() > limits.memoryLimitKb()) {
       return MEMORY_LIMIT_EXCEEDED;
     }
     if (sizeOf(command.outputFile()) >= limits.outputLimitKb() * 1024L) {

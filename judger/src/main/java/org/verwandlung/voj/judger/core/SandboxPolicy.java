@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sun.management.OperatingSystemMXBean;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +42,35 @@ import org.verwandlung.voj.judger.model.Problem;
  * @author Haozhe Xie
  */
 @Component
-public class SandboxPolicy {
+public class SandboxPolicy implements InitializingBean {
+  /**
+   * Checks the configured limits as the judger starts: a compilation or run without a limit could
+   * hold the judger forever, so a limit that is not positive keeps the judger from starting.
+   *
+   * @throws IllegalStateException if a configured limit is not positive
+   */
+  @Override
+  public void afterPropertiesSet() {
+    requirePositive("judger.compileTimeLimit", compileTimeLimit);
+    requirePositive("judger.compileMemoryLimit", compileMemoryLimit);
+    requirePositive("judger.processLimit", processLimit);
+    requirePositive("judger.compileProcessLimit", compileProcessLimit);
+    requirePositive("judger.outputLimit", outputLimitKb);
+  }
+
+  /**
+   * Checks that a configured limit is positive.
+   *
+   * @param name - the name of the setting
+   * @param value - its value
+   * @throws IllegalStateException if it is not
+   */
+  private static void requirePositive(String name, int value) {
+    if (value <= 0) {
+      throw new IllegalStateException(name + " must be positive, not " + value);
+    }
+  }
+
   /**
    * Builds the compilation of a submission, which runs in the program directory, the only one it
    * may write to, and writes its log (standard output and error) to {@code logFile}.
@@ -52,7 +83,8 @@ public class SandboxPolicy {
   public SandboxCommand compilation(Language language, String programDirectory, String logFile) {
     Map<String, String> environment = environment(programDirectory, null);
     Limits limits =
-        new Limits(
+        limits(
+            true,
             compileTimeLimit,
             scale(compileMemoryLimit, Math.max(language.getMemoryMultiplier(), 1.0)),
             outputLimitKb,
@@ -92,7 +124,8 @@ public class SandboxPolicy {
     Map<String, String> environment =
         environment(runDirectory, JavaOptions.forRun(memoryLimit));
     Limits limits =
-        new Limits(
+        limits(
+            false,
             scale(problem.getTimeLimit(), language.getTimeMultiplier()),
             memoryLimit,
             outputLimitKb,
@@ -105,6 +138,58 @@ public class SandboxPolicy {
         outputFile,
         false,
         limits);
+  }
+
+  /**
+   * Decides the limits of a compilation or run from its time, memory, output and process limits:
+   *
+   * <ul>
+   *   <li>the wall-clock limit, which ends a program that sleeps or blocks rather than using CPU
+   *       time: {@value #WALL_TIME_FACTOR} times the time limit plus {@value #WALL_TIME_SLACK_MS}
+   *       ms, so that a program on a busy host is not stopped short of its CPU time;
+   *   <li>the memory backstop: twice the memory limit plus {@value #BACKSTOP_HEADROOM_KB} KB (256
+   *       MB), the same on every host, which a run's JVM, sized to its memory limit (see {@link
+   *       JavaOptions}), fits in with room to spare. The memory limit is measured on the peak
+   *       resident set; the backstop only bounds how far a program gets between two
+   *       measurements, and decides whether a single allocation, or a program's static data, is
+   *       beyond any limit (see docs/deployment.md). A compilation's headroom is at least 1/32 of
+   *       the host's RAM: its compilers' JVMs (javac, kotlinc) size themselves to the host, and
+   *       commit far more than they touch.
+   * </ul>
+   *
+   * @param compilation - whether the limits are a compilation's
+   * @param timeLimitMs - the CPU time limit (ms)
+   * @param memoryLimitKb - the memory limit (KB)
+   * @param outputLimitKb - the largest file the program may write (KB)
+   * @param processLimit - the processes (on Linux, and threads) the program may have at once
+   * @return the limits
+   * @throws IllegalArgumentException if a limit is not positive
+   */
+  static Limits limits(
+      boolean compilation,
+      int timeLimitMs,
+      int memoryLimitKb,
+      int outputLimitKb,
+      int processLimit) {
+    long headroomKb =
+        compilation ? Math.max(BACKSTOP_HEADROOM_KB, TOTAL_MEMORY_KB / 32) : BACKSTOP_HEADROOM_KB;
+    return new Limits(
+        timeLimitMs,
+        saturate((long) timeLimitMs * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS),
+        memoryLimitKb,
+        saturate(2L * memoryLimitKb + headroomKb),
+        outputLimitKb,
+        processLimit);
+  }
+
+  /**
+   * Caps a figure at the largest int.
+   *
+   * @param value - the figure
+   * @return the figure, at most {@link Integer#MAX_VALUE}
+   */
+  private static int saturate(long value) {
+    return (int) Math.min(Integer.MAX_VALUE, value);
   }
 
   /**
@@ -231,13 +316,27 @@ public class SandboxPolicy {
   /**
    * Scales a limit by a language's multiplier.
    *
-   * @param limit - the limit (0 means none)
+   * @param limit - the limit
    * @param multiplier - the multiplier
    * @return the scaled limit
    */
   private static int scale(int limit, double multiplier) {
     return (int) Math.min(Integer.MAX_VALUE, Math.ceil(limit * multiplier));
   }
+
+  /** The wall-clock limit is this many times the time limit, ... */
+  static final int WALL_TIME_FACTOR = 2;
+
+  /** ... plus this much (ms). */
+  static final int WALL_TIME_SLACK_MS = 1000;
+
+  /** The headroom of the memory backstop over twice the memory limit (KB). */
+  static final int BACKSTOP_HEADROOM_KB = 256 * 1024;
+
+  /** The host's physical memory (KB). */
+  private static final long TOTAL_MEMORY_KB =
+      ((OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()).getTotalMemorySize()
+          / 1024;
 
   /** The judger's variables a program gets: the locale and the toolchains' settings. */
   static final List<String> INHERITED_VARIABLES =

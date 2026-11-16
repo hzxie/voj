@@ -118,8 +118,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 - **Memory.** A run's memory is the peak resident set size of its process
   (`VmHWM`, polled from `/proc` every millisecond; the program is killed once it
   exceeds the limit). The kernel backs this with `RLIMIT_DATA` at twice the
-  limit plus max(256 MB, RAM / 32), which bounds how far a process can grow
-  between two polls; a single allocation larger than that (say,
+  limit plus 256 MB, the same on every host, which bounds how far a process can
+  grow between two polls; a single allocation larger than that (say,
   `std::vector<int>(1e9)` under 256 MB) is stopped by the seccomp filters and is
   Memory Limit Exceeded too, rather than the runtime error its failure would
   look like. A program that would have handled such a failed allocation is
@@ -131,8 +131,9 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   with the backstop at more than twice the limit, that is rare. Memory that is
   reserved but never touched does not count. A compilation's memory is that of
   the compiler's top-level process, under `judger.compileMemoryLimit`; every
-  process it runs is held to the same `RLIMIT_DATA` backstop, derived from that
-  limit. A program whose static data alone (`static int a[1 << 30];`) exceeds
+  process it runs is held to an `RLIMIT_DATA` backstop of twice that limit plus
+  max(256 MB, RAM / 32), as the JVMs of `javac` and `kotlinc` size themselves to
+  the host. A program whose static data alone (`static int a[1 << 30];`) exceeds
   the backstop cannot even be loaded; it is not run and is Memory Limit
   Exceeded, rather than the `SIGSEGV` the kernel would kill it with while
   loading it. A run cannot create memory files (`memfd_create` is not on its
@@ -385,7 +386,11 @@ UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
   the limit. A program that writes large files in its work directory may thus
   reach its memory limit under isolate only. A program the cgroup runs out of
   memory for is killed by its out-of-memory killer, and judged Memory Limit
-  Exceeded.
+  Exceeded. The cgroup charges only the pages a program touches, and isolate
+  has no backstop on what it merely allocates: a program that allocates far
+  more than its limit without touching it (`static int a[1 << 28];`, 1 GB, or a
+  single `malloc` of it, under 256 MB) is Memory Limit Exceeded on the native
+  backend, past its backstop, and judged by what it touches under isolate.
 - **Boxes.** Every judger on a host needs a box of its own
   (`judger.isolate.boxId`). The box is cleaned up after every compilation and
   run, which frees the captured output right away; `--init` empties a box that a
@@ -629,8 +634,8 @@ every 2 ms and kills the Job as soon as a limit is exceeded:
   its memory limit, see [Java and Kotlin runs](#java-and-kotlin-runs); a
   compiler's RAM / 64).
   The Job also has a hard cap on commit, the counterpart of Linux's
-  `RLIMIT_DATA` and the same figure: twice the limit plus max(256 MB, RAM / 32),
-  for the run's process (a compilation: for each process). An allocation refused
+  `RLIMIT_DATA` and the same figure: twice the limit plus 256 MB for the run's
+  process (a compilation: plus max(256 MB, RAM / 32), for each process). An allocation refused
   by the cap is judged Memory Limit Exceeded as well. Unlike on Linux, a program
   can lower its own working set (`SetProcessWorkingSetSize(-1, -1)`,
   `EmptyWorkingSet`), which moves pages to the standby list or the page file

@@ -130,7 +130,7 @@ public class IsolateRunnerTest {
                 null,
                 null,
                 false,
-                new Limits(1500, 65536, 1024, 7)),
+                SandboxPolicy.limits(false, 1500, 65536, 1024, 7)),
             new File("meta"));
 
     Assertions.assertTrue(args.contains("--processes=7"));
@@ -257,7 +257,7 @@ public class IsolateRunnerTest {
         input == null ? null : input.toString(),
         output.toString(),
         false,
-        new Limits(1000, 0, 262144, 64));
+        SandboxPolicy.limits(false, 1000, 262144, 262144, 64));
   }
 
   /**
@@ -275,7 +275,7 @@ public class IsolateRunnerTest {
         null,
         log.toString(),
         true,
-        new Limits(1000, 0, 262144, 1024));
+        SandboxPolicy.limits(true, 1000, 524288, 262144, 1024));
   }
 
   /**

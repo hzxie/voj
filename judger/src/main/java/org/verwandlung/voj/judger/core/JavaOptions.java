@@ -149,26 +149,19 @@ final class JavaOptions {
   /**
    * Gets the options of a JVM that a run of a submission starts.
    *
-   * @param memoryLimitKb - the memory limit of the run (KB, 0 means no limit, which leaves the heap
-   *     to the JVM's defaults)
+   * @param memoryLimitKb - the memory limit of the run (KB)
    * @return the value of {@value #ENVIRONMENT_VARIABLE}
    */
   static String forRun(int memoryLimitKb) {
-    StringBuilder options = new StringBuilder();
-    if (memoryLimitKb > 0) {
-      int reserveKb =
-          Math.max(memoryLimitKb / NON_HEAP_RESERVE_DIVISOR, MIN_NON_HEAP_RESERVE_KB);
-      int maxHeapKb =
-          Math.max(MIN_MAX_HEAP_KB, Math.max(memoryLimitKb / 2, memoryLimitKb - reserveKb));
-      options
-          .append("-XX:MaxRAM=")
-          .append(memoryLimitKb)
-          .append("k -Xmx")
-          .append(maxHeapKb)
-          .append("k ");
-    }
-    return options
-        .append("-XX:+UseSerialGC -XX:ActiveProcessorCount=1")
+    int reserveKb = Math.max(memoryLimitKb / NON_HEAP_RESERVE_DIVISOR, MIN_NON_HEAP_RESERVE_KB);
+    int maxHeapKb =
+        Math.max(MIN_MAX_HEAP_KB, Math.max(memoryLimitKb / 2, memoryLimitKb - reserveKb));
+    return new StringBuilder()
+        .append("-XX:MaxRAM=")
+        .append(memoryLimitKb)
+        .append("k -Xmx")
+        .append(maxHeapKb)
+        .append("k -XX:+UseSerialGC -XX:ActiveProcessorCount=1")
         .append(" -Djava.util.concurrent.ForkJoinPool.common.parallelism=")
         .append(COMMON_POOL_PARALLELISM)
         .append(" -XX:+ExitOnOutOfMemoryError -XX:-UsePerfData")

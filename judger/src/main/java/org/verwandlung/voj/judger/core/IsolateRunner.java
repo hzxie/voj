@@ -182,13 +182,9 @@ public class IsolateRunner implements SandboxRunner {
       isolateCommand.add("--syscalls=" + compileSyscalls.trim());
     }
     isolateCommand.add("--fsize=" + limits.outputLimitKb());
-    if (limits.timeLimitMs() > 0) {
-      isolateCommand.add("--time=" + limits.timeLimitMs() / 1000.0);
-      isolateCommand.add("--wall-time=" + limits.wallTimeLimitMs() / 1000.0);
-    }
-    if (limits.memoryLimitKb() > 0) {
-      isolateCommand.add("--cg-mem=" + limits.memoryLimitKb());
-    }
+    isolateCommand.add("--time=" + limits.timeLimitMs() / 1000.0);
+    isolateCommand.add("--wall-time=" + limits.wallTimeLimitMs() / 1000.0);
+    isolateCommand.add("--cg-mem=" + limits.memoryLimitKb());
     isolateCommand.add("--dir=" + BOX_JUDGING_DIRECTORY + "=" + judgingDirectory);
     isolateCommand.add("--dir=" + boxWorkDirectory + "=" + workDirectory + ":rw");
     for (String directory : extraDirectories.split(",")) {

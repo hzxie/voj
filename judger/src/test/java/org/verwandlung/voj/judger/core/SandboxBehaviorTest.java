@@ -98,10 +98,8 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testTimeLimitExceeded() throws Exception {
-    // No memory limit: this case is purely about the time limit, so it must not depend on the
-    // sandbox's memory measurement.
     Assertions.assertEquals(
-        Verdict.TIME_LIMIT_EXCEEDED, judge(900002L, INFINITE_LOOP_CODE, 1000, 0));
+        Verdict.TIME_LIMIT_EXCEEDED, judge(900002L, INFINITE_LOOP_CODE, 1000, 262144));
   }
 
   /**
@@ -110,7 +108,7 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testExitZeroOverTheTimeLimit() throws Exception {
-    Assertions.assertEquals(Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, 0));
+    Assertions.assertEquals(Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, 262144));
   }
 
   /**
@@ -507,7 +505,7 @@ public class SandboxBehaviorTest {
 
   /**
    * Runs a command in the sandbox, with the environment the policy gives a program in its work
-   * directory, under a 5 s time limit and no memory limit, and judges it.
+   * directory, under a 5 s time limit and the default memory limit, and judges it.
    *
    * @param commandLine - the command, its arguments separated by spaces
    * @param workDirectory - the work directory
@@ -524,8 +522,8 @@ public class SandboxBehaviorTest {
   }
 
   /**
-   * Builds a command as the policy builds a compilation or a run, under a 5 s time limit and no
-   * memory limit.
+   * Builds a command as the policy builds a compilation or a run, under a 5 s time limit and the
+   * default memory limit of a compilation (512 MB) or a run (256 MB).
    *
    * @param commandLine - the command, its arguments separated by spaces
    * @param workDirectory - the work directory
@@ -536,7 +534,7 @@ public class SandboxBehaviorTest {
   private SandboxCommand command(
       String commandLine, String workDirectory, String outputFile, boolean compilation) {
     return command(
-        commandLine, workDirectory, outputFile, compilation, new Limits(5000, 0, 262144, 0));
+        commandLine, workDirectory, outputFile, compilation, 5000, compilation ? 524288 : 262144);
   }
 
   /**
@@ -546,7 +544,8 @@ public class SandboxBehaviorTest {
    * @param workDirectory - the work directory
    * @param outputFile - the output file ({@code null}: none)
    * @param compilation - whether it is a compilation
-   * @param limits - the limits (a process limit of 0: the policy's)
+   * @param timeLimitMs - the time limit (ms)
+   * @param memoryLimitKb - the memory limit (KB)
    * @return the command
    */
   private SandboxCommand command(
@@ -554,7 +553,8 @@ public class SandboxBehaviorTest {
       String workDirectory,
       String outputFile,
       boolean compilation,
-      Limits limits) {
+      int timeLimitMs,
+      int memoryLimitKb) {
     Map<String, String> environment = sandboxPolicy.environment(workDirectory, null);
     List<String> arguments = new ArrayList<>(List.of(commandLine.split(" ")));
     arguments.set(0, SandboxPolicy.findExecutable(arguments.get(0), environment.get("PATH")));
@@ -568,11 +568,7 @@ public class SandboxBehaviorTest {
         null,
         outputFile,
         compilation,
-        new Limits(
-            limits.timeLimitMs(),
-            limits.memoryLimitKb(),
-            limits.outputLimitKb(),
-            limits.processLimit() > 0 ? limits.processLimit() : processLimit));
+        SandboxPolicy.limits(compilation, timeLimitMs, memoryLimitKb, 262144, processLimit));
   }
 
   /**
@@ -689,7 +685,8 @@ public class SandboxBehaviorTest {
             preprocessor.createRunDirectory(workDirectory),
             workDirectory + "/output.txt",
             false,
-            new Limits(5000, 65536, 262144, 0));
+            5000,
+            65536);
     SandboxResult result = sandboxRunner.run(command);
     long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
 
@@ -984,7 +981,8 @@ public class SandboxBehaviorTest {
             programDirectory,
             workDirectory + "/compile.log",
             true,
-            new Limits(20000, 0, 262144, 0));
+            20000,
+            524288);
     Assertions.assertEquals(
         Verdict.NORMAL,
         Verdict.of(compilation, sandboxRunner.run(compilation)),
@@ -995,7 +993,8 @@ public class SandboxBehaviorTest {
             preprocessor.createRunDirectory(workDirectory),
             workDirectory + "/output.txt",
             false,
-            new Limits(5000, 65536, 262144, 0));
+            5000,
+            65536);
     Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, Verdict.of(run, sandboxRunner.run(run)));
   }
 

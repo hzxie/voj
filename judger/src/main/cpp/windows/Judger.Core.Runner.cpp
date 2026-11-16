@@ -193,10 +193,10 @@ std::vector<std::wstring> getWideStringValues(JNIEnv*, jobjectArray);
  * @param  jOutputFile     - the file receiving stdout (may be NULL), and stderr for a compilation (a
  *                           run's is discarded). Created by the judger (see setupIoRedirection)
  * @param  compilation     - whether a trusted compiler runs, rather than the submission
- * @param  timeLimit       - the CPU time limit (ms, 0: none)
- * @param  wallTimeLimit   - the wall-clock limit (ms, 0: none)
- * @param  memoryLimit     - the limit of the peak working set (KB, 0: none)
- * @param  memoryBackstop  - the Job's commit limit (KB, 0: none): of the whole Job for a run, of each
+ * @param  timeLimit       - the CPU time limit (ms)
+ * @param  wallTimeLimit   - the wall-clock limit (ms)
+ * @param  memoryLimit     - the limit of the peak working set (KB)
+ * @param  memoryBackstop  - the Job's commit limit (KB): of the whole Job for a run, of each
  *                           process for a compilation
  * @param  outputLimit     - the largest output (KB)
  * @param  processLimit    - the Job's active process limit
@@ -377,10 +377,9 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
         if ( hOutput != NULL && !GetFileSizeEx(hOutput, &outputSize) ) {
             return fail("GetFileSizeEx");
         }
-        if ( (timeLimit > 0 && timeUsage > timeLimit) ||
-             (wallTimeLimit > 0 && GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit) ) {
+        if ( timeUsage > timeLimit || GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit ) {
             stop = STOP_TIME;
-        } else if ( memoryLimitHit || (memoryLimit > 0 && memoryUsage > memoryLimit) ) {
+        } else if ( memoryLimitHit || memoryUsage > memoryLimit ) {
             stop = STOP_MEMORY;
         } else if ( outputSize.QuadPart >= outputLimitBytes ) {
             stop = STOP_OUTPUT;
@@ -590,7 +589,7 @@ bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR& pSecurityDescriptor) 
  * the program off from the user interface, reports its events to a completion port, and kills the
  * whole tree when closed.
  * @param  activeProcessLimit - the maximum number of processes that may be active in the Job
- * @param  memoryBackstop     - the commit limit (KB, 0 means none). An allocation beyond it fails,
+ * @param  memoryBackstop     - the commit limit (KB). An allocation beyond it fails,
  *                              and the Job posts JOB_OBJECT_MSG_(JOB|PROCESS)_MEMORY_LIMIT, which
  *                              stops the program for its memory
  * @param  jobWideMemory      - whether the limit applies to all processes together (a run) or to
@@ -624,19 +623,16 @@ HANDLE createJobObject(DWORD activeProcessLimit, jint memoryBackstop, bool jobWi
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
     jeli.BasicLimitInformation.LimitFlags =
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
-        JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+        JOB_OBJECT_LIMIT_ACTIVE_PROCESS |
+        (jobWideMemory ? JOB_OBJECT_LIMIT_JOB_MEMORY : JOB_OBJECT_LIMIT_PROCESS_MEMORY);
     jeli.BasicLimitInformation.ActiveProcessLimit = activeProcessLimit;
-    if ( memoryBackstop > 0 ) {
-        unsigned long long hardLimitBytes = (unsigned long long) memoryBackstop * 1024ULL;
-        SIZE_T             hardLimit      = ( hardLimitBytes > (unsigned long long) SIZE_MAX )
-                                          ? SIZE_MAX : (SIZE_T) hardLimitBytes;
-        if ( jobWideMemory ) {
-            jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
-            jeli.JobMemoryLimit = hardLimit;
-        } else {
-            jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
-            jeli.ProcessMemoryLimit = hardLimit;
-        }
+    unsigned long long hardLimitBytes = (unsigned long long) memoryBackstop * 1024ULL;
+    SIZE_T             hardLimit      = ( hardLimitBytes > (unsigned long long) SIZE_MAX )
+                                      ? SIZE_MAX : (SIZE_T) hardLimitBytes;
+    if ( jobWideMemory ) {
+        jeli.JobMemoryLimit = hardLimit;
+    } else {
+        jeli.ProcessMemoryLimit = hardLimit;
     }
     if ( !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)) ) {
         return failJob();

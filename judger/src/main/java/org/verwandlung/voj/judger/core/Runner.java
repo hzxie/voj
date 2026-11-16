@@ -100,10 +100,10 @@ public class Runner implements SandboxRunner {
    * @param outputFile - the file standard output goes to ({@code null}: none), created by the
    *     sandbox; standard error goes there too for a compilation
    * @param compilation - whether a trusted compiler runs, rather than the submission
-   * @param timeLimit - the CPU time limit (ms, 0: none)
-   * @param wallTimeLimit - the wall-clock limit (ms, 0: none)
-   * @param memoryLimit - the limit of the peak resident memory (KB, 0: none)
-   * @param memoryBackstop - the limit of the committed memory (KB, 0: none)
+   * @param timeLimit - the CPU time limit (ms)
+   * @param wallTimeLimit - the wall-clock limit (ms)
+   * @param memoryLimit - the limit of the peak resident memory (KB)
+   * @param memoryBackstop - the limit of the committed memory (KB)
    * @param outputLimit - the largest file the program may write (KB)
    * @param processLimit - the processes (on Linux, and threads) the program may have at once
    * @return the CPU time (ms), the peak memory (KB), the exit code and the limit the program was

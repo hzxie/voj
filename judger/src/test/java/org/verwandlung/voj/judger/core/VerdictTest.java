@@ -120,7 +120,7 @@ public class VerdictTest {
             null,
             null,
             false,
-            new Limits(1000, 65536, 1, 1));
+            SandboxPolicy.limits(false, 1000, 65536, 1, 1));
     return Verdict.of(command, new SandboxResult(cpuTime, peakMemory, exitCode, stop));
   }
 
@@ -142,7 +142,7 @@ public class VerdictTest {
             null,
             outputFile.toString(),
             compilation,
-            new Limits(1000, 65536, 1, 1));
+            SandboxPolicy.limits(false, 1000, 65536, 1, 1));
     return Verdict.of(command, new SandboxResult(10, 10, exitCode, SandboxResult.Stop.NONE));
   }
 }

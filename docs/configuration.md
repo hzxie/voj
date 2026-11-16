@@ -274,11 +274,13 @@ clocks of the hosts do not matter.
 
 ### Sandbox
 
+Every limit here must be positive: nothing is compiled or run without a limit, and the judger does not start with a limit of zero or less.
+
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `judger.sandbox` | `native` | Sandbox backend. `isolate` (Linux, as root, with [isolate](https://github.com/ioi/isolate) installed) runs every program in an isolate box: recommended for Linux in production. `native` is the JNI runner (Linux: rlimits, seccomp filters, Landlock, which needs Linux 5.13+ with Landlock enabled, and `system.username` when the judger is root; Windows: a restricted Low-integrity token of `system.username`, a Job Object and a network filter): the backend on Windows, and on Linux for a judger that is not root. Both enforce the same commands and limits and are judged alike. See [`deployment.md`](deployment.md#sandbox-backends). |
 | `judger.compileTimeLimit` | `20000` | CPU time (ms) a compilation may use: of the compiler and every program it runs. The wall-clock limit of a compilation or run is twice its time limit plus a second. |
-| `judger.compileMemoryLimit` | `524288` | Memory (KB) a compilation may use, scaled by the language's memory multiplier like a run's limit. The native sandbox measures the compiler's top-level process against it and holds every process it runs to a kernel backstop of twice the limit plus headroom (`RLIMIT_DATA`). The base 512 MB caps C/C++/Go/Rust/Pascal "compiler bombs"; Kotlin (multiplier 2) gets 1 GB, since `kotlinc` is a JVM with a 512 MB heap of its own. |
+| `judger.compileMemoryLimit` | `524288` | Memory (KB) a compilation may use, scaled by the language's memory multiplier like a run's limit. The native sandbox measures the compiler's top-level process against it and holds every process it runs to a kernel backstop of twice the limit plus max(256 MB, RAM / 32) (`RLIMIT_DATA`). The base 512 MB caps C/C++/Go/Rust/Pascal "compiler bombs"; Kotlin (multiplier 2) gets 1 GB, since `kotlinc` is a JVM with a 512 MB heap of its own. |
 | `judger.processLimit` | `64` | Threads a run of a submission may have at once on Linux, where a run is a single process: the sandbox user's `RLIMIT_NPROC`, or isolate's `--processes`, both of which count threads. On Windows, whose Job Objects count processes only, a run is held to its one process (and the console host Windows starts for it) whatever this is set to. |
 | `judger.compileProcessLimit` | `1024` | Processes and threads a compilation may have at once (both backends). Higher than `judger.processLimit` because the Go toolchain runs a compiler per CPU, each with up to a thread per CPU: a cold `go build` used ~100 threads on a 24-core host. |
 | `judger.outputLimit` | `262144` | Largest file (KB) a compilation or run may write, its output included (`RLIMIT_FSIZE`, isolate's `--fsize`; on Windows, the output). A run whose output reaches it is Output Limit Exceeded. |

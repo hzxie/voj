@@ -165,8 +165,8 @@ struct ChildPlan {
   std::string              workDirectory;  // working directory, HOME and the only writable
                                            // directory (empty: /, and none)
   bool                     compileStep;    // compile: stderr also goes to the output file
-  int                      timeLimit;      // ms (0 = no limit)
-  rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
+  int                      timeLimit;      // ms
+  rlim_t                   dataLimit;      // RLIMIT_DATA in bytes
   rlim_t                   outputLimit;    // RLIMIT_FSIZE in bytes
   unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
@@ -284,10 +284,10 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
  * @param  jOutputFile     - the file receiving stdout (may be NULL: /dev/null), and stderr for a
  *                           compilation (a run's is discarded)
  * @param  compilation     - whether a trusted compiler runs, rather than the submission
- * @param  timeLimit       - the CPU time limit (ms, 0: none)
- * @param  wallTimeLimit   - the wall-clock limit (ms, 0: none)
- * @param  memoryLimit     - the limit of the peak resident set (KB, 0: none)
- * @param  memoryBackstop  - RLIMIT_DATA (KB, 0: none)
+ * @param  timeLimit       - the CPU time limit (ms)
+ * @param  wallTimeLimit   - the wall-clock limit (ms)
+ * @param  memoryLimit     - the limit of the peak resident set (KB)
+ * @param  memoryBackstop  - RLIMIT_DATA (KB)
  * @param  outputLimit     - RLIMIT_FSIZE (KB)
  * @param  processLimit    - RLIMIT_NPROC of the sandbox user (processes and threads), as root
  * @return the CPU time (ms), the peak memory (KB), the exit code (128 + the signal if killed) and
@@ -431,8 +431,8 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
         watchdog = std::thread([&]() {
             while ( !finished.load() ) {
                 // The CPU time of the program and of the children it waited for (a compiler's).
-                if ( (timeLimit > 0 && readCpuTimeMillis(pid) > timeLimit) ||
-                     (wallTimeLimit > 0 && getMonotonicMillis() - startMillis > wallTimeLimit) ) {
+                if ( readCpuTimeMillis(pid) > timeLimit ||
+                     getMonotonicMillis() - startMillis > wallTimeLimit ) {
                     int none = STOP_NONE;
                     stop.compare_exchange_strong(none, STOP_TIME);
                     kill(-pid, SIGKILL);
@@ -443,7 +443,7 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
                 if ( peakKb > peakMemoryKb.load() ) {
                     peakMemoryKb.store(peakKb);
                 }
-                if ( memoryLimit > 0 && peakKb > memoryLimit ) {
+                if ( peakKb > memoryLimit ) {
                     int none = STOP_NONE;
                     stop.compare_exchange_strong(none, STOP_MEMORY);
                     kill(-pid, SIGKILL);
@@ -505,8 +505,8 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     int stoppedFor = stop.load();
     if ( stoppedFor == STOP_NONE && WIFSIGNALED(status) && WTERMSIG(status) == SIGXFSZ ) {
         stoppedFor = STOP_OUTPUT;
-    } else if ( stoppedFor == STOP_NONE && !plan.compileStep && plan.dataLimit > 0 &&
-                WIFSIGNALED(status) && WTERMSIG(status) == SIGSYS ) {
+    } else if ( stoppedFor == STOP_NONE && !plan.compileStep && WIFSIGNALED(status) &&
+                WTERMSIG(status) == SIGSYS ) {
         stoppedFor = STOP_MEMORY;
     }
     return toResult(jniEnv, (int) (cpuMicros / 1000), peakMemoryKb.load(), exitCode, stoppedFor);
@@ -599,11 +599,9 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     }
 
     // Tier 1: kernel-enforced resource limits.
-    if ( plan.timeLimit > 0 ) {
-        rlim_t seconds = (rlim_t) ((plan.timeLimit + 999) / 1000) + 1;
-        if ( !setResourceLimit(RLIMIT_CPU, seconds, seconds + 1) ) {
-            reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
-        }
+    rlim_t cpuSeconds = (rlim_t) ((plan.timeLimit + 999) / 1000) + 1;
+    if ( !setResourceLimit(RLIMIT_CPU, cpuSeconds, cpuSeconds + 1) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
     if ( !setResourceLimit(RLIMIT_FSIZE, plan.outputLimit, plan.outputLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
@@ -668,7 +666,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // return, and the kernel would kill the program with a SIGSEGV that looks like a runtime error.
     // Like a single mapping beyond the backstop (see buildSeccompPrograms), it is Memory Limit
     // Exceeded. The file is read with the sandbox user's credentials, as execve would read it.
-    if ( !plan.compileStep && plan.dataLimit > 0 &&
+    if ( !plan.compileStep &&
          getWritableImageSize(plan.argv[0], plan.pageSize) > (unsigned long long) plan.dataLimit ) {
         reportChildFailure(syncWriteFd, STEP_STATIC_DATA_LIMIT);
     }
@@ -680,7 +678,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
     // process can balloon between two polls (a run's single mapping beyond it is MLE as well, see
     // buildSeccompPrograms). Set last: the forked JVM image itself is far larger.
-    if ( plan.dataLimit > 0 && !setResourceLimit(RLIMIT_DATA, plan.dataLimit, plan.dataLimit) ) {
+    if ( !setResourceLimit(RLIMIT_DATA, plan.dataLimit, plan.dataLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
 
@@ -1192,7 +1190,7 @@ class SeccompFilter {
  *    than twice the limit and the watchdog stops any program whose touched memory exceeds the limit
  *    first.
  * @param  runOfSubmission - whether the filters are for a run of the submission (not a compilation)
- * @param  dataLimit       - the run's RLIMIT_DATA in bytes (0 = none)
+ * @param  dataLimit       - the run's RLIMIT_DATA in bytes
  * @return the programs, or none if any filter (or any one of its rules) could not be built - a
  *         partial filter is never returned
  */
@@ -1270,14 +1268,12 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
                        {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) SOL_SOCKET),
                         SCMP_A2(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) option)});
         }
-        if ( dataLimit > 0 ) {
-            // A private (MAP_TYPE), writable mapping that is not a stack (MAP_GROWSDOWN) counts
-            // against RLIMIT_DATA.
-            filter.add(SCMP_ACT_KILL_PROCESS, SCMP_SYS(mmap),
-                       {SCMP_A1(SCMP_CMP_GT, (scmp_datum_t) dataLimit),
-                        SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE, PROT_WRITE),
-                        SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_GROWSDOWN, MAP_PRIVATE)});
-        }
+        // A private (MAP_TYPE), writable mapping that is not a stack (MAP_GROWSDOWN) counts
+        // against RLIMIT_DATA.
+        filter.add(SCMP_ACT_KILL_PROCESS, SCMP_SYS(mmap),
+                   {SCMP_A1(SCMP_CMP_GT, (scmp_datum_t) dataLimit),
+                    SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE, PROT_WRITE),
+                    SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_GROWSDOWN, MAP_PRIVATE)});
     }
     programs.push_back(filter.exportProgram());
 

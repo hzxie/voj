@@ -133,28 +133,65 @@ public class SandboxPolicyTest {
     Assertions.assertTrue(compilation.compilation());
     Assertions.assertEquals("/w/program", compilation.workDirectory());
     Assertions.assertEquals("/w/compile.log", compilation.outputFile());
-    Assertions.assertEquals(new Limits(20000, 1048576, 262144, 1024), compilation.limits());
+    Assertions.assertEquals(20000, compilation.limits().timeLimitMs());
     Assertions.assertEquals(41000, compilation.limits().wallTimeLimitMs());
+    Assertions.assertEquals(1048576, compilation.limits().memoryLimitKb());
+    Assertions.assertEquals(262144, compilation.limits().outputLimitKb());
+    Assertions.assertEquals(1024, compilation.limits().processLimit());
     Assertions.assertFalse(run.compilation());
     Assertions.assertEquals("/w/run", run.workDirectory());
-    Assertions.assertEquals(
-        new Limits(
-            2000, 131072, 262144, System.getProperty("os.name").contains("Windows") ? 2 : 64),
-        run.limits());
+    Assertions.assertEquals(2000, run.limits().timeLimitMs());
     Assertions.assertEquals(5000, run.limits().wallTimeLimitMs());
+    Assertions.assertEquals(131072, run.limits().memoryLimitKb());
+    Assertions.assertEquals(262144, run.limits().outputLimitKb());
+    Assertions.assertEquals(
+        System.getProperty("os.name").contains("Windows") ? 2 : 64, run.limits().processLimit());
     Assertions.assertEquals(
         Path.of("/w/program", "Main.exe").toString(), run.arguments().get(0));
   }
 
   /**
-   * Test case: tests the memory backstop. Expected result: none without a memory limit, else at
-   * least twice the limit plus 256 MB.
+   * Test case: tests the memory backstop. Expected result: twice the limit plus 256 MB for a run,
+   * whatever the host's RAM, so that whether an allocation is beyond it does not depend on the
+   * host; at least that for a compilation, whose compilers' JVMs size themselves to the host.
    */
   @Test
   public void testTheMemoryBackstop() {
-    Assertions.assertEquals(0, new Limits(1000, 0, 1, 1).memoryBackstopKb());
-    Assertions.assertTrue(new Limits(1000, 65536, 1, 1).memoryBackstopKb() >= 2 * 65536 + 262144);
-    Assertions.assertEquals(0, new Limits(0, 65536, 1, 1).wallTimeLimitMs());
+    Assertions.assertEquals(
+        2 * 65536 + 262144, SandboxPolicy.limits(false, 1000, 65536, 1, 1).memoryBackstopKb());
+    Assertions.assertTrue(
+        SandboxPolicy.limits(true, 1000, 65536, 1, 1).memoryBackstopKb() >= 2 * 65536 + 262144);
+    Assertions.assertEquals(
+        Integer.MAX_VALUE,
+        SandboxPolicy.limits(false, 1000, Integer.MAX_VALUE, 1, 1).memoryBackstopKb());
+  }
+
+  /**
+   * Test case: limits that are zero or negative, of a problem or configured. Expected result:
+   * refused, where the limits are built and as the judger starts: nothing runs without a limit.
+   */
+  @Test
+  public void testEveryLimitMustBePositive() {
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> SandboxPolicy.limits(false, 0, 65536, 1, 1));
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> SandboxPolicy.limits(false, 1000, -1, 1, 1));
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> SandboxPolicy.limits(true, 1000, 65536, 0, 1));
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> SandboxPolicy.limits(true, 1000, 65536, 1, 0));
+    policy().afterPropertiesSet();
+    for (String setting :
+        List.of(
+            "compileTimeLimit",
+            "compileMemoryLimit",
+            "processLimit",
+            "compileProcessLimit",
+            "outputLimitKb")) {
+      SandboxPolicy policy = policy();
+      ReflectionTestUtils.setField(policy, setting, 0);
+      Assertions.assertThrows(IllegalStateException.class, policy::afterPropertiesSet, setting);
+    }
   }
 
   /**
