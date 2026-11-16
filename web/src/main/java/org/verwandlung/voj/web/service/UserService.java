@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -24,9 +25,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -49,6 +50,7 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
 import org.verwandlung.voj.web.util.DigestUtils;
+import org.verwandlung.voj.web.util.FailureLimiter;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
 import org.verwandlung.voj.web.util.InputValidator;
 import org.verwandlung.voj.web.util.JsonUtils;
@@ -66,21 +68,35 @@ public class UserService {
   /** The number of days an email validation credential remains valid after it is issued. */
   private static final long EMAIL_VALIDATION_VALID_DAYS = 1;
 
-  /**
-   * The number of wrong current passwords after which the checks of a user's current password are
-   * refused for the rest of {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS}.
-   */
-  private static final int MAX_CURRENT_PASSWORD_FAILURES = 5;
-
-  /** How long wrong current passwords are counted from the first one, and the checks refused. */
-  private static final long CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(15);
+  /** How long wrong passwords are counted from the first one, and further attempts refused. */
+  private static final long PASSWORD_FAILURE_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(15);
 
   /**
-   * The wrong current passwords of each user: {number of failures, time of the first one}. Kept in
-   * memory (per web application instance, and lost on restart), which is enough to make guessing
-   * the password through a session impractical.
+   * The wrong current passwords of each user (when changing the password or the email address):
+   * after 5, a hijacked session cannot keep guessing the password to take the account over.
    */
-  private final Map<Long, long[]> currentPasswordFailures = new ConcurrentHashMap<>();
+  private FailureLimiter currentPasswordLimiter =
+      new FailureLimiter(5, PASSWORD_FAILURE_WINDOW_MILLIS);
+
+  /** The failed logins of each account, so its password cannot be guessed online. */
+  private FailureLimiter loginAccountLimiter =
+      new FailureLimiter(10, PASSWORD_FAILURE_WINDOW_MILLIS);
+
+  /**
+   * The failed logins from each client address, so one client cannot try a password on many
+   * accounts. Generous, as a classroom may share an address.
+   */
+  private FailureLimiter loginAddressLimiter =
+      new FailureLimiter(100, PASSWORD_FAILURE_WINDOW_MILLIS);
+
+  /** The minimum length of a password. */
+  private static final int MIN_PASSWORD_LENGTH = 6;
+
+  /** The maximum length of a password, in characters. */
+  private static final int MAX_PASSWORD_LENGTH = 64;
+
+  /** The maximum length of a password in UTF-8 bytes: bcrypt only takes 72. */
+  private static final int MAX_PASSWORD_BYTES = 72;
 
   /** The length of the rolling rate-limit window for verification / password-reset emails. */
   private static final long EMAIL_RATE_LIMIT_WINDOW_MILLIS = TimeUnit.DAYS.toMillis(1);
@@ -259,23 +275,41 @@ public class UserService {
   }
 
   /**
-   * Verifies whether the user's identity is valid.
+   * Verifies whether the user's identity is valid. Failed logins are limited per account and per
+   * client address (see {@link #loginAccountLimiter} and {@link #loginAddressLimiter}): once either
+   * limit is reached, logins are refused with {@code isThrottled} without checking the password.
    *
    * @param username - the username or email address
    * @param password - the plain-text password
+   * @param ipAddress - the client address
    * @return a Map<String, Boolean> object containing the login verification result
    */
-  public Map<String, Boolean> isAllowedToLogin(String username, String password) {
-    Map<String, Boolean> result = new HashMap<>(6, 1);
+  public Map<String, Boolean> isAllowedToLogin(String username, String password, String ipAddress) {
+    Map<String, Boolean> result = new HashMap<>(8, 1);
     result.put("isUsernameEmpty", username.isEmpty());
     result.put("isPasswordEmpty", password.isEmpty());
+    result.put("isThrottled", false);
     result.put("isAccountValid", false);
     result.put("isAllowedToAccess", false);
     result.put("isSuccessful", false);
 
     if (!result.get("isUsernameEmpty") && !result.get("isPasswordEmpty")) {
       User user = getUserUsingUsernameOrEmail(username);
-      if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+      // A user may log in with the username or the email address: both count for the account.
+      Object accountKey = user != null ? user.getUid() : username.toLowerCase(Locale.ROOT);
+      String addressKey = String.valueOf(ipAddress);
+      if (!loginAccountLimiter.tryAcquire(accountKey)) {
+        result.put("isThrottled", true);
+        return result;
+      }
+      if (!loginAddressLimiter.tryAcquire(addressKey)) {
+        loginAccountLimiter.release(accountKey);
+        result.put("isThrottled", true);
+        return result;
+      }
+      if (user != null && isPasswordCorrect(password, user.getPassword())) {
+        loginAccountLimiter.reset(accountKey);
+        loginAddressLimiter.release(addressKey);
         upgradePasswordEncodingIfNeeded(user, password);
         result.put("isAccountValid", true);
         if (isAllowedToAccess(user.getUserGroup())) {
@@ -801,38 +835,15 @@ public class UserService {
   }
 
   /**
-   * Takes one of the checks of a user's current password allowed for now, if any is left: after
-   * {@value #MAX_CURRENT_PASSWORD_FAILURES} wrong current passwords (when changing the password or
-   * the email address) within {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS} of the first one,
-   * further attempts are refused until that window ends. Otherwise a hijacked session could find
-   * the current password by trying passwords one request after another, and then take the account
-   * over.
-   *
-   * <p>The check is counted as a failure when it is taken, atomically with testing the limit, and
-   * the count is cleared only if the password turns out right (see {@link #checkCurrentPassword}).
-   * Testing the count first and counting the failure after the (slow) password hash let any number
-   * of concurrent requests through before the first failure was counted.
+   * Takes one of the checks of a user's current password allowed for now, if any is left (see
+   * {@link #currentPasswordLimiter}). The check counts as a failure until {@link
+   * #checkCurrentPassword} finds the password right.
    *
    * @param user - the user whose current password is to be checked
    * @return whether the password may be checked; false if the check must be refused
    */
   private boolean reserveCurrentPasswordCheck(User user) {
-    long now = System.currentTimeMillis();
-    boolean[] isReserved = {false};
-    currentPasswordFailures.compute(
-        user.getUid(),
-        (uid, failures) -> {
-          if (failures == null || now - failures[1] >= CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS) {
-            isReserved[0] = true;
-            return new long[] {1, now};
-          }
-          if (failures[0] >= MAX_CURRENT_PASSWORD_FAILURES) {
-            return failures;
-          }
-          isReserved[0] = true;
-          return new long[] {failures[0] + 1, failures[1]};
-        });
-    return isReserved[0];
+    return currentPasswordLimiter.tryAcquire(user.getUid());
   }
 
   /**
@@ -846,7 +857,7 @@ public class UserService {
   private boolean checkCurrentPassword(User user, String submittedPassword) {
     boolean isCorrect = isOldPasswordCorrect(user.getPassword(), submittedPassword);
     if (isCorrect) {
-      currentPasswordFailures.remove(user.getUid());
+      currentPasswordLimiter.reset(user.getUid());
     }
     return isCorrect;
   }
@@ -1011,14 +1022,30 @@ public class UserService {
   }
 
   /**
-   * Checks whether a password is legal. Rule: the password should be 6-16 characters long.
+   * Checks whether a password is legal: 6 to 64 characters, and at most 72 bytes in UTF-8 (all
+   * that bcrypt hashes).
    *
-   * @param password - the password (not encrypted with MD5)
+   * @param password - the plain-text password
    * @return whether the password is legal
    */
-  private boolean isPasswordLegal(String password) {
+  private static boolean isPasswordLegal(String password) {
     int passwordLength = password.length();
-    return passwordLength >= 6 && passwordLength <= 16;
+    return passwordLength >= MIN_PASSWORD_LENGTH
+        && passwordLength <= MAX_PASSWORD_LENGTH
+        && password.getBytes(StandardCharsets.UTF_8).length <= MAX_PASSWORD_BYTES;
+  }
+
+  /**
+   * Checks a plain-text password against a stored one. A password longer than bcrypt takes cannot
+   * be any user's (the encoder would reject it), so it is simply wrong.
+   *
+   * @param rawPassword - the plain-text password
+   * @param encodedPassword - the stored password
+   * @return whether the password is right
+   */
+  private boolean isPasswordCorrect(String rawPassword, String encodedPassword) {
+    return rawPassword.getBytes(StandardCharsets.UTF_8).length <= MAX_PASSWORD_BYTES
+        && passwordEncoder.matches(rawPassword, encodedPassword);
   }
 
   /**
@@ -1035,7 +1062,7 @@ public class UserService {
     if (submitedPassword == null || submitedPassword.isEmpty()) {
       return false;
     }
-    return passwordEncoder.matches(submitedPassword, oldPassword);
+    return isPasswordCorrect(submitedPassword, oldPassword);
   }
 
   /**

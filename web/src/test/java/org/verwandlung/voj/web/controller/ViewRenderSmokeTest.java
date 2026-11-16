@@ -916,7 +916,7 @@ class ViewRenderSmokeTest {
   @Test
   void loginActionAcceptsTheRememberMeTheFormSends() throws Exception {
     when(turnstileService.verify(any(), any())).thenReturn(true);
-    when(userService.isAllowedToLogin("zjhzxhz", "secret"))
+    when(userService.isAllowedToLogin(eq("zjhzxhz"), eq("secret"), anyString()))
         .thenReturn(new java.util.HashMap<>(Map.of("isSuccessful", false)));
     mockMvc
         .perform(

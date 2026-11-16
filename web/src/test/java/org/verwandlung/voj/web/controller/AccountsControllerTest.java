@@ -98,7 +98,7 @@ public class AccountsControllerTest {
 
     Assertions.assertEquals(Boolean.FALSE, result.get("isCaptchaValid"));
     Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
-    verify(userService, never()).isAllowedToLogin(anyString(), anyString());
+    verify(userService, never()).isAllowedToLogin(anyString(), anyString(), anyString());
     Assertions.assertNull(SecurityContextHolder.getContext().getAuthentication());
   }
 
@@ -106,7 +106,7 @@ public class AccountsControllerTest {
   @Test
   public void testLoginActionBadCredentials() {
     when(turnstileService.verify(anyString(), anyString())).thenReturn(true);
-    when(userService.isAllowedToLogin("zjhzxhz", "secret"))
+    when(userService.isAllowedToLogin(eq("zjhzxhz"), eq("secret"), anyString()))
         .thenReturn(Map.of("isSuccessful", false, "isAccountValid", false));
 
     Map<String, Boolean> result =
@@ -123,7 +123,7 @@ public class AccountsControllerTest {
   @Test
   public void testLoginActionSuccess() {
     when(turnstileService.verify(anyString(), anyString())).thenReturn(true);
-    when(userService.isAllowedToLogin("zjhzxhz", "secret"))
+    when(userService.isAllowedToLogin(eq("zjhzxhz"), eq("secret"), anyString()))
         .thenReturn(Map.of("isSuccessful", true));
     User user = userWithGroup();
     when(userService.getUserUsingUsernameOrEmail("zjhzxhz")).thenReturn(user);
@@ -147,7 +147,7 @@ public class AccountsControllerTest {
   @Test
   public void testLoginActionRotatesSessionIdAndCsrfToken() {
     when(turnstileService.verify(anyString(), anyString())).thenReturn(true);
-    when(userService.isAllowedToLogin("zjhzxhz", "secret"))
+    when(userService.isAllowedToLogin(eq("zjhzxhz"), eq("secret"), anyString()))
         .thenReturn(Map.of("isSuccessful", true));
     when(userService.getUserUsingUsernameOrEmail("zjhzxhz")).thenReturn(userWithGroup());
 

@@ -40,6 +40,7 @@ import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.util.FailureLimiter;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
 
@@ -167,7 +168,8 @@ public class UserServiceTest {
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an administrator account with the correct password. Expected: login is allowed. */
   @Test
   public void testIsAllowedToLoginSuccessfully() {
-    Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD);
+    Map<String, Boolean> result =
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "127.0.0.1");
     Assertions.assertTrue(result.get("isAccountValid"));
     Assertions.assertTrue(result.get("isSuccessful"));
   }
@@ -176,7 +178,7 @@ public class UserServiceTest {
   @Test
   public void testIsAllowedToLoginWithDisallowedUserGroup() {
     Map<String, Boolean> result =
-        userService.isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD);
+        userService.isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD, "127.0.0.1");
     Assertions.assertTrue(result.get("isAccountValid"));
     Assertions.assertFalse(result.get("isAllowedToAccess"));
     Assertions.assertFalse(result.get("isSuccessful"));
@@ -185,15 +187,63 @@ public class UserServiceTest {
   /** Test case: tests the isAllowedToLogin(...) method. Test data: a wrong password. Expected: the account is invalid. */
   @Test
   public void testIsAllowedToLoginWithWrongPassword() {
-    Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", "wrong-password-hash");
+    Map<String, Boolean> result =
+        userService.isAllowedToLogin("zjhzxhz", "wrong-password-hash", "127.0.0.1");
     Assertions.assertFalse(result.get("isAccountValid"));
     Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the throttling of isAllowedToLogin(...). Test data: 10 wrong passwords for user zjhzxhz, alternating its username and email address, then the right one. Expected: the right password is refused with isThrottled, while another account still logs in from the same address. */
+  @Test
+  public void testIsAllowedToLoginThrottlesAnAccount() {
+    for (int i = 0; i < 10; ++i) {
+      String login = i % 2 == 0 ? "zjhzxhz" : "cshzxie@gmail.com";
+      Map<String, Boolean> result = userService.isAllowedToLogin(login, "wrong-" + i, "10.0.0.1");
+      Assertions.assertFalse(result.get("isThrottled"));
+      Assertions.assertFalse(result.get("isAccountValid"));
+    }
+    Map<String, Boolean> result =
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "10.0.0.2");
+    Assertions.assertTrue(result.get("isThrottled"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertTrue(
+        userService
+            .isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD, "10.0.0.1")
+            .get("isAccountValid"));
+  }
+
+  /** Test case: tests isAllowedToLogin(...) with an over-long password. Test data: a password of 100 bytes. Expected: it is wrong, without an error from the bcrypt encoder. */
+  @Test
+  public void testIsAllowedToLoginWithOverlongPassword() {
+    Map<String, Boolean> result =
+        userService.isAllowedToLogin("zjhzxhz", "x".repeat(100), "127.0.0.1");
+    Assertions.assertFalse(result.get("isAccountValid"));
+  }
+
+  /** Test case: tests the password rule through changePassword(...). Test data: a 64-character password, a 65-character one and 30 three-byte characters (90 bytes). Expected: only the first is legal. */
+  @Test
+  public void testPasswordLengthLimits() {
+    User user = userService.getUserUsingUid(1000);
+    String longest = "p".repeat(64);
+    Assertions.assertTrue(
+        userService.changePassword(user, PLAINTEXT_PASSWORD, longest, longest).get("isSuccessful"));
+    Assertions.assertTrue(
+        userService.isAllowedToLogin("zjhzxhz", longest, "127.0.0.1").get("isSuccessful"));
+
+    String tooLong = "p".repeat(65);
+    Assertions.assertFalse(
+        userService.changePassword(user, longest, tooLong, tooLong).get("isNewPasswordLegal"));
+    String tooManyBytes = "\u4e2d".repeat(30);
+    Assertions.assertFalse(
+        userService
+            .changePassword(user, longest, tooManyBytes, tooManyBytes)
+            .get("isNewPasswordLegal"));
   }
 
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an empty username. Expected: login fails. */
   @Test
   public void testIsAllowedToLoginWithEmptyUsername() {
-    Map<String, Boolean> result = userService.isAllowedToLogin("", PASSWORD_HASH);
+    Map<String, Boolean> result = userService.isAllowedToLogin("", PASSWORD_HASH, "127.0.0.1");
     Assertions.assertTrue(result.get("isUsernameEmpty"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -324,7 +374,7 @@ public class UserServiceTest {
   public void testLoginUpgradesALegacyPasswordOnly() {
     userMapper.updatePreferLanguage(1000, 3);
     Assertions.assertTrue(
-        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD).get("isSuccessful"));
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "127.0.0.1").get("isSuccessful"));
     User storedUser = userService.getUserUsingUid(1000);
     Assertions.assertTrue(storedUser.getPassword().startsWith("{bcrypt}"));
     Assertions.assertTrue(passwordEncoder.matches(PLAINTEXT_PASSWORD, storedUser.getPassword()));
@@ -343,20 +393,18 @@ public class UserServiceTest {
   }
 
   /**
-   * Clears the wrong current passwords UserService counted (in memory, in the application context
-   * the test classes share), so that the failures of one test do not throttle another.
+   * Clears the wrong passwords UserService counted (in memory, in the application context the test
+   * classes share), so that the failures of one test do not throttle another.
    */
   @AfterEach
-  public void clearCurrentPasswordFailures() {
-    currentPasswordFailures().clear();
-  }
-
-  /** Gets the wrong current passwords UserService counted, by user. */
-  private Map<?, ?> currentPasswordFailures() {
+  public void clearPasswordFailures() {
     Object target = org.springframework.test.util.AopTestUtils.getTargetObject(userService);
-    return (Map<?, ?>)
-        org.springframework.test.util.ReflectionTestUtils.getField(
-            target, "currentPasswordFailures");
+    UserService fresh = new UserService();
+    for (String limiter :
+        new String[] {"currentPasswordLimiter", "loginAccountLimiter", "loginAddressLimiter"}) {
+      org.springframework.test.util.ReflectionTestUtils.setField(
+          target, limiter, org.springframework.test.util.ReflectionTestUtils.getField(fresh, limiter));
+    }
   }
 
   /**
@@ -404,12 +452,10 @@ public class UserServiceTest {
         userService
             .changePassword(anotherUser, "wrong", "new-password", "new-password")
             .get("isPasswordCheckThrottled"));
-    Assertions.assertTrue(currentPasswordFailures().containsKey(1002L));
     Assertions.assertTrue(
         userService
             .changePassword(anotherUser, PLAINTEXT_PASSWORD, "new-password", "new-password")
             .get("isSuccessful"));
-    Assertions.assertFalse(currentPasswordFailures().containsKey(1002L));
   }
 
   /** Test case: tests the changePassword(...) method. Test data: the old password is wrong. Expected: the change fails. */

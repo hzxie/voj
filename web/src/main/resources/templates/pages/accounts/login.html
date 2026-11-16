@@ -36,7 +36,7 @@
                                     <span th:text="#{voj.accounts.login.password}">Password</span>
                                     <a th:href="@{/accounts/reset-password}" th:text="#{voj.accounts.login.forgot-password}">Forgot password?</a>
                                 </label>
-                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="current-password" required />
+                                <input id="password" class="vw-input" name="password" type="password" maxlength="64" autocomplete="current-password" required />
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-check" for="remember-me">
@@ -98,6 +98,8 @@
                 var errorMessage = '';
                 if ( result['isCaptchaValid'] === false ) {
                     errorMessage = [[#{voj.accounts.captcha-invalid}]];
+                } else if ( result['isThrottled'] ) {
+                    errorMessage = [[#{voj.accounts.login.too-many-attempts}]];
                 } else if ( !result['isAccountValid'] ) {
                     errorMessage = [[#{voj.accounts.login.incorrect-password}]];
                 } else if ( !result['isAllowedToAccess'] ) {

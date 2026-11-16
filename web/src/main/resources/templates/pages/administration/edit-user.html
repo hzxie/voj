@@ -91,8 +91,8 @@
                 <div class="adm-card" th:if="${isCreate}">
                     <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.password-card}">// PASSWORD</div>
                     <div class="adm-card-body">
-                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.password}">PASSWORD</span><input id="password" class="adm-input" type="password" maxlength="16" /></label>
-                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="password-confirm" class="adm-input" type="password" maxlength="16" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.password}">PASSWORD</span><input id="password" class="adm-input" type="password" maxlength="64" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="password-confirm" class="adm-input" type="password" maxlength="64" /></label>
                         <div class="adm-formnote" th:text="#{voj.administration.edit-user.password-hint}">Min 6 characters.</div>
                     </div>
                 </div>
@@ -114,8 +114,8 @@
                     <div class="adm-pwpanel hide" id="set-password-panel">
                         <div class="lbl" th:text="#{voj.administration.edit-user.set-password-card}">// SET PASSWORD</div>
                         <div id="set-password-form">
-                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.new-password}">NEW PASSWORD</span><input id="new-password" class="adm-input" type="password" maxlength="16" /></label>
-                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="new-password-confirm" class="adm-input" type="password" maxlength="16" /></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.new-password}">NEW PASSWORD</span><input id="new-password" class="adm-input" type="password" maxlength="64" /></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="new-password-confirm" class="adm-input" type="password" maxlength="64" /></label>
                             <div class="adm-formnote" th:text="#{voj.administration.edit-user.set-password-hint}">Min 6 characters.</div>
                             <div class="adm-pwpanel-btns">
                                 <button type="button" class="adm-btn-reset" id="cancel-set-password" th:text="#{voj.administration.edit-user.cancel}">cancel</button>

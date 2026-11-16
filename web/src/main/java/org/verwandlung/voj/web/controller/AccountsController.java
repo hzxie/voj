@@ -186,7 +186,7 @@ public class AccountsController {
     if (!turnstileService.verify(captchaResponse, ipAddress)) {
       return captchaFailureResult();
     }
-    Map<String, Boolean> result = userService.isAllowedToLogin(username, password);
+    Map<String, Boolean> result = userService.isAllowedToLogin(username, password, ipAddress);
     LOGGER.info(
         String.format(
             "User: [Username=%s] tried to log in at %s",
