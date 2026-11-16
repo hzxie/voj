@@ -43,34 +43,6 @@ import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 @Component
 public class Runner implements SandboxRunner {
   /**
-   * Runs a command under the legacy native sandbox. Callers that do not say whether this is a
-   * compilation are treated as one exactly when there is no standard input (a compilation never has
-   * one, a run of the submission always does).
-   *
-   * @param commandLine - the command line to execute
-   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture the output into, or {@code null} for none
-   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
-   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
-   * @return the structured run result; never {@code null}
-   */
-  @Override
-  public RunResult run(
-      String commandLine,
-      String inputFilePath,
-      String outputFilePath,
-      int timeLimitMs,
-      int memoryLimitKb) {
-    return run(
-        commandLine,
-        inputFilePath,
-        outputFilePath,
-        timeLimitMs,
-        memoryLimitKb,
-        inputFilePath == null);
-  }
-
-  /**
    * Runs a command under the legacy native sandbox. A compilation captures standard output and
    * standard error into {@code outputFilePath} (the compile log); a run of the submission captures
    * only standard output, and its standard error is discarded so it never reaches the judged output.
