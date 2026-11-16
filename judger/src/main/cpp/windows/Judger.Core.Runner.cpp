@@ -92,6 +92,14 @@ static const unsigned long long MEMORY_HARD_LIMIT_HEADROOM_DIVISOR = 4;
 static const jint LIMIT_NONE   = 0;
 static const jint LIMIT_TIME   = 1;
 static const jint LIMIT_MEMORY = 2;
+static const jint LIMIT_OUTPUT = 3;
+
+/**
+ * The largest output file (bytes) a program may write: 256 MB, the Linux runner's RLIMIT_FSIZE.
+ * Windows has no per-process file size limit, so the size of the output file is polled with the
+ * other limits and the run is killed once it is exceeded.
+ */
+static const LONGLONG OUTPUT_FILE_SIZE_LIMIT = 256LL * 1024 * 1024;
 
 /**
  * The only environment variables the sandboxed process inherits from the judger, mirroring the
@@ -327,11 +335,13 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     //  - memory, as a soft limit: the peak may rise just above the limit before the kill, so that
     //    the run is classified as MLE (matching the Linux runner). An allocation refused by the
     //    Job's hard cap is reported on the completion port and is a Memory Limit Exceeded too;
+    //  - the size of the output file (see OUTPUT_FILE_SIZE_LIMIT);
     //  - wall-clock time, a guard for a process that blocks or sleeps while using little CPU.
     DWORD     wallTimeLimit       = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
     jint      limitExceeded       = LIMIT_NONE;
     bool      killedByWallTimeout = false;
     bool      memoryLimitHit      = false;
+    LARGE_INTEGER outputSize      = {};
     ULONGLONG startTick           = GetTickCount64();
     for ( ;; ) {
         DWORD waitResult = WaitForSingleObject(processInfo.hProcess, POLL_INTERVAL_MS);
@@ -366,6 +376,14 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                 limitExceeded = LIMIT_MEMORY;
             }
         }
+        if ( limitExceeded == LIMIT_NONE && hOutput != NULL ) {
+            if ( !GetFileSizeEx(hOutput, &outputSize) ) {
+                return fail("GetFileSizeEx");
+            }
+            if ( outputSize.QuadPart > OUTPUT_FILE_SIZE_LIMIT ) {
+                limitExceeded = LIMIT_OUTPUT;
+            }
+        }
         if ( limitExceeded == LIMIT_NONE && wallTimeLimit != INFINITE &&
                 GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit ) {
             limitExceeded       = LIMIT_TIME;
@@ -396,6 +414,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     if ( !drainJobMessages(hCompletionPort, memoryLimitHit) ) {
         return fail("GetQueuedCompletionStatus");
     }
+    if ( hOutput != NULL && !GetFileSizeEx(hOutput, &outputSize) ) {
+        return fail("GetFileSizeEx");
+    }
 
     // The program may have exceeded a limit after the last poll and exited before the next one
     // (CPU time and memory accounting are only sampled): judge the final figures too.
@@ -404,6 +425,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
             limitExceeded = LIMIT_TIME;
         } else if ( memoryLimit > 0 && (memoryLimitHit || memoryUsage > memoryLimit) ) {
             limitExceeded = LIMIT_MEMORY;
+        } else if ( hOutput != NULL && outputSize.QuadPart > OUTPUT_FILE_SIZE_LIMIT ) {
+            limitExceeded = LIMIT_OUTPUT;
         }
     }
     // A process killed by the wall-clock guard used little CPU: report at least the limit, so that
@@ -454,7 +477,10 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
         }
     }
     if ( !outputFilePath.empty() ) {
-        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &sa,
+        // FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
+        // (GetFileSizeEx needs it, and GENERIC_WRITE does not include it). The child inherits the
+        // handle as its stdout, which only lets it read the attributes of its own output file.
+        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ, &sa,
                     CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if ( hOutput == INVALID_HANDLE_VALUE )  {
             hOutput = NULL;
