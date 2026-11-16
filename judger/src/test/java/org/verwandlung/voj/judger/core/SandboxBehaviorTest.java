@@ -107,14 +107,18 @@ public class SandboxBehaviorTest {
 
   /**
    * Test case: a program that writes far more than the output limit (256 MB) to standard output.
-   * Expected result: Output Limit Exceeded, both when the kernel's SIGXFSZ kills it and when it
-   * ignores the signal, so that its writes fail, and exits with 0.
+   * Expected result: Output Limit Exceeded. On Linux, both when the kernel's SIGXFSZ kills it and
+   * when it ignores the signal, so that its writes fail, and exits with 0; on Windows, where the
+   * runner polls the size of the output file, when it is killed for it.
    */
   @Test
   public void testOutputLimitExceeded() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     try {
       Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144));
+      if (!isLinux()) {
+        return;
+      }
       Files.deleteIfExists(Path.of(workBaseDirectory, "voj-sandbox-900014", "output.txt"));
       Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144, "ignore"));
     } finally {
@@ -196,6 +200,7 @@ public class SandboxBehaviorTest {
   @Test
   public void testRunCannotCreateProcesses() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The test program uses fork() and posix_spawn().");
     Assertions.assertEquals("AC", judge(900011L, FORK_CODE, 5000, 262144));
     Assertions.assertEquals(
         "fork: EPERM\nSYS_fork: EPERM\nposix_spawn: EPERM\n",
@@ -304,6 +309,7 @@ public class SandboxBehaviorTest {
   @Test
   public void testCompilationStandardInputIsDevNull() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "This reads /proc/self/fd/0.");
     String workDirectory = createWorkDirectory(900010L);
     String logFile = workDirectory + "/stdin.log";
     RunResult result = sandboxRunner.run("readlink /proc/self/fd/0", null, logFile, 5000, 0, true);
@@ -319,12 +325,22 @@ public class SandboxBehaviorTest {
   @Test
   public void testProgramRunsInItsWorkDirectory() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "This runs /bin/pwd.");
     String workDirectory = createWorkDirectory(900017L);
     String logFile = workDirectory + "/cwd.log";
     RunResult result = sandboxRunner.run("/bin/pwd", null, logFile, 5000, 0, true);
     Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
     Assertions.assertEquals(
         Path.of(workDirectory).toRealPath().toString(), Files.readString(Path.of(logFile)).strip());
+  }
+
+  /**
+   * Checks whether the judger runs on Linux.
+   *
+   * @return whether the operating system is Linux
+   */
+  private static boolean isLinux() {
+    return System.getProperty("os.name").contains("Linux");
   }
 
   /**
@@ -480,7 +496,7 @@ public class SandboxBehaviorTest {
 
   /**
    * A program that writes 512 MB to standard output. Given "ignore" on its input, it ignores
-   * SIGXFSZ and exits with 0 as soon as a write fails.
+   * SIGXFSZ (where there is one) and exits with 0 as soon as a write fails.
    */
   private static final String OUTPUT_BOMB_CODE =
       """
@@ -494,7 +510,9 @@ public class SandboxBehaviorTest {
       int main() {
           char mode[16] = "";
           if (std::scanf("%15s", mode) == 1 && std::strcmp(mode, "ignore") == 0) {
+      #ifdef SIGXFSZ
               std::signal(SIGXFSZ, SIG_IGN);
+      #endif
           }
           std::memset(block, 'x', sizeof(block));
           for (int i = 0; i < 512; ++i) {
