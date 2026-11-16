@@ -31,12 +31,15 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
 
 /**
  * Downloads a problem's checkpoints from the web application over HTTP.
@@ -53,6 +56,9 @@ public class HttpCheckpointProvider {
   /** The HTTP header carrying the shared secret that authenticates this judger to the web side. */
   private static final String TOKEN_HEADER = "X-Judger-Token";
 
+  /** The entry of the archive that describes the checkpoints; every archive has one. */
+  private static final String MANIFEST_FILE = "manifest.properties";
+
   /**
    * Downloads a problem's checkpoints into the given directory.
    *
@@ -64,7 +70,9 @@ public class HttpCheckpointProvider {
    *
    * @param problemId - the unique identifier of the problem
    * @param destinationDirectory - the directory the checkpoints are written into
-   * @throws IOException if the checkpoints cannot be downloaded, or not in time
+   * @throws InvalidCheckpointsException if the problem has no test data, or its archive is
+   *     malformed
+   * @throws IOException if the checkpoints cannot be downloaded for another reason, or not in time
    */
   public void download(long problemId, File destinationDirectory) throws IOException {
     if (!destinationDirectory.exists() && !destinationDirectory.mkdirs()) {
@@ -94,6 +102,10 @@ public class HttpCheckpointProvider {
     }
     // Closing the body (rather than draining it) also ends the exchange of a failed request.
     try (InputStream body = response.body()) {
+      if (response.statusCode() == 404) {
+        throw new InvalidCheckpointsException(
+            String.format("Problem %d has no test data to download (HTTP 404)", problemId), null);
+      }
       if (response.statusCode() != 200) {
         throw new IOException(
             String.format(
@@ -155,7 +167,8 @@ public class HttpCheckpointProvider {
    *
    * @param zipBody - the ZIP response body
    * @param destinationDirectory - the directory entries are written into
-   * @throws IOException if an entry cannot be written
+   * @throws InvalidCheckpointsException if the archive is malformed
+   * @throws IOException if the body cannot be read or an entry cannot be written
    */
   private void extract(InputStream zipBody, File destinationDirectory) throws IOException {
     String destinationPrefix = destinationDirectory.getCanonicalPath() + File.separator;
@@ -167,13 +180,21 @@ public class HttpCheckpointProvider {
         }
         File outputFile = new File(destinationDirectory, entry.getName());
         if (!outputFile.getCanonicalPath().startsWith(destinationPrefix)) {
-          throw new IOException(
-              "Refusing to extract entry outside the destination directory: " + entry.getName());
+          throw new InvalidCheckpointsException(
+              "Refusing to extract entry outside the destination directory: " + entry.getName(),
+              null);
         }
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
           zipStream.transferTo(outputStream);
         }
       }
+    } catch (ZipException ex) {
+      throw new InvalidCheckpointsException("The checkpoint archive is malformed", ex);
+    }
+    // Something that is no ZIP at all (e.g. an error page of a proxy) has no entries.
+    if (!new File(destinationDirectory, MANIFEST_FILE).isFile()) {
+      throw new InvalidCheckpointsException(
+          "The checkpoint archive has no " + MANIFEST_FILE, null);
     }
   }
 

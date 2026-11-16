@@ -50,6 +50,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
+import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+import org.verwandlung.voj.judger.exception.RetryableJudgingException;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
@@ -221,12 +223,12 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded.
-   * Expected result: a System Error.
+   * Test case: tests the createNewTask method. Test data: the web application has no test data
+   * for the problem (or a malformed archive). Expected result: a System Error.
    */
   @Test
-  public void testCreateNewTaskWithUnavailableCheckpointsIsSystemError() throws Exception {
-    org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 403"))
+  public void testCreateNewTaskWithInvalidCheckpointsIsSystemError() throws Exception {
+    org.mockito.Mockito.doThrow(new InvalidCheckpointsException("HTTP 404", null))
         .when(checkpointStore)
         .sync(any());
 
@@ -234,6 +236,29 @@ public class DispatcherTest {
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be loaded"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded now
+   * (e.g. the web application is restarting). Expected result: no System Error; the exception is
+   * passed on so that the task is delivered again, and the work directory is removed.
+   */
+  @Test
+  public void testCreateNewTaskWithUnavailableCheckpointsIsRetried(@TempDir Path tempDir)
+      throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", tempDir.toString());
+    org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
+        .when(checkpointStore)
+        .sync(any());
+
+    Assertions.assertThrows(
+        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L));
+
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
+      Assertions.assertEquals(0, leftovers.count());
+    }
   }
 
   /**

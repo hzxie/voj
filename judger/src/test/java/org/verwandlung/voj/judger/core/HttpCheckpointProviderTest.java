@@ -41,6 +41,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+
 /**
  * Tests for HttpCheckpointProvider against a stub of the web application's checkpoint endpoint.
  *
@@ -75,6 +77,57 @@ public class HttpCheckpointProviderTest {
 
     Assertions.assertEquals(
         "version=1\ncount=0\n", Files.readString(tempDir.resolve("manifest.properties")));
+  }
+
+  /**
+   * Test case: the web application has no test data for the problem, or answers with something
+   * that is not an archive of checkpoints. Expected result: the download fails for good (an
+   * InvalidCheckpointsException), as asking again would not help.
+   */
+  @Test
+  public void testFinalAnswersAreInvalidCheckpoints() throws Exception {
+    byte[][] body = new byte[1][];
+    int[] status = new int[1];
+    startServer(
+        exchange -> {
+          exchange.sendResponseHeaders(status[0], body[0].length);
+          try (OutputStream output = exchange.getResponseBody()) {
+            output.write(body[0]);
+          }
+        });
+
+    status[0] = 404;
+    body[0] = "Not Found".getBytes(StandardCharsets.UTF_8);
+    assertInvalidCheckpoints();
+    status[0] = 200;
+    body[0] = "<html>Bad Gateway</html>".getBytes(StandardCharsets.UTF_8);
+    assertInvalidCheckpoints();
+    body[0] = archiveWithEntry("../escaped.txt");
+    assertInvalidCheckpoints();
+    Assertions.assertFalse(Files.exists(tempDir.resolveSibling("escaped.txt")));
+  }
+
+  /**
+   * Test case: the web application is restarting or overloaded (HTTP 503), or refuses the judger
+   * (HTTP 403, a token this judger got wrong). Expected result: the download fails, but not for
+   * good: another judger, or a later attempt, may succeed.
+   */
+  @Test
+  public void testOtherFailuresAreNotFinal() throws Exception {
+    int[] status = new int[1];
+    startServer(
+        exchange -> {
+          exchange.sendResponseHeaders(status[0], -1);
+          exchange.close();
+        });
+
+    for (int code : new int[] {503, 403}) {
+      status[0] = code;
+      IOException ex =
+          Assertions.assertThrows(
+              IOException.class, () -> provider.download(1000, tempDir.toFile()));
+      Assertions.assertFalse(ex instanceof InvalidCheckpointsException, ex.toString());
+    }
   }
 
   /**
@@ -142,6 +195,28 @@ public class HttpCheckpointProviderTest {
     if (message != null) {
       Assertions.assertTrue(ex.getMessage().contains(message), ex.getMessage());
     }
+  }
+
+  /** Asserts that a download fails for good. */
+  private void assertInvalidCheckpoints() {
+    Assertions.assertThrows(
+        InvalidCheckpointsException.class, () -> provider.download(1000, tempDir.toFile()));
+  }
+
+  /**
+   * Builds an archive with a single entry.
+   *
+   * @param name - the name of the entry
+   * @return the archive
+   */
+  private static byte[] archiveWithEntry(String name) throws IOException {
+    ByteArrayOutputStream archive = new ByteArrayOutputStream();
+    try (ZipOutputStream zipStream = new ZipOutputStream(archive)) {
+      zipStream.putNextEntry(new ZipEntry(name));
+      zipStream.write("42\n".getBytes(StandardCharsets.UTF_8));
+      zipStream.closeEntry();
+    }
+    return archive.toByteArray();
   }
 
   /** Blocks a handler of the stub until the test is over. */

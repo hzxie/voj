@@ -33,6 +33,8 @@ import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
+import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+import org.verwandlung.voj.judger.exception.RetryableJudgingException;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Submission;
@@ -63,6 +65,7 @@ public class Dispatcher {
    * @throws IllgealSubmissionException if the submission does not exist
    * @throws DataAccessException if the submission or the outcome of its judging cannot be read or
    *     written
+   * @throws RetryableJudgingException if the submission cannot be judged now, but likely later
    */
   public void createNewTask(long submissionId) throws IllgealSubmissionException {
     synchronized (this) {
@@ -97,6 +100,12 @@ public class Dispatcher {
       } catch (DataAccessException ex) {
         // The database cannot be reached: neither the verdict nor a System Error can be recorded.
         // The task is delivered again later (see MessageReceiver).
+        throw ex;
+      } catch (RetryableJudgingException ex) {
+        LOGGER.warn(
+            String.format(
+                "Cannot judge submission #%d now; its task is delivered again.", submissionId),
+            ex);
         throw ex;
       } catch (SystemError ex) {
         LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
@@ -137,15 +146,24 @@ public class Dispatcher {
   /**
    * Makes the problem's test data available locally.
    *
+   * <p>Only a download whose answer is final (the problem has no test data, or its archive is
+   * malformed) is a System Error. Any other failure (the web application restarting or
+   * overloaded, a network failure or timeout, this judger's own disk) is no fault of the
+   * submission or its problem and likely gone later or on another judger, so the task is
+   * delivered again instead.
+   *
    * @param submission - the submission object
    * @return the directory holding the problem's test data
-   * @throws SystemError if the test data cannot be downloaded
+   * @throws SystemError if the problem has no usable test data
+   * @throws RetryableJudgingException if the test data cannot be downloaded now
    */
   private Path syncCheckpoints(Submission submission) throws SystemError {
     try {
       return checkpointStore.sync(submission.getProblem());
-    } catch (IOException ex) {
+    } catch (InvalidCheckpointsException ex) {
       throw new SystemError("The test data of this problem could not be loaded.", ex);
+    } catch (IOException ex) {
+      throw new RetryableJudgingException("The test data could not be downloaded.", ex);
     }
   }
 

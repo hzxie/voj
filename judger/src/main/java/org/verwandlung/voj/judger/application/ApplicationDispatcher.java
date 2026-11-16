@@ -48,8 +48,10 @@ public class ApplicationDispatcher {
    * Callback invoked when a new judging request is received from the message queue.
    *
    * <p>The dispatcher records any failure of the judging itself as a System Error. What it throws
-   * is a failure to record the outcome at all (e.g. the database is unreachable), which is passed
-   * on so that the task is delivered again rather than the submission staying pending forever.
+   * is a failure to record the outcome at all (e.g. the database is unreachable), or a failure that
+   * is likely gone later or on another judger (e.g. the test data cannot be downloaded now), which
+   * is passed on so that the task is delivered again rather than the submission staying pending
+   * forever or being judged a System Error.
    *
    * @param submissionId - the unique identifier of the submission
    */

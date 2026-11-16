@@ -75,8 +75,10 @@ restarts with it):
 - It takes a judging task only once it is idle (no prefetch), so a busy judger
   never holds back tasks that another judger could judge meanwhile.
 - A task is acknowledged only after its verdict (or a System Error) has been
-  recorded. If that is impossible, e.g. while the database is down, or the
-  judger dies while judging, the broker delivers the task again, up to 5 times
+  recorded. If that is impossible, e.g. while the database is down, if the
+  test data cannot be downloaded for now (the web app restarting or
+  unreachable, an error status other than 404, a download that times out), or
+  if the judger dies while judging, the broker delivers the task again, up to 5 times
   with a growing delay (10 s, 20 s, 40 s, ...), then moves it to `ActiveMQ.DLQ`,
   where the web app marks the submission as a System Error whose judge log says
   that judging it failed repeatedly (a task that expired because no judger took
@@ -101,7 +103,7 @@ restarts with it):
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. |
+| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app has no test data for (HTTP 404), or an archive that is malformed, is a System Error; any other failed download is retried (see [Message queue](#message-queue)). |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
 | `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty, the web app refuses every download, so every submission is judged a System Error; the judger logs an error at startup. The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
