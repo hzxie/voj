@@ -38,6 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.nio.file.ExtendedOpenOption;
+
 /**
  * An exclusive lock on a lock file, held by this process until it is closed or the process exits
  * (however it exits), which tells judgers on one host apart.
@@ -168,9 +170,20 @@ public final class ExclusiveFileLock implements Closeable {
           ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
           : new FileAttribute<?>[0];
 
-  /** How a lock file is opened: created if needed, for writing, never through a link. */
+  /**
+   * How a lock file is opened: created if needed, for writing, never through a link. On Windows
+   * also without letting it be deleted or renamed while it is open (Java lets it otherwise), as a
+   * file locked at a path that names another file meanwhile would not keep another judger from
+   * the file there.
+   */
   private static final Set<OpenOption> OPEN_OPTIONS =
-      Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
+      IS_POSIX
+          ? Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)
+          : Set.of(
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE,
+              LinkOption.NOFOLLOW_LINKS,
+              ExtendedOpenOption.NOSHARE_DELETE);
 
   /** What a lock file holds: the process id of its holder. */
   private static final byte[] CONTENT =

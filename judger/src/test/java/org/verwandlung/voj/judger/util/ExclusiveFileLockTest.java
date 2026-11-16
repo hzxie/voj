@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.judger.util;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
@@ -27,6 +28,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -35,13 +37,13 @@ import org.junit.jupiter.api.io.TempDir;
  *
  * @author Haozhe Xie
  */
-@DisabledOnOs(OS.WINDOWS)
 public class ExclusiveFileLockTest {
   /**
    * Test case: a lock file locked twice. Expected result: only the first lock is granted, until it
    * is released; the file holds the process id of its holder, and only its owner may open it.
    */
   @Test
+  @DisabledOnOs(OS.WINDOWS)
   public void testLockIsExclusive() throws Exception {
     Path lockFile = tempDir.resolve("judger-0.lock");
 
@@ -73,11 +75,33 @@ public class ExclusiveFileLockTest {
   }
 
   /**
+   * Test case: a lock file held by this process is deleted or renamed (e.g. by a clean-up tool) on
+   * Windows, where Java lets a file it opened be deleted by default. Expected result: neither is
+   * possible while the lock is held, so no other judger can lock a new file at its path; once the
+   * lock is released, the file may be deleted.
+   */
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  public void testHeldLockFileCannotBeDeletedOnWindows() throws Exception {
+    Path lockFile = tempDir.resolve("judger-0.lock");
+
+    try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
+      Assertions.assertNotNull(lock);
+      Assertions.assertThrows(IOException.class, () -> Files.delete(lockFile));
+      Assertions.assertThrows(
+          IOException.class, () -> Files.move(lockFile, tempDir.resolve("moved.lock")));
+      Assertions.assertFalse(isFreeForAnotherProcess(lockFile));
+    }
+    Files.delete(lockFile);
+  }
+
+  /**
    * Test case: an earlier build left a lock file others may read, which they could take a lock on.
    * Expected result: it is made private once locked, and the lock holds: making it private never
    * opens (and closes) the file again, which would release the lock.
    */
   @Test
+  @DisabledOnOs(OS.WINDOWS)
   public void testLockFileOthersMayReadIsMadePrivate() throws Exception {
     Path lockFile =
         Files.createFile(
@@ -98,6 +122,7 @@ public class ExclusiveFileLockTest {
    * attempt never opens (and closes) the file again, which would release the lock.
    */
   @Test
+  @DisabledOnOs(OS.WINDOWS)
   public void testLockTakenAgainIsExclusiveAcrossProcesses() throws Exception {
     Path lockFile = tempDir.resolve("judger-0.lock");
     Path link = Files.createSymbolicLink(tempDir.resolve("link"), tempDir);
