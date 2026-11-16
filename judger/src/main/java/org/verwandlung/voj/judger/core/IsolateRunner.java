@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -392,7 +394,10 @@ public class IsolateRunner implements SandboxRunner {
   /**
    * Rewrites the work directory's host path, wherever it appears in a command-line argument (e.g.
    * {@code /tmp/voj-1/a.cpp}, {@code -o/tmp/voj-1/a.exe} or {@code -cp /tmp/voj-1}), to its path in
-   * the box, {@link #BOX_WORK_DIRECTORY}.
+   * the box, {@link #BOX_WORK_DIRECTORY}. The path is matched however its separators are repeated
+   * ({@code /tmp//voj-1/a.cpp}): the bound directory comes from {@link #directoryOf}, which
+   * collapses them, the command line from the compile and run commands, which do not; a path that
+   * was not rewritten names nothing in the box, so every compilation would fail.
    *
    * @param argument - the command-line argument
    * @param workDirectory - the work directory's host path (may be {@code null})
@@ -402,10 +407,18 @@ public class IsolateRunner implements SandboxRunner {
     if (workDirectory == null) {
       return argument;
     }
-    if (argument.equals(workDirectory)) {
-      return BOX_WORK_DIRECTORY;
+    StringBuilder pattern = new StringBuilder();
+    for (String segment : workDirectory.split("/+")) {
+      if (!segment.isEmpty()) {
+        pattern.append("/+").append(Pattern.quote(segment));
+      }
     }
-    return argument.replace(workDirectory + "/", BOX_WORK_DIRECTORY + "/");
+    // Only the whole directory (also in a path list such as a class path), not e.g. /tmp/voj-1 in
+    // /tmp/voj-10.
+    pattern.append("(?=[/:]|$)");
+    return Pattern.compile(pattern.toString())
+        .matcher(argument)
+        .replaceAll(Matcher.quoteReplacement(BOX_WORK_DIRECTORY));
   }
 
   /**
