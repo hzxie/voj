@@ -323,7 +323,10 @@ runs that use many threads may overlap.
 ## Native build prerequisites (Linux)
 
 Building the judger compiles its JNI library, which needs a C++ toolchain and
-libseccomp:
+libseccomp 2.5.0 or later (Ubuntu 22.04 and Debian 11 ship it): an older one
+does not know every system call the sandbox refuses, so the build stops with an
+error, and a judger that finds an older library at run time refuses every
+compilation and run as a system error:
 
 ```
 sudo apt-get install -y g++ make libseccomp-dev

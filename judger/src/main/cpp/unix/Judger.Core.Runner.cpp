@@ -58,6 +58,15 @@
 #include <linux/filter.h>
 #include <seccomp.h>
 
+// The deny-list filter refuses system calls by name (clone3 and the io_uring calls among them), and
+// a name the library does not know would be left out of it, letting the call through: libseccomp
+// 2.5.0 is the first to know them all (and to optimize a filter into a binary tree). A run-time
+// library older than this one makes the filters incomplete, and every compilation and run is refused
+// (see SeccompFilter::addEach).
+#if !defined(SCMP_VER_MAJOR) || SCMP_VER_MAJOR < 2 || (SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 5)
+#error "libseccomp 2.5.0 or later is required: an older one does not know every system call the sandbox refuses (clone3, io_uring_*)"
+#endif
+
 // SECCOMP_SET_MODE_FILTER lives in <linux/seccomp.h>, but that header can clash with libseccomp's
 // <seccomp.h> on some distributions, so define it here instead of including the kernel header.
 #ifndef SECCOMP_SET_MODE_FILTER
@@ -1186,25 +1195,28 @@ class SeccompFilter {
         }
     }
 
-    // Unconditional rules, by name: a system call that this architecture lacks (fork on arm64) or
-    // that this libseccomp does not know is left out.
+    // Unconditional rules, by name. A system call that this architecture lacks (fork on arm64, ipc
+    // on amd64) is left out: libseccomp knows it, and resolves it to a negative pseudo number. A
+    // name it does not know at all (as a library older than the one built against answers for a
+    // newer system call) is left out of the allowlist, which then refuses the call, but leaves the
+    // filter incomplete for a rule that refuses: the default-allow filter would let the call through.
     template <size_t N> void addEach(uint32_t action, const char* const (&names)[N]) {
         for ( const char* name : names ) {
             int syscallNr = seccomp_syscall_resolve_name(name);
             if ( syscallNr >= 0 ) {
                 add(action, syscallNr);
+            } else if ( syscallNr == __NR_SCMP_ERROR && action != SCMP_ACT_ALLOW ) {
+                complete_ = false;
             }
         }
     }
 
-    // Compiles the rules into a binary search tree rather than a linear list (libseccomp 2.5+), so
-    // that a long allowlist costs a run a handful of comparisons per system call. Best-effort.
+    // Compiles the rules into a binary search tree rather than a linear list, so that a long
+    // allowlist costs a run a handful of comparisons per system call. Best-effort.
     void optimize() {
-#if SCMP_VER_MAJOR > 2 || (SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR >= 5)
         if ( ctx_ != nullptr ) {
             seccomp_attr_set(ctx_, SCMP_FLTATR_CTL_OPTIMIZE, 2);
         }
-#endif
     }
 
     // Exports the filter as a classic BPF program, here in the parent, so that the child can install
@@ -1343,7 +1355,7 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
     for ( int syscallNr : socketSyscalls ) {
         filter.add(SCMP_ACT_ERRNO(EACCES), syscallNr, {SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX)});
     }
-    // By name, so this still builds against a libseccomp that predates them.
+    // By name, like every list of the filters (see addEach).
     const char* const unimplementedSyscalls[] = {
         "clone3", "io_uring_setup", "io_uring_enter", "io_uring_register",
     };
