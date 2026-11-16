@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
@@ -208,7 +210,9 @@ public class SubmissionController {
   /**
    * Gets the real-time judge result. It is a GET, the only method an EventSource can send, so it
    * needs no CSRF token (Spring Security checks the token on state-changing methods only): the
-   * stream only reads, and only to the submission's owner and administrators.
+   * stream only reads, and only to the submission's owner and administrators. A viewer who has as
+   * many streams open as they may (or follows a submission that has) gets none (429); the page
+   * still reads the verdict by its poll.
    *
    * @param submissionId - the unique identifier of the submission record
    * @return an SseEmitter object containing the judge result information
@@ -221,6 +225,9 @@ public class SubmissionController {
       HttpServletResponse response)
       throws IOException {
     User currentUser = HttpSessionParser.getCurrentUser();
+    if (currentUser == null) {
+      throw new ResourceNotFoundException();
+    }
     // The stream is registered before the submission is read: an outcome recorded after the read
     // found the submission pending is then sent to it, whereas one sent between the read and a
     // later registration would reach no stream, which would wait for nothing. It opens with a
@@ -228,7 +235,9 @@ public class SubmissionController {
     // until it is returned, and sends it first).
     SseEmitter sseEmitter = new SseEmitter(STREAM_TIMEOUT_MS);
     sseEmitter.send(SseEmitter.event().comment("connected"));
-    submissionEventListener.addSseEmitters(submissionId, sseEmitter);
+    if (!submissionEventListener.addSseEmitter(submissionId, currentUser.getUid(), sseEmitter)) {
+      throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
+    }
     // Unless the stream is returned, it never starts, so it never completes either: it is
     // unregistered here, whatever the checks throw (e.g. the database is unreachable).
     boolean isReturned = false;
@@ -251,7 +260,7 @@ public class SubmissionController {
       return sseEmitter;
     } finally {
       if (!isReturned) {
-        submissionEventListener.removeSseEmitter(submissionId, sseEmitter);
+        submissionEventListener.removeSseEmitter(sseEmitter);
       }
     }
   }

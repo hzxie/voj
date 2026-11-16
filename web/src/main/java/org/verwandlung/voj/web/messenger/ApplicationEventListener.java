@@ -19,13 +19,13 @@ package org.verwandlung.voj.web.messenger;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -36,6 +36,11 @@ import org.verwandlung.voj.web.service.SubmissionService;
  * receives on the topic of the progress (see {@link MessageReceiver}), to the live streams of the
  * submissions on this instance.
  *
+ * <p>A viewer has at most {@value #MAX_STREAMS_PER_USER} streams open on an instance, and a
+ * submission at most {@value #MAX_STREAMS_PER_SUBMISSION}. Every stream gets a comment every
+ * {@value #HEARTBEAT_INTERVAL_MS} ms, so that one whose browser went away is dropped once a send
+ * to it fails, rather than when it times out.
+ *
  * @author Haozhe Xie
  */
 @Component
@@ -44,17 +49,14 @@ public class ApplicationEventListener {
    * The handler for submission events. The message is pushed to every viewer subscribed to the
    * submission (e.g. its owner on the submission page and an administrator on the edit-submission
    * page); a viewer whose stream fails is dropped without affecting the others. Once judging has
-   * completed every stream of the submission is completed and the submission is unregistered.
+   * completed every stream of the submission is completed and unregistered.
    *
    * @param event - the submission record event
    */
   @EventListener
   public void submissionEventHandler(SubmissionEvent event) {
     long submissionId = event.getSubmissionId();
-    boolean isCompleted = event.isCompleted();
-    Set<SseEmitter> emitters = sseEmitters.get(submissionId);
-
-    if (emitters == null || emitters.isEmpty()) {
+    if (getNumberOfSseEmitters(submissionId) == 0) {
       // Every instance receives the progress of every judging; most have no viewer of it.
       LOGGER.debug(String.format("No viewer of submission #%d on this instance.", submissionId));
       return;
@@ -69,86 +71,105 @@ public class ApplicationEventListener {
               "Dropped a message of a superseded judging of submission #%d.", submissionId));
       return;
     }
-    if (isCompleted) {
-      emitters = sseEmitters.remove(submissionId);
-      if (emitters == null) {
-        return;
-      }
-    }
     Map<String, String> mapMessage = new HashMap<>(3, 1);
     mapMessage.put("judgeResult", event.getJudgeResult());
     mapMessage.put("message", event.getMessage());
 
-    // The set is concurrent, so iterating it while a callback (or another event) removes an
-    // emitter never throws a ConcurrentModificationException.
-    for (SseEmitter sseEmitter : emitters) {
+    // The map is concurrent, so iterating it while a callback (or another event) removes a stream
+    // never throws a ConcurrentModificationException.
+    for (Map.Entry<SseEmitter, Stream> entry : streams.entrySet()) {
+      SseEmitter sseEmitter = entry.getKey();
+      if (entry.getValue().submissionId() != submissionId) {
+        continue;
+      }
+      // The verdict ends a stream: it is sent by the one event that unregistered the stream.
+      if (event.isCompleted() && streams.remove(sseEmitter) == null) {
+        continue;
+      }
       try {
         sseEmitter.send(mapMessage);
       } catch (IOException | IllegalStateException ex) {
-        // The client closed the EventSource (or the stream is already complete): drop the dead
-        // emitter instead of letting the exception propagate. Re-throwing here would surface
-        // through Spring's async error handling and, because the SSE response is already
-        // committed, fail again while rendering the HTML error view.
-        LOGGER.warn(
-            String.format(
-                "Dropping SseEmitter for submission #%d after a failed send.", submissionId),
-            ex);
-        removeSseEmitter(submissionId, sseEmitter);
-        completeQuietly(sseEmitter, ex);
+        dropStream(sseEmitter, ex);
         continue;
       }
-      if (isCompleted) {
+      if (event.isCompleted()) {
         completeQuietly(sseEmitter, null);
       }
     }
   }
 
   /**
-   * Registers a Server-Sent Event emitter object. Several emitters may be registered for the same
-   * submission; each of them receives every judge message of that submission.
+   * Sends a comment to every stream, which the pages ignore: a stream whose browser went away is
+   * dropped once the send fails.
+   */
+  @Scheduled(fixedDelay = HEARTBEAT_INTERVAL_MS)
+  public void sendHeartbeats() {
+    for (SseEmitter sseEmitter : streams.keySet()) {
+      try {
+        sseEmitter.send(SseEmitter.event().comment("heartbeat"));
+      } catch (IOException | IllegalStateException ex) {
+        dropStream(sseEmitter, ex);
+      }
+    }
+  }
+
+  /**
+   * Registers a Server-Sent Event emitter object, unless its viewer or its submission has as many
+   * streams open as it may. Several emitters may be registered for the same submission; each of
+   * them receives every judge message of that submission.
    *
    * @param submissionId - the unique identifier of the submission record
+   * @param uid - the unique identifier of the viewer
    * @param sseEmitter - the Server-Sent Event emitter object
+   * @return whether the emitter was registered
    */
-  public void addSseEmitters(long submissionId, SseEmitter sseEmitter) {
+  public boolean addSseEmitter(long submissionId, long uid, SseEmitter sseEmitter) {
+    synchronized (streams) {
+      long streamsOfSubmission =
+          streams.values().stream().filter(s -> s.submissionId() == submissionId).count();
+      long streamsOfUser = streams.values().stream().filter(s -> s.uid() == uid).count();
+      if (streamsOfSubmission >= MAX_STREAMS_PER_SUBMISSION
+          || streamsOfUser >= MAX_STREAMS_PER_USER) {
+        return false;
+      }
+      streams.put(sseEmitter, new Stream(submissionId, uid));
+    }
     // Evict the emitter from the registry once the stream ends for any reason (normal
     // completion, container timeout or a client disconnect). Without this a closed
     // connection would linger in the map and keep failing on every future send().
-    sseEmitter.onCompletion(() -> removeSseEmitter(submissionId, sseEmitter));
+    sseEmitter.onCompletion(() -> removeSseEmitter(sseEmitter));
     // A stream that lasted its time ends like any other: completed, the response ends normally and
     // the page opens another stream if the submission is still pending. Left alone, it would end
     // with an AsyncRequestTimeoutException, which the error handling logs.
     sseEmitter.onTimeout(
         () -> {
-          removeSseEmitter(submissionId, sseEmitter);
+          removeSseEmitter(sseEmitter);
           completeQuietly(sseEmitter, null);
         });
-    sseEmitter.onError(throwable -> removeSseEmitter(submissionId, sseEmitter));
-    sseEmitters.compute(
-        submissionId,
-        (id, emitters) -> {
-          Set<SseEmitter> registeredEmitters =
-              emitters != null ? emitters : ConcurrentHashMap.newKeySet();
-          registeredEmitters.add(sseEmitter);
-          return registeredEmitters;
-        });
+    sseEmitter.onError(throwable -> removeSseEmitter(sseEmitter));
+    return true;
   }
 
   /**
-   * Unregisters one Server-Sent Event emitter of a submission, and the submission itself once it
-   * has no emitter left. Emitters of other submissions are never touched: several judgers run in
-   * parallel, so submissions do not complete in the order of their identifiers.
+   * Unregisters a Server-Sent Event emitter.
    *
-   * @param submissionId - the unique identifier of the submission record
    * @param sseEmitter - the Server-Sent Event emitter object to unregister
    */
-  public void removeSseEmitter(long submissionId, SseEmitter sseEmitter) {
-    sseEmitters.computeIfPresent(
-        submissionId,
-        (id, emitters) -> {
-          emitters.remove(sseEmitter);
-          return emitters.isEmpty() ? null : emitters;
-        });
+  public void removeSseEmitter(SseEmitter sseEmitter) {
+    streams.remove(sseEmitter);
+  }
+
+  /**
+   * Unregisters a stream a send to which failed (its browser went away, or it is already complete)
+   * and completes it with the failure.
+   *
+   * @param sseEmitter - the Server-Sent Event emitter object
+   * @param ex - the failure of the send
+   */
+  private void dropStream(SseEmitter sseEmitter, Exception ex) {
+    LOGGER.debug("Dropping an SseEmitter after a failed send.", ex);
+    removeSseEmitter(sseEmitter);
+    completeQuietly(sseEmitter, ex);
   }
 
   /**
@@ -171,22 +192,38 @@ public class ApplicationEventListener {
   }
 
   /**
-   * Gets the number of Server-Sent Event emitters registered for a submission (used by tests).
+   * Gets the number of Server-Sent Event emitters registered for a submission.
    *
    * @param submissionId - the unique identifier of the submission record
    * @return the number of registered emitters
    */
   public int getNumberOfSseEmitters(long submissionId) {
-    Set<SseEmitter> emitters = sseEmitters.get(submissionId);
-    return emitters == null ? 0 : emitters.size();
+    return (int) streams.values().stream().filter(s -> s.submissionId() == submissionId).count();
   }
 
   /**
-   * The registered SseEmitter objects. The Key in the Map represents the unique identifier of the
-   * submission record. The Value in the Map is the set of SseEmitter objects of every viewer
-   * following that submission, used to push real-time judge information.
+   * A registered stream: the submission it follows and its viewer.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param uid - the unique identifier of the viewer
    */
-  private final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
+  private record Stream(long submissionId, long uid) {}
+
+  /** How many streams a viewer may have open at once (on this instance). */
+  public static final int MAX_STREAMS_PER_USER = 10;
+
+  /** How many streams of a submission may be open at once (on this instance). */
+  public static final int MAX_STREAMS_PER_SUBMISSION = 20;
+
+  /** How often (ms) every stream gets a comment, which finds the streams whose browser went away. */
+  static final long HEARTBEAT_INTERVAL_MS = 30000;
+
+  /**
+   * The registered streams: the SseEmitter object of every viewer following a submission, used to
+   * push its real-time judge information. Registrations are made under its lock, so that the
+   * limits hold.
+   */
+  private final Map<SseEmitter, Stream> streams = new ConcurrentHashMap<>();
 
   /**
    * The autowired SubmissionService object. Used to tell the current judging of a submission from

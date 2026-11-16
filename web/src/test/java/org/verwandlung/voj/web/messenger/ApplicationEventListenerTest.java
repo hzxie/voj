@@ -26,6 +26,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,8 +49,8 @@ public class ApplicationEventListenerTest {
   public void testEveryViewerReceivesMessages() throws IOException {
     SseEmitter owner = mock(SseEmitter.class);
     SseEmitter administrator = mock(SseEmitter.class);
-    listener.addSseEmitters(9101L, owner);
-    listener.addSseEmitters(9101L, administrator);
+    listener.addSseEmitter(9101L, OWNER, owner);
+    listener.addSseEmitter(9101L, ADMINISTRATOR, administrator);
     Assertions.assertEquals(2, listener.getNumberOfSseEmitters(9101L));
 
     listener.submissionEventHandler(
@@ -71,8 +73,8 @@ public class ApplicationEventListenerTest {
   public void testCompletionOnlyRemovesItsOwnEmitters() {
     SseEmitter older = mock(SseEmitter.class);
     SseEmitter newer = mock(SseEmitter.class);
-    listener.addSseEmitters(9201L, older);
-    listener.addSseEmitters(9202L, newer);
+    listener.addSseEmitter(9201L, OWNER, older);
+    listener.addSseEmitter(9202L, OWNER, newer);
 
     listener.submissionEventHandler(
         new SubmissionEvent(this, 9202L, CLAIM_TOKEN, "AC", "Accepted", true));
@@ -92,8 +94,8 @@ public class ApplicationEventListenerTest {
     SseEmitter closed = mock(SseEmitter.class);
     SseEmitter healthy = mock(SseEmitter.class);
     doThrow(new IOException("Broken pipe")).when(closed).send(any(Object.class));
-    listener.addSseEmitters(9301L, closed);
-    listener.addSseEmitters(9301L, healthy);
+    listener.addSseEmitter(9301L, OWNER, closed);
+    listener.addSseEmitter(9301L, ADMINISTRATOR, healthy);
 
     Assertions.assertDoesNotThrow(
         () ->
@@ -131,7 +133,7 @@ public class ApplicationEventListenerTest {
     when(submissionService.isCurrentJudging(9501L, 1000L)).thenReturn(false);
     when(submissionService.isCurrentJudging(9501L, 2000L)).thenReturn(true);
     SseEmitter viewer = mock(SseEmitter.class);
-    listener.addSseEmitters(9501L, viewer);
+    listener.addSseEmitter(9501L, OWNER, viewer);
 
     listener.submissionEventHandler(
         new SubmissionEvent(this, 9501L, 1000L, "Running", "#1 WA", false));
@@ -151,14 +153,14 @@ public class ApplicationEventListenerTest {
   }
 
   /**
-   * Test case: tests addSseEmitters(...). Test data: a stream that lasted its time. Expected: it is
+   * Test case: tests addSseEmitter(...). Test data: a stream that lasted its time. Expected: it is
    * unregistered and completed, so that its response ends normally rather than with an
    * AsyncRequestTimeoutException.
    */
   @Test
   public void testAStreamThatTimesOutIsCompleted() {
     SseEmitter viewer = mock(SseEmitter.class);
-    listener.addSseEmitters(9601L, viewer);
+    listener.addSseEmitter(9601L, OWNER, viewer);
     ArgumentCaptor<Runnable> onTimeout = ArgumentCaptor.forClass(Runnable.class);
     verify(viewer).onTimeout(onTimeout.capture());
 
@@ -166,6 +168,58 @@ public class ApplicationEventListenerTest {
 
     verify(viewer).complete();
     Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9601L));
+  }
+
+  /**
+   * Test case: tests addSseEmitter(...). Test data: a viewer who opens one stream more than they
+   * may, then closes one; then other viewers who open one stream more than a submission may have.
+   * Expected: the streams beyond a limit are refused (and not registered) until one of the open
+   * ones ends.
+   */
+  @Test
+  public void testTheStreamsOfAViewerAndOfASubmissionAreLimited() {
+    List<SseEmitter> ofOwner = new ArrayList<>();
+    for (int i = 0; i < ApplicationEventListener.MAX_STREAMS_PER_USER; ++i) {
+      SseEmitter stream = mock(SseEmitter.class);
+      Assertions.assertTrue(listener.addSseEmitter(9700L + i % 2, OWNER, stream));
+      ofOwner.add(stream);
+    }
+    Assertions.assertFalse(listener.addSseEmitter(9702L, OWNER, mock(SseEmitter.class)));
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9702L));
+    listener.removeSseEmitter(ofOwner.get(0));
+    Assertions.assertTrue(listener.addSseEmitter(9702L, OWNER, mock(SseEmitter.class)));
+
+    int ofSubmission = listener.getNumberOfSseEmitters(9701L);
+    for (long uid = 1; ofSubmission < ApplicationEventListener.MAX_STREAMS_PER_SUBMISSION; ++uid) {
+      Assertions.assertTrue(listener.addSseEmitter(9701L, uid, mock(SseEmitter.class)));
+      ++ofSubmission;
+    }
+    Assertions.assertFalse(listener.addSseEmitter(9701L, ADMINISTRATOR, mock(SseEmitter.class)));
+    Assertions.assertEquals(
+        ApplicationEventListener.MAX_STREAMS_PER_SUBMISSION, listener.getNumberOfSseEmitters(9701L));
+  }
+
+  /**
+   * Test case: tests sendHeartbeats(). Test data: a stream whose browser went away (a send to it
+   * fails) and a healthy one. Expected: both get a comment; the dead one is completed and
+   * unregistered, the healthy one stays.
+   */
+  @Test
+  public void testHeartbeatsDropTheStreamsWhoseBrowserWentAway() throws IOException {
+    SseEmitter dead = mock(SseEmitter.class);
+    SseEmitter healthy = mock(SseEmitter.class);
+    doThrow(new IOException("Broken pipe"))
+        .when(dead)
+        .send(any(SseEmitter.SseEventBuilder.class));
+    listener.addSseEmitter(9801L, OWNER, dead);
+    listener.addSseEmitter(9801L, ADMINISTRATOR, healthy);
+
+    listener.sendHeartbeats();
+
+    verify(healthy).send(any(SseEmitter.SseEventBuilder.class));
+    verify(dead).completeWithError(any(IOException.class));
+    verify(healthy, never()).complete();
+    Assertions.assertEquals(1, listener.getNumberOfSseEmitters(9801L));
   }
 
   /** Creates the listener under test, whose service says that every judging is current. */
@@ -176,6 +230,12 @@ public class ApplicationEventListenerTest {
     listener = new ApplicationEventListener();
     ReflectionTestUtils.setField(listener, "submissionService", submissionService);
   }
+
+  /** The viewer who owns the submissions of the tests. */
+  private static final long OWNER = 1000L;
+
+  /** An administrator who follows the submissions of the tests too. */
+  private static final long ADMINISTRATOR = 1L;
 
   /** The claim token of the judgings of the tests. */
   private static final long CLAIM_TOKEN = 42L;

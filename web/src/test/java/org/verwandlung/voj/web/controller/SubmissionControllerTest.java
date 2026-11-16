@@ -39,6 +39,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
@@ -305,6 +306,40 @@ public class SubmissionControllerTest {
 
     Assertions.assertThrows(
         org.springframework.dao.DataAccessResourceFailureException.class,
+        () ->
+            controller.getRealTimeJudgeResultAction(
+                submissionId, new MockHttpServletRequest(), new MockHttpServletResponse()));
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(submissionId));
+  }
+
+  /**
+   * Test case: tests getRealTimeJudgeResultAction(...). Test data: the owner of a pending
+   * submission, who has as many streams open as they may, opens another one; an anonymous visitor
+   * asks for one. Expected: 429 for the first and 404 for the second, and neither stream is
+   * registered.
+   */
+  @Test
+  public void testNoStreamBeyondTheLimitNorForAnAnonymousVisitor() throws Exception {
+    User owner = ownerUser();
+    long submissionId = 987654324L;
+    ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
+    for (int i = 0; i < ApplicationEventListener.MAX_STREAMS_PER_USER; ++i) {
+      listener.addSseEmitter(submissionId + 1, owner.getUid(), new SseEmitter());
+    }
+    authenticate(owner);
+
+    ResponseStatusException refused =
+        Assertions.assertThrows(
+            ResponseStatusException.class,
+            () ->
+                controller.getRealTimeJudgeResultAction(
+                    submissionId, new MockHttpServletRequest(), new MockHttpServletResponse()));
+    Assertions.assertEquals(429, refused.getStatusCode().value());
+
+    SecurityContextHolder.clearContext();
+    Assertions.assertThrows(
+        ResourceNotFoundException.class,
         () ->
             controller.getRealTimeJudgeResultAction(
                 submissionId, new MockHttpServletRequest(), new MockHttpServletResponse()));
