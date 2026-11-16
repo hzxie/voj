@@ -68,13 +68,14 @@ public class JavaOptionsTest {
 
   /**
    * Test case: runs that failed, with the exit code and the end of the output of a JVM that ran
-   * out of memory, or not. Expected result: only a run that exited with 3 and whose last line of
-   * output holds the JVM's report ran out of memory, whatever the line starts with and however it
-   * ends; not one whose report is followed by more output, that exited otherwise, or that was
-   * stopped at a limit.
+   * out of memory, or not. Expected result: only a run that exited with 3 and whose output ends
+   * with the JVM's report somewhere in it ran out of memory, whatever the report's line starts with
+   * and however it ends, and whatever other threads wrote after it; not one whose report is
+   * further from the end than the part read, that exited otherwise, or that was stopped at a
+   * limit.
    */
   @Test
-  public void testOnlyARunEndingWithTheJvmsReportRanOutOfMemory(@TempDir Path directory)
+  public void testOnlyARunWhoseOutputEndsWithTheJvmsReportRanOutOfMemory(@TempDir Path directory)
       throws Exception {
     String report = "Terminating due to java.lang.OutOfMemoryError: Java heap space";
     String output = write(directory, "output", "1\n2\n" + report + "\n");
@@ -99,13 +100,19 @@ public class JavaOptionsTest {
                 "array",
                 "Terminating due to java.lang.OutOfMemoryError: Requested array size exceeds VM"
                     + " limit\n")));
+    // Another thread wrote on after the report, before the JVM exited.
+    Assertions.assertTrue(
+        JavaOptions.isOutOfMemoryExit(
+            Verdict.RUNTIME_ERROR, 3, write(directory, "followed", report + "\n4\n5")));
 
     Assertions.assertFalse(JavaOptions.isOutOfMemoryExit(Verdict.RUNTIME_ERROR, 1, output));
     Assertions.assertFalse(JavaOptions.isOutOfMemoryExit(Verdict.TIME_LIMIT_EXCEEDED, 3, output));
     Assertions.assertFalse(JavaOptions.isOutOfMemoryExit(Verdict.NORMAL, 0, output));
     Assertions.assertFalse(
         JavaOptions.isOutOfMemoryExit(
-            Verdict.RUNTIME_ERROR, 3, write(directory, "followed", report + "\n4\n")));
+            Verdict.RUNTIME_ERROR,
+            3,
+            write(directory, "distant", report + "\n" + "y".repeat(100000) + "\n")));
     Assertions.assertFalse(
         JavaOptions.isOutOfMemoryExit(
             Verdict.RUNTIME_ERROR, 3, write(directory, "other", "1\n2\n")));

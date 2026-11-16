@@ -391,20 +391,21 @@ is *L*:
   metadata), or asks for an array larger than the JVM allows, prints
   `Terminating due to java.lang.OutOfMemoryError: ...` on standard output and
   exits at once with status 3. A run that ends so (status 3, with that report
-  on the last line of its output) is Memory Limit Exceeded, reported at no less
-  than the limit, as a C++ program that keeps allocating, or asks for more than
-  its limit at once, is. This goes by what the JVM reports, not by the run
-  command, so it holds however the JVM is started (`java`, `/usr/bin/env java`,
-  a launcher script that execs it, `JAVA.EXE`); a program of another language
-  that exits with 3 is a Runtime Error, unless it prints the JVM's report
-  first, which gains it nothing. The run's peak memory would not tell it: the
-  JVM refuses an allocation that does not fit its heap before touching it, so
-  a program that asks for one array larger than its heap runs out at a peak of
-  some 40 MB. Any other failure (an uncaught exception, a thread that cannot be
-  started at the thread limit) stays a Runtime Error. A program cannot catch
-  an `OutOfMemoryError` then, which a judged program rarely does. (The report
-  is never compared with the expected output: only an accepted run's output
-  is.)
+  in the last 4 KB of its output: the program's other threads may still write
+  a little after it, until the JVM exits) is Memory Limit Exceeded, reported
+  at no less than the limit, as a C++ program that keeps allocating, or asks
+  for more than its limit at once, is. This goes by what the JVM reports, not
+  by the run command, so it holds however the JVM is started (`java`,
+  `/usr/bin/env java`, a launcher script that execs it, `JAVA.EXE`); a program
+  of another language that exits with 3 is a Runtime Error, unless it prints
+  the JVM's report, which gains it nothing. The run's peak memory would not
+  tell it: the JVM refuses an allocation that does not fit its heap before
+  touching it, so a program that asks for one array larger than its heap runs
+  out at a peak of some 40 MB. Any other failure (an uncaught exception, a
+  thread that cannot be started at the thread limit) stays a Runtime Error. A
+  program cannot catch an `OutOfMemoryError` then, which a judged program
+  rarely does. (The report is never compared with the expected output: only an
+  accepted run's output is.)
 
 Options on a language's run command come after these. Where an option is
 given twice, the last one wins, so a command can set its own `-Xmx`,

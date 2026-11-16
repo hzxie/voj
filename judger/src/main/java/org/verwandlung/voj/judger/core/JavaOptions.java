@@ -171,13 +171,16 @@ final class JavaOptions {
 
   /**
    * Tells whether a run ended because its JVM ran out of memory: it exited with {@value
-   * #OUT_OF_MEMORY_EXIT_CODE}, and the last line of its standard output holds the JVM's report
-   * ({@value #OUT_OF_MEMORY_REPORT}...), which the JVM writes just before it exits. That is what the
-   * JVM itself says, whatever started it (the {@code java} launcher by any path, {@code env}, a
-   * launcher script that execs it) and on any system, while any other program exiting with 3 is not
-   * taken for it. The report follows whatever the program had written, on the same line if that
-   * did not end with a line break; nothing follows it. A program that writes the report and exits
-   * with 3 itself is taken for one, which gains it nothing (it fails either way).
+   * #OUT_OF_MEMORY_EXIT_CODE}, and the end of its standard output (its last {@value
+   * #REPORT_TAIL_BYTES} bytes) holds the JVM's report ({@value #OUT_OF_MEMORY_REPORT}...), which the
+   * JVM writes just before it exits. That is what the JVM itself says, whatever started it (the
+   * {@code java} launcher by any path, {@code env}, a launcher script that execs it) and on any
+   * system, while any other program exiting with 3 is not taken for it. The report follows
+   * whatever the program had written, on the same line if that did not end with a line break. It
+   * need not be the last thing in the output: the JVM writes it from the thread that ran out of
+   * memory, and the program's other threads keep running, and may write, until the JVM exits. A
+   * program that writes the report and exits with 3 itself is taken for one, which gains it
+   * nothing (it fails either way).
    *
    * <p>The run's peak memory does not tell it: the JVM refuses an allocation that does not fit in
    * its heap before touching any of it, so a program that asks for one array larger than the heap
@@ -199,13 +202,7 @@ final class JavaOptions {
         || outputFilePath.isEmpty()) {
       return false;
     }
-    String output = readTail(Paths.get(outputFilePath));
-    int end = output.length();
-    while (end > 0 && (output.charAt(end - 1) == '\n' || output.charAt(end - 1) == '\r')) {
-      --end;
-    }
-    String lastLine = output.substring(output.lastIndexOf('\n', end - 1) + 1, end);
-    return lastLine.contains(OUT_OF_MEMORY_REPORT);
+    return readTail(Paths.get(outputFilePath)).contains(OUT_OF_MEMORY_REPORT);
   }
 
   /**

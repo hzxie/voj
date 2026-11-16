@@ -741,6 +741,22 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a Java program that keeps 768 MB of arrays, under a 256 MB limit (512 MB with Java's
+   * memory multiplier), while another of its threads keeps writing lines to standard output from
+   * the time half of it is held. Expected result: Memory Limit Exceeded: the other thread usually
+   * writes a few more lines after the JVM's report, before the JVM exits, so the report need not be
+   * the last line of the output.
+   */
+  @Test
+  public void testJavaThatRunsOutOfMemoryWhileAnotherThreadWritesIsMemoryLimitExceeded()
+      throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Map<String, Object> result =
+        judge(900041L, "text/x-java", JAVA_HOARD_WHILE_WRITING_CODE, 5000, 262144, "");
+    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+  }
+
+  /**
    * Test case: a Java program that keeps 768 MB of arrays, under a 256 MB limit, started through
    * {@code /usr/bin/env java} rather than by the java launcher itself. Expected result: Memory Limit
    * Exceeded: what tells a JVM that ran out of memory is its own report, not the command.
@@ -952,6 +968,55 @@ public class SandboxBehaviorTest {
           public static void main(String[] args) {
               List<byte[]> blocks = new ArrayList<>();
               for (int i = 0; i < 768; ++i) {
+                  byte[] block = new byte[1 << 20];
+                  for (int j = 0; j < block.length; j += 4096) {
+                      block[j] = 1;
+                  }
+                  blocks.add(block);
+              }
+              System.out.println(blocks.size());
+          }
+      }
+      """;
+
+  /**
+   * A Java program that keeps 768 MB of arrays of 1 MB, touching every page, while another thread
+   * writes lines to standard output (unbuffered, without allocating) from the time it holds 384 MB
+   * until the JVM exits.
+   */
+  private static final String JAVA_HOARD_WHILE_WRITING_CODE =
+      """
+      import java.io.FileDescriptor;
+      import java.io.FileOutputStream;
+      import java.io.IOException;
+      import java.util.ArrayList;
+      import java.util.List;
+
+      public class Main {
+          static volatile boolean halfFull;
+
+          public static void main(String[] args) {
+              Thread writer = new Thread(() -> {
+                  FileOutputStream out = new FileOutputStream(FileDescriptor.out);
+                  byte[] line = "tick\\n".getBytes();
+                  try {
+                      while (!halfFull) {
+                          Thread.sleep(1);
+                      }
+                      while (true) {
+                          out.write(line);
+                      }
+                  } catch (IOException | InterruptedException ex) {
+                      // Nothing more to write.
+                  }
+              });
+              writer.setDaemon(true);
+              writer.start();
+              List<byte[]> blocks = new ArrayList<>();
+              for (int i = 0; i < 768; ++i) {
+                  if (i == 384) {
+                      halfFull = true;
+                  }
                   byte[] block = new byte[1 << 20];
                   for (int j = 0; j < block.length; j += 4096) {
                       block[j] = 1;
