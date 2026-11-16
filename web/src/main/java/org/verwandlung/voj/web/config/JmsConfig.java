@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
@@ -36,6 +36,10 @@ import org.springframework.jms.listener.SimpleMessageListenerContainer;
  *
  * <p>The web module dispatches pending judge tasks to {@code vojSubmissionTaskQueue}, and listens to
  * {@code vojJudgeResultQueue} to receive judge results.
+ *
+ * <p>It survives a restart of an external broker: the listener containers keep trying to reconnect
+ * every {@value #RECOVERY_INTERVAL_MS} ms until the broker is back, and the sending side drops its
+ * cached connection once it fails and opens a new one for the next task.
  *
  * @author Haozhe Xie
  */
@@ -52,6 +56,9 @@ public class JmsConfig {
    * the redelivery limit.
    */
   private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
+
+  /** How long (ms) a listener container waits between two attempts to reconnect. */
+  static final long RECOVERY_INTERVAL_MS = 5000;
 
   /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
   private static final String EMBEDDED_BROKER_NAME = "localhost";
@@ -128,13 +135,9 @@ public class JmsConfig {
 
   /** The message listener container that listens to the judge result queue. */
   @Bean
-  public SimpleMessageListenerContainer judgeResultListenerContainer(
+  public DefaultMessageListenerContainer judgeResultListenerContainer(
       ConnectionFactory connectionFactory, MessageListener messageReceiver) {
-    SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
-    listenerContainer.setConnectionFactory(connectionFactory);
-    listenerContainer.setDestinationName(JUDGE_RESULT_QUEUE);
-    listenerContainer.setMessageListener(messageReceiver);
-    return listenerContainer;
+    return newListenerContainer(connectionFactory, JUDGE_RESULT_QUEUE, messageReceiver);
   }
 
   /**
@@ -145,13 +148,38 @@ public class JmsConfig {
    * touching other dead-lettered messages (only judging tasks carry this {@code event} property).
    */
   @Bean
-  public SimpleMessageListenerContainer deadLetterListenerContainer(
+  public DefaultMessageListenerContainer deadLetterListenerContainer(
       ConnectionFactory connectionFactory) {
-    SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
-    listenerContainer.setConnectionFactory(connectionFactory);
-    listenerContainer.setDestinationName(DEAD_LETTER_QUEUE);
+    DefaultMessageListenerContainer listenerContainer =
+        newListenerContainer(connectionFactory, DEAD_LETTER_QUEUE, (MessageListener) message -> {});
     listenerContainer.setMessageSelector("event = 'SubmissionCreated'");
-    listenerContainer.setMessageListener((MessageListener) message -> {});
+    return listenerContainer;
+  }
+
+  /**
+   * Creates a message listener container with a single consumer.
+   *
+   * <p>A DefaultMessageListenerContainer, which re-establishes its connection in a loop until the
+   * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
+   * when the connection fails (while the broker is still down), and then stops consuming for good.
+   * It connects through the broker's own connection factory rather than the cached one of the
+   * JmsTemplate, as it caches its connection itself.
+   *
+   * @param connectionFactory - the connection factory of the JmsTemplate
+   * @param destinationName - the name of the queue to listen to
+   * @param listener - the listener of the messages
+   * @return the listener container
+   */
+  private static DefaultMessageListenerContainer newListenerContainer(
+      ConnectionFactory connectionFactory, String destinationName, MessageListener listener) {
+    DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
+    listenerContainer.setConnectionFactory(
+        connectionFactory instanceof CachingConnectionFactory cachingConnectionFactory
+            ? cachingConnectionFactory.getTargetConnectionFactory()
+            : connectionFactory);
+    listenerContainer.setDestinationName(destinationName);
+    listenerContainer.setMessageListener(listener);
+    listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     return listenerContainer;
   }
 }

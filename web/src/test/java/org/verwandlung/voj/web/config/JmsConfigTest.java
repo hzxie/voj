@@ -16,9 +16,14 @@
  */
 package org.verwandlung.voj.web.config;
 
+import java.net.ServerSocket;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
+import jakarta.jms.MapMessage;
 import jakarta.jms.Message;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
@@ -30,7 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
  * The test class for JmsConfig, against a broker embedded in the test.
@@ -61,7 +66,7 @@ public class JmsConfigTest {
         new JmsTemplate(new ActiveMQConnectionFactory("vm://" + BROKER_NAME + "?create=false"));
   }
 
-  /** Stops the listener container, the connections and the broker. */
+  /** Stops the listener container, the connections and the brokers. */
   @AfterEach
   public void tearDown() throws Exception {
     if (listenerContainer != null) {
@@ -70,6 +75,55 @@ public class JmsConfigTest {
     connectionFactory.destroy();
     broker.stop();
     broker.waitUntilStopped();
+    if (tcpBroker != null) {
+      tcpBroker.stop();
+      tcpBroker.waitUntilStopped();
+    }
+  }
+
+  /**
+   * Test case: an external broker (over TCP, as in a deployment) is restarted while the web
+   * application is running. Expected: once it is back, the web application receives the messages
+   * of the judgers again, without being restarted itself.
+   */
+  @Test
+  public void testJudgeResultsAreReceivedAfterBrokerRestart() throws Exception {
+    String brokerUrl;
+    try (ServerSocket socket = new ServerSocket(0)) {
+      brokerUrl = "tcp://localhost:" + socket.getLocalPort();
+    }
+    tcpBroker = startBroker(brokerUrl);
+    BlockingQueue<Long> received = new LinkedBlockingQueue<>();
+    CachingConnectionFactory tcpConnectionFactory =
+        (CachingConnectionFactory) jmsConfig.externalConnectionFactory(brokerUrl);
+    listenerContainer =
+        jmsConfig.judgeResultListenerContainer(
+            tcpConnectionFactory,
+            message -> {
+              try {
+                received.add(((MapMessage) message).getLong("submissionId"));
+              } catch (jakarta.jms.JMSException ex) {
+                throw new IllegalStateException(ex);
+              }
+            });
+    listenerContainer.afterPropertiesSet();
+    listenerContainer.start();
+    JmsTemplate judger = new JmsTemplate(new ActiveMQConnectionFactory(brokerUrl));
+
+    judger.convertAndSend("vojJudgeResultQueue", Map.of("submissionId", 1L));
+    Assertions.assertEquals(1L, received.poll(10, TimeUnit.SECONDS));
+
+    tcpBroker.stop();
+    tcpBroker.waitUntilStopped();
+    tcpBroker = startBroker(brokerUrl);
+
+    judger.convertAndSend("vojJudgeResultQueue", Map.of("submissionId", 2L));
+    Assertions.assertEquals(
+        2L, received.poll(JmsConfig.RECOVERY_INTERVAL_MS * 3, TimeUnit.MILLISECONDS));
+    Assertions.assertTrue(listenerContainer.isRunning());
+    listenerContainer.shutdown();
+    listenerContainer = null;
+    tcpConnectionFactory.destroy();
   }
 
   /**
@@ -94,6 +148,24 @@ public class JmsConfigTest {
     Assertions.assertNotNull(deadLetter);
     Assertions.assertEquals("KeepAlive", deadLetter.getStringProperty("event"));
     Assertions.assertNull(jmsTemplate.receive(DEAD_LETTER_QUEUE));
+  }
+
+  /**
+   * Starts a non-persistent broker listening on a URL.
+   *
+   * @param brokerUrl - the URL of the broker's transport connector
+   * @return the started broker
+   */
+  private static BrokerService startBroker(String brokerUrl) throws Exception {
+    BrokerService brokerService = new BrokerService();
+    brokerService.setBrokerName("jmsConfigTestOverTcp");
+    brokerService.setPersistent(false);
+    brokerService.setUseJmx(false);
+    brokerService.setUseShutdownHook(false);
+    brokerService.addConnector(brokerUrl);
+    brokerService.start();
+    brokerService.waitUntilStarted();
+    return brokerService;
   }
 
   /**
@@ -129,6 +201,9 @@ public class JmsConfigTest {
   /** Sends, browses and receives the messages of the dead-letter queue. */
   private JmsTemplate jmsTemplate;
 
-  /** The dead-letter listener container a test started, if any. */
-  private SimpleMessageListenerContainer listenerContainer;
+  /** The broker over TCP a test started, if any. */
+  private BrokerService tcpBroker;
+
+  /** The listener container a test started, if any. */
+  private DefaultMessageListenerContainer listenerContainer;
 }

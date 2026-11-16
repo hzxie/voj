@@ -38,6 +38,10 @@ Email (verification, password reset, notifications) is disabled when `mail.host`
 
 ### Message queue
 
+The web app survives a restart of an external broker: its listeners (the judgers'
+messages, the dead-letter queue) try to reconnect every 5 seconds until the broker
+is back, and the next judging task after the restart is sent over a new connection.
+
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app publishes judging tasks to. |
