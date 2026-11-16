@@ -203,35 +203,86 @@ public class CheckpointStore {
    */
   private Path claimSlot(Path root) throws IOException {
     Files.createDirectories(root);
-    for (int slot = 0; slot < MAX_SLOTS; ++slot) {
-      ExclusiveFileLock lock =
-          ExclusiveFileLock.tryAcquire(root.resolve("judger-" + slot + ".lock"));
+    // Relative to the directory the judger was started in, as any relative path is; but the
+    // sandbox resolves the paths of a judging after entering its work directory.
+    Path workRoot = Paths.get(workRootDirectory).toAbsolutePath().normalize();
+    Path[] workDirectory = new Path[1];
+    Slot slot =
+        claimSlot(
+            root,
+            "judger-",
+            directory -> {
+              if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
+                createPrivateDirectory(directory);
+              }
+              ensureOwnedByJudger(directory);
+              workDirectory[0] = workRoot.resolve("voj-" + directory.getFileName());
+              resetWorkDirectory(workDirectory[0]);
+            });
+    if (slot == null) {
+      throw new IOException(
+          String.format(
+              "All %d checkpoint cache slots under %s are taken by other judgers.",
+              MAX_SLOTS, root));
+    }
+    LOGGER.info("Judging in {}", workDirectory[0]);
+    slotLock = slot.lock();
+    judgerWorkDirectory = workDirectory[0];
+    return slot.directory();
+  }
+
+  /**
+   * Claims the first free slot in a directory: locks its lock file, {@code <name><n>.lock}, for as
+   * long as this judger runs (the lock is released when the process exits, however it exits), and
+   * prepares its directory, {@code <name><n>}. A slot whose directory cannot be prepared is
+   * released, whatever went wrong.
+   *
+   * @param root - the directory of the slots
+   * @param name - the name of the slots, without their number
+   * @param preparation - prepares the directory of the slot once it is locked
+   * @return the slot, or {@code null} if every slot is taken
+   * @throws IOException if a lock file cannot be opened or the directory cannot be prepared
+   */
+  static Slot claimSlot(Path root, String name, SlotPreparation preparation) throws IOException {
+    for (int number = 0; number < MAX_SLOTS; ++number) {
+      ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(root.resolve(name + number + ".lock"));
       if (lock == null) {
         continue;
       }
+      Path directory = root.resolve(name + number);
       try {
-        Path directory = root.resolve("judger-" + slot);
-        if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
-          createPrivateDirectory(directory);
+        preparation.prepare(directory);
+      } catch (Throwable ex) {
+        try {
+          lock.close();
+        } catch (IOException closeException) {
+          ex.addSuppressed(closeException);
         }
-        ensureOwnedByJudger(directory);
-        // Relative to the directory the judger was started in, as any relative path is; but the
-        // sandbox resolves the paths of a judging after entering its work directory.
-        Path workDirectory =
-            Paths.get(workRootDirectory).toAbsolutePath().normalize().resolve("voj-judger-" + slot);
-        resetWorkDirectory(workDirectory);
-        LOGGER.info("Judging in {}", workDirectory);
-        slotLock = lock;
-        judgerWorkDirectory = workDirectory;
-        return directory;
-      } catch (IOException ex) {
-        lock.close();
         throw ex;
       }
+      return new Slot(lock, directory);
     }
-    throw new IOException(
-        String.format(
-            "All %d checkpoint cache slots under %s are taken by other judgers.", MAX_SLOTS, root));
+    return null;
+  }
+
+  /**
+   * A slot claimed by this judger.
+   *
+   * @param lock - the lock of the slot, held while the judger runs
+   * @param directory - the directory of the slot
+   */
+  record Slot(ExclusiveFileLock lock, Path directory) {}
+
+  /** Prepares the directory of a slot once it is locked. */
+  @FunctionalInterface
+  interface SlotPreparation {
+    /**
+     * Prepares the directory of a slot.
+     *
+     * @param directory - the directory of the slot
+     * @throws IOException if the directory cannot be prepared
+     */
+    void prepare(Path directory) throws IOException;
   }
 
   /**

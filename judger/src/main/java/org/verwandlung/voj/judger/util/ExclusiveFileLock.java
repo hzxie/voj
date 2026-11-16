@@ -20,15 +20,19 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * An exclusive lock on a lock file, held by this process until it is closed or the process exits
@@ -45,11 +49,30 @@ public final class ExclusiveFileLock implements Closeable {
   /**
    * Locks a lock file, which is created if needed.
    *
+   * <p>The file may be removed or replaced between its opening and its locking, and what was
+   * locked then guards nothing: another process may lock the file now at the path. So once the
+   * file is locked, the file at the path must be the one locked, i.e. open in this process (Java
+   * cannot tell the identity of the file a channel has open, but Linux lists the files a process
+   * has open in {@code /proc/self/fd}, and this process opens a lock file through its lock only);
+   * if it is not, or there is none, the file at the path is opened and locked again.
+   *
    * @param file - the lock file
    * @return the lock, or {@code null} if another process, or this one, holds it already
    * @throws IOException if the lock file cannot be opened
    */
   public static ExclusiveFileLock tryAcquire(Path file) throws IOException {
+    return tryAcquire(file, lockFile -> {});
+  }
+
+  /**
+   * Locks a lock file, which is created if needed.
+   *
+   * @param file - the lock file
+   * @param afterLocking - what happens right after the lock file is locked (for tests)
+   * @return the lock, or {@code null} if another process, or this one, holds it already
+   * @throws IOException if the lock file cannot be opened
+   */
+  static ExclusiveFileLock tryAcquire(Path file, Consumer<Path> afterLocking) throws IOException {
     Path lockFile = file.toAbsolutePath().normalize();
     // A file lock is held by the whole process, and closing any channel of a locked file may drop
     // it: never open a lock file this process holds (e.g. two judgers in one JVM in a test).
@@ -57,28 +80,91 @@ public final class ExclusiveFileLock implements Closeable {
       if (HELD_LOCK_FILES.contains(lockFile)) {
         return null;
       }
-      FileChannel channel =
-          FileChannel.open(
-              lockFile,
-              StandardOpenOption.CREATE,
-              StandardOpenOption.WRITE,
-              LinkOption.NOFOLLOW_LINKS);
-      try {
-        if (channel.tryLock() == null) {
+      for (int attempt = 1; attempt <= MAXIMUM_ATTEMPTS; ++attempt) {
+        FileChannel channel =
+            FileChannel.open(
+                lockFile,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE,
+                LinkOption.NOFOLLOW_LINKS);
+        try {
+          if (!tryLock(channel)) {
+            channel.close();
+            return null;
+          }
+          afterLocking.accept(lockFile);
+          Object fileKey = fileKeyOfLocked(lockFile);
+          if (fileKey != NOT_LOCKED) {
+            ExclusiveFileLock lock = new ExclusiveFileLock(lockFile, channel, fileKey);
+            HELD_LOCK_FILES.add(lockFile);
+            return lock;
+          }
           channel.close();
-          return null;
+        } catch (Throwable ex) {
+          try {
+            channel.close();
+          } catch (IOException closeException) {
+            ex.addSuppressed(closeException);
+          }
+          throw ex;
         }
-        ExclusiveFileLock lock = new ExclusiveFileLock(lockFile, channel, fileKeyOf(lockFile));
-        HELD_LOCK_FILES.add(lockFile);
-        return lock;
-      } catch (OverlappingFileLockException ex) {
-        channel.close();
-        return null;
-      } catch (IOException | RuntimeException ex) {
-        channel.close();
-        throw ex;
+      }
+      throw new IOException(
+          String.format(
+              "The lock file %s was removed or replaced each of the %d times it was locked.",
+              lockFile, MAXIMUM_ATTEMPTS));
+    }
+  }
+
+  /**
+   * Locks the file a channel has open, unless another process, or this one, holds it.
+   *
+   * @param channel - the channel
+   * @return whether the file is locked now
+   * @throws IOException if the file cannot be locked
+   */
+  private static boolean tryLock(FileChannel channel) throws IOException {
+    try {
+      return channel.tryLock() != null;
+    } catch (OverlappingFileLockException ex) {
+      return false;
+    }
+  }
+
+  /**
+   * Gets the file key of the lock file just locked, i.e. of the file at its path, if that is the
+   * file locked.
+   *
+   * @param lockFile - the path of the lock file
+   * @return the file key ({@code null} if the platform has none), or {@link #NOT_LOCKED} if the
+   *     file at the path is not the one locked (or there is none)
+   * @throws IOException if the files open in this process cannot be listed
+   */
+  private static Object fileKeyOfLocked(Path lockFile) throws IOException {
+    Object fileKey;
+    try {
+      fileKey = fileKeyOf(lockFile);
+    } catch (NoSuchFileException ex) {
+      return NOT_LOCKED;
+    }
+    // No file key on Windows, where a file cannot be removed while it is open.
+    if (fileKey == null || !Files.isDirectory(OPEN_FILES)) {
+      return fileKey;
+    }
+    try (DirectoryStream<Path> descriptors = Files.newDirectoryStream(OPEN_FILES)) {
+      for (Path descriptor : descriptors) {
+        try {
+          // Follows the descriptor to the file it has open, even if that was removed.
+          if (fileKey.equals(
+              Files.readAttributes(descriptor, BasicFileAttributes.class).fileKey())) {
+            return fileKey;
+          }
+        } catch (IOException ex) {
+          // Closed meanwhile.
+        }
       }
     }
+    return NOT_LOCKED;
   }
 
   /**
@@ -151,6 +237,15 @@ public final class ExclusiveFileLock implements Closeable {
 
   /** The lock files this process holds. */
   private static final Set<Path> HELD_LOCK_FILES = new HashSet<>();
+
+  /** How many times a lock file is opened and locked before its removal or replacement fails. */
+  private static final int MAXIMUM_ATTEMPTS = 10;
+
+  /** The directory (on Linux) of the descriptors of the files this process has open. */
+  private static final Path OPEN_FILES = Paths.get("/proc/self/fd");
+
+  /** Stands for a lock file whose path is not the file locked. */
+  private static final Object NOT_LOCKED = new Object();
 
   /** The lock file. */
   private final Path file;

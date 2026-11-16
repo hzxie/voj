@@ -246,6 +246,32 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
+   * Test case: the directory of a slot cannot be prepared, for a reason that is no IOException.
+   * Expected result: the slot is released all the same, so that it can be claimed again.
+   */
+  @Test
+  public void testClaimSlotReleasesTheSlotWhateverGoesWrong() throws Exception {
+    Path root = Files.createDirectory(tempDir.resolve("voj-testpoints"));
+
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () ->
+            CheckpointStore.claimSlot(
+                root,
+                "judger-",
+                directory -> {
+                  throw new IllegalStateException("unexpected");
+                }));
+
+    CheckpointStore.Slot slot = CheckpointStore.claimSlot(root, "judger-", directory -> {});
+    try {
+      Assertions.assertEquals(root.resolve("judger-0"), slot.directory());
+    } finally {
+      slot.lock().close();
+    }
+  }
+
+  /**
    * Test case: judger.workDir is relative and ends with a slash. Expected result: the judger's work
    * directory is absolute and normalized (the native sandbox resolves paths after entering the
    * work directory, isolate binds it as java.io.File spells it), restricted so that others can
