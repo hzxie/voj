@@ -230,13 +230,15 @@ public class SubmissionController {
   }
 
   /**
-   * Gets the real-time judge result.
+   * Gets the real-time judge result. It is a GET, the only method an EventSource can send, so it
+   * needs no CSRF token (Spring Security checks the token on state-changing methods only): the
+   * stream only reads, and only to the submission's owner and administrators.
    *
    * @param submissionId - the unique identifier of the submission record
    * @return an SseEmitter object containing the judge result information
    * @throws IOException
    */
-  @RequestMapping("/getRealTimeJudgeResult.action")
+  @RequestMapping(value = "/getRealTimeJudgeResult.action", method = RequestMethod.GET)
   public SseEmitter getRealTimeJudgeResultAction(
       @RequestParam(value = "submissionId") long submissionId,
       HttpServletRequest request,
