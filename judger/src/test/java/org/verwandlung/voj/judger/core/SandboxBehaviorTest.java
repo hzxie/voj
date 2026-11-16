@@ -540,6 +540,28 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that looks at its session and opens its controlling terminal, as a program
+   * would that pushes input into the judger's terminal (TIOCSTI). Expected result: the run leads a
+   * session and a process group of its own, so it has no controlling terminal (ENXIO), whatever
+   * terminal the judger was started from, and it cannot leave them (setsid: EPERM).
+   */
+  @Test
+  public void testRunHasNoControllingTerminal() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The test program uses getsid().");
+    Assertions.assertEquals("AC", judge(900027L, TERMINAL_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "session leader: yes",
+            "process group leader: yes",
+            "/dev/tty: ENXIO",
+            "setsid: EPERM",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900027", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1328,6 +1350,33 @@ public class SandboxBehaviorTest {
           long parent = getppid();
           report("parent (read)", syscall(SYS_prlimit64, parent, RLIMIT_CORE, nullptr, &limit) == 0);
           report("parent (lower)", syscall(SYS_prlimit64, parent, RLIMIT_CORE, &lowered, nullptr) == 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reports whether it leads its session and process group, and how opening its
+   * controlling terminal and leaving its session end.
+   */
+  private static final String TERMINAL_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == ENXIO ? "ENXIO" : error == EPERM ? "EPERM" : std::strerror(error));
+      }
+
+      int main() {
+          std::printf("session leader: %s\\n", getsid(0) == getpid() ? "yes" : "no");
+          std::printf("process group leader: %s\\n", getpgrp() == getpid() ? "yes" : "no");
+          report("/dev/tty", open("/dev/tty", O_RDONLY) >= 0);
+          report("setsid", setsid() >= 0);
           return 0;
       }
       """;

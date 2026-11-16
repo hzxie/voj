@@ -216,7 +216,7 @@ enum ChildStep {
   STEP_STATIC_DATA_LIMIT,
 };
 static const char* const CHILD_STEP_NAMES[] = {
-  "marking inherited descriptors close-on-exec", "opening the input file", "setpgid()",
+  "marking inherited descriptors close-on-exec", "opening the input file", "setsid()",
   "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
   "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
   "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
@@ -420,7 +420,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         return NULL;
     }
 
-    // The program has been exec'd and is in its own process group (pid), set up before exec.
+    // The program has been exec'd and is in its own session and process group (both pid), set up
+    // before exec.
     std::atomic<bool> finished(false);
     std::atomic<int>  limitExceeded(LIMIT_NONE); // the first limit the watchdog enforced
     std::atomic<int>  peakMemoryKb(0);
@@ -582,8 +583,12 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     dup2(inputFd, STDIN_FILENO);
     close(inputFd);
 
-    // Run in a dedicated process group so the watchdog can signal the whole tree.
-    if ( setpgid(0, 0) != 0 ) {
+    // Run in a session of its own, which is also a process group of its own (both the child's pid),
+    // so that the watchdog can signal the whole tree. A new session has no controlling terminal: in
+    // the judger's session, the program could open the judger's terminal (/dev/tty) and, where the
+    // kernel still allows TIOCSTI, push input into the shell that started the judger. (As the
+    // session's leader, it cannot take a terminal another session controls.)
+    if ( setsid() < 0 ) {
         reportChildFailure(syncWriteFd, STEP_PROCESS_GROUP);
     }
 

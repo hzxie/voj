@@ -139,7 +139,9 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   memory limit sees. A run's threads must share its descriptor table (`clone`
   with `CLONE_THREAD` but without `CLONE_FILES` fails with `EPERM`), so the
   limit is the run's, not each thread's. Compilations and runs start in the
-  submission's work directory.
+  submission's work directory, in a session of their own without a
+  controlling terminal, so they cannot open the terminal the judger was started
+  from (to push input into its shell with `TIOCSTI`, say).
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
   its secrets, with `HOME` and `TMPDIR` set to the submission's work directory.
