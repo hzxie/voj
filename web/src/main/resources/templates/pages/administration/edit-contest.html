@@ -284,26 +284,54 @@
             })();
 
             // --- START TIME ------------------------------------------------------
-            // The field shows the start in the browser's time zone (named next to the label);
-            // a new contest starts out at the current time (to the minute).
+            // The field shows the start in the browser's time zone (named next to the label, with
+            // its offset at that start); a new contest starts out at the current time (to the
+            // minute).
             var startInput = document.getElementById('start-time');
             function pad2(n) { return String(n).padStart(2, '0'); }
             function fmt(d) {
                 return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
                     'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
             }
-            var startTime = startInput.getAttribute('data-start-time');
-            startInput.value = fmt(startTime ? new Date(Number(startTime)) : new Date());
-            (function showTimeZone() {
-                var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '', offset = [];
-                try {  // 'shortOffset' (GMT+8) is newer than the rest of Intl: optional
-                    offset = new Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' })
-                        .formatToParts(new Date())
+            var storedStart = startInput.getAttribute('data-start-time');
+            var storedStartTime = storedStart ? Number(storedStart) : null;
+            startInput.value = fmt(storedStartTime !== null ? new Date(storedStartTime) : new Date());
+            var shownStartValue = startInput.value;
+            // The instant (epoch ms) of the start the field holds, NaN if it holds none.
+            //
+            // A datetime-local value has no offset, so Date reads it in the browser's zone, and a
+            // wall-clock time is not always one instant there: one in the hour repeated when
+            // daylight saving time ends occurs twice (browsers take one of the two, usually the
+            // first), and one in the hour skipped when it starts does not occur at all (browsers
+            // move it by the gap). So the stored start is kept as it is unless the admin changed
+            // the field; reading the field back would move a start in the second of the repeated
+            // hours an hour earlier on a save that changed something else. An edited field means
+            // what the browser takes it to mean.
+            function getStartTime() {
+                if (storedStartTime !== null && startInput.value === shownStartValue) {
+                    return storedStartTime;
+                }
+                return startInput.value ? new Date(startInput.value).getTime() : NaN;
+            }
+            var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+            var offsetFormat = null;
+            try {  // 'shortOffset' (GMT+8) is newer than the rest of Intl: optional
+                offsetFormat = new Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' });
+            } catch (e) { /* the zone name alone */ }
+            // The offset depends on the date (daylight saving time), so it is the one at the
+            // entered start (now while the field holds no valid start).
+            function showTimeZone() {
+                var startTime = getStartTime(), offset = [];
+                if (offsetFormat) {
+                    offset = offsetFormat.formatToParts(new Date(isNaN(startTime) ? Date.now() : startTime))
                         .filter(function (part) { return part.type === 'timeZoneName'; });
-                } catch (e) { /* the zone name alone */ }
+                }
                 document.getElementById('start-time-zone').textContent =
-                    ' · ' + zone + (offset.length ? ' (' + offset[0].value + ')' : '');
-            })();
+                    ' · ' + timeZone + (offset.length ? ' (' + offset[0].value + ')' : '');
+            }
+            showTimeZone();
+            startInput.addEventListener('input', showTimeZone);
+            startInput.addEventListener('change', showTimeZone);
 
             // --- Save ------------------------------------------------------------
             function parseHhMm(text) {
@@ -318,17 +346,15 @@
             function save() {
                 if (saveButton.disabled) { return; }
                 $err.addClass('hide');
-                var startRaw = startInput.value;
+                var start = getStartTime();
                 var durationMinutes = parseHhMm(document.getElementById('contest-duration').value);
                 var freezeMinutes = parseHhMm(document.getElementById('contest-freeze').value);
                 var name = $('#contest-name').val();
-                if (!name || !startRaw || durationMinutes === null || durationMinutes <= 0) {
+                if (!name || isNaN(start) || durationMinutes === null || durationMinutes <= 0) {
                     $err.text([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
                 }
-                // A datetime-local value has no offset, so Date reads it in the browser's zone.
                 // Both ends are posted as instants (epoch ms) and the duration is added to the
                 // instant, so a DST change during the contest does not alter its length.
-                var start = new Date(startRaw).getTime();
                 var data = {
                     contestName: name,
                     contestNotes: notesEditor ? notesEditor.value() : $('#contest-notes').val(),
