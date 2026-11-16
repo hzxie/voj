@@ -40,7 +40,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
  * contest_mode and contest_is_rated columns, no submission_judge_generation column, the foreign
  * key from voj_email_validation to voj_users, problem statements and contest notes written for
- * HTML output (with HTML entities) and the contestants' code_snippet column.
+ * HTML output (with HTML entities), the contestants' code_snippet column and Kotlin's old compile
+ * command.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -110,6 +111,13 @@ public class UpgradeFrom102Test {
     {"9104", "ACM", "ICPC", "ICPC"},
   };
 
+  /** Kotlin's compile command as 1.0.2 seeded it, and as the upgrade sets it. */
+  private static final String OLD_KOTLIN_COMPILE_COMMAND =
+      "kotlinc {filename}.kt -include-runtime -d {filename}.jar";
+
+  private static final String NEW_KOTLIN_COMPILE_COMMAND =
+      "kotlinc -J-Djava.io.tmpdir=. {filename}.kt -include-runtime -d {filename}.jar";
+
   @BeforeEach
   public void setUp() {
     jdbcTemplate = new JdbcTemplate(dataSource);
@@ -125,6 +133,11 @@ public class UpgradeFrom102Test {
         "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
     // The contestants as 1.0.2 created them, with a code snippet.
     jdbcTemplate.execute("ALTER TABLE voj_contest_contestants ADD COLUMN code_snippet text");
+    // Kotlin's compile command as 1.0.2 seeded it.
+    jdbcTemplate.update(
+        "UPDATE voj_languages SET language_compile_command = ? WHERE language_slug = ?",
+        OLD_KOTLIN_COMPILE_COMMAND,
+        "text/x-kotlin");
     // The submissions as 1.0.2 created them, without a judge generation.
     jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
     // The email validations as 1.0.2 created them, owned by a user.
@@ -243,6 +256,29 @@ public class UpgradeFrom102Test {
   }
 
   /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more after an administrator changed
+   * Kotlin's compile command. Test data: Kotlin's 1.0.2 compile command. Expected: the default
+   * compile command gets the compiler's temporary directory, and the second run keeps the
+   * administrator's command.
+   */
+  @Test
+  public void testMovesKotlinsTemporaryDirectory() throws SQLException {
+    runUpgrade();
+    Assertions.assertEquals(NEW_KOTLIN_COMPILE_COMMAND, getKotlinCompileCommand());
+
+    jdbcTemplate.update(
+        "UPDATE voj_languages SET language_compile_command = ? WHERE language_slug = ?",
+        "kotlinc {filename}.kt -d {filename}.jar",
+        "text/x-kotlin");
+    runUpgrade();
+    Assertions.assertEquals("kotlinc {filename}.kt -d {filename}.jar", getKotlinCompileCommand());
+    jdbcTemplate.update(
+        "UPDATE voj_languages SET language_compile_command = ? WHERE language_slug = ?",
+        NEW_KOTLIN_COMPILE_COMMAND,
+        "text/x-kotlin");
+  }
+
+  /**
    * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: no judge
    * generation column. Expected: the column is added with 0 for the existing submissions, and the
    * second run leaves it (and a generation a rejudge set since) as it is.
@@ -356,6 +392,13 @@ public class UpgradeFrom102Test {
         "SELECT contest_scoring FROM voj_contests WHERE contest_id = ?",
         String.class,
         Long.parseLong(contestId));
+  }
+
+  private String getKotlinCompileCommand() {
+    return jdbcTemplate.queryForObject(
+        "SELECT language_compile_command FROM voj_languages WHERE language_slug = ?",
+        String.class,
+        "text/x-kotlin");
   }
 
   private boolean hasColumn(String tableName, String columnName) {

@@ -34,8 +34,13 @@
 --    a statement that showed "&lt;" (stored "&amp;lt;") still shows "&lt;".
 --    The hint was already written as text, so it is left alone.
 -- 7. voj_contest_contestants.code_snippet was never written; it is dropped.
+-- 8. The native sandbox lets a compiler write only inside its work
+--    directory, so kotlinc's default compile command, whose terminal library
+--    unpacks itself into /tmp, now points the compiler's temporary directory
+--    there (the compile succeeded either way, with a warning in its log). A
+--    compile command an administrator changed is left as it is.
 --
--- Safe to run more than once. Steps 1 to 5 and 7 first check the information
+-- Safe to run more than once. Steps 1 to 5, 7 and 8 first check the information
 -- schema and only change what is still in the old state (MySQL commits DDL
 -- implicitly, so a transaction could not make them atomic; an interrupted run
 -- is completed by running the script again). Step 6 runs in one transaction
@@ -195,3 +200,7 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
+-- 8. Kotlin's temporary directory, in the default compile command only.
+UPDATE `voj_languages`
+SET `language_compile_command` = 'kotlinc -J-Djava.io.tmpdir=. {filename}.kt -include-runtime -d {filename}.jar'
+WHERE `language_compile_command` = 'kotlinc {filename}.kt -include-runtime -d {filename}.jar';
