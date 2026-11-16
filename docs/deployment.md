@@ -10,32 +10,35 @@ database scripts some releases need.
 
 The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
 
-- `native` (default): an in-process JNI runner. On Linux it confines each
-  submission with `setrlimit`, a seccomp syscall filter (which also refuses
-  network sockets and System V IPC), Landlock rules that confine its writes to
-  its own work directory (a run's is a fresh, empty one: it cannot change the
-  compiled program, which the judger takes once compiled, nor anything a later
-  run uses), a private network namespace where one can be created,
-  and a privilege drop. It needs Linux 5.13 or later with Landlock enabled (see
-  [Kernel requirements](#kernel-requirements)). On Windows it runs the
-  submission under a separate low-privilege account. This is the only option on
-  Windows.
-- `isolate` (Linux only): delegates to the external
-  [isolate](https://github.com/ioi/isolate) tool. Choose this when you need full
-  filesystem isolation (each submission gets its own mount namespace). It requires
-  `isolate` to be installed and the judger to run as root. isolate runs box *n*
-  as UID `first_uid + n` (its default `first_uid` is 60000), so the judger hands
-  each submission's private program directory to that UID: set
-  `judger.isolate.firstUid` to isolate's `first_uid` and `judger.isolate.boxId`
-  to the box id. See [The isolate backend](#the-isolate-backend) for how the
-  judger sets up each box.
+- `isolate` (Linux): runs each compilation and run in a box of the external
+  [isolate](https://github.com/ioi/isolate) tool, with namespaces of its own
+  (no network, no other processes, only the system directories and the
+  directory of its judging visible) and a cgroup that accounts for its memory
+  and processes. It needs isolate and a judger running as root. **This is the
+  recommended backend for Linux in production.** See
+  [The isolate backend](#the-isolate-backend).
+- `native` (default): the judger's JNI runner. On Linux it confines each
+  program with resource limits, seccomp filters (which also refuse network
+  sockets and System V IPC), Landlock rules that confine its writes to its own
+  work directory and, for a judger running as root, a dedicated account; it
+  needs no privilege, so it also serves a judger that is not root
+  (development, CI) and hosts without isolate. On Windows, the only backend
+  there, it runs each program under a restricted token of a separate account
+  (see [Windows native sandbox](#windows-native-sandbox)).
+
+Both backends get the same command, environment and limits from the judger
+(`SandboxPolicy.java`), and the judger judges what they measure alike
+(`Verdict.of`): a limit the sandbox stopped the program for, else a limit its
+final CPU time, peak memory or output exceeds, else its exit code. They differ
+in what they can measure: see [Memory](#what-a-submission-is-held-to) and
+[The isolate backend](#the-isolate-backend).
 
 Unless a section says otherwise, this guide describes the `native` backend on Linux.
 
-## Running the native sandbox as root (recommended for production)
+## Running the native sandbox as root
 
-To isolate untrusted code, run the judger as root so it can drop privileges to an
-unprivileged account before executing each submission.
+Run the judger as root so it can drop privileges to an unprivileged account
+before running each program.
 
 ### The unprivileged user
 
@@ -106,11 +109,12 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   its process, as the kernel accounts it when the process is reaped. A watchdog
   polls it every millisecond and kills the program once it exceeds the limit,
   backed by `RLIMIT_CPU` (the limit rounded up to whole seconds, plus one) and a
-  wall-clock limit of three times the time limit plus one second (for a program
-  that sleeps or blocks). A program that finishes over the limit before the
-  watchdog stops it is Time Limit Exceeded all the same. A compilation's time is
-  that of the compiler's top-level process, including the children it waited
-  for, under `judger.compileTimeLimit`.
+  wall-clock limit of twice the time limit plus one second (for a program that
+  sleeps or blocks), the same on every backend. A program that finishes over the
+  limit before the watchdog stops it is Time Limit Exceeded all the same. A
+  compilation's time is that of the whole compilation, the compiler and the
+  programs it ran and waited for, as polled and as finally counted, under
+  `judger.compileTimeLimit`.
 - **Memory.** A run's memory is the peak resident set size of its process
   (`VmHWM`, polled from `/proc` every millisecond; the program is killed once it
   exceeds the limit). The kernel backs this with `RLIMIT_DATA` at twice the
@@ -139,18 +143,22 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   maps its heap through a memory file, and Python's anonymous
   `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
   collectors do). A run's JVM is told its memory limit and sizes its heap to
-  it (see [Java and Kotlin runs](#java-and-kotlin-runs)). Files a run writes in its work directory hold data outside its
-  memory limit, though, until the run is over and the directory removed:
-  `RLIMIT_FSIZE` bounds each file (see below), not their
-  number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
-  file's size. The work directories are under `judger.checkpointDir`; on tmpfs,
-  that space is RAM: keep `judger.checkpointDir` on a disk-backed file system
-  (as its default, `/var/lib/voj-judger`, is), or on a tmpfs whose `size=`
-  bounds what the runs on the host can hold there.
+  it (see [Java and Kotlin runs](#java-and-kotlin-runs)).
+- **Disk.** A compilation or run may write in its work directory, and
+  `judger.outputLimit` bounds each file, not their number: until it ends and its
+  directory is removed, a run can fill whatever file system holds
+  `judger.checkpointDir` (and on tmpfs, that is RAM no memory limit sees). The
+  judger cannot bound the total itself, so put `judger.checkpointDir` on a file
+  system of its own whose size is the bound: a dedicated partition or volume,
+  or a tmpfs with `size=`, large enough for the test data of the problems and a
+  few compilations (a run that fills it fails with `ENOSPC`, and so may the
+  judger's next download). `fallocate`, which could reserve space past
+  `RLIMIT_FSIZE`, is not on a run's allowlist (the C library's
+  `posix_fallocate` falls back to writing).
 - **Output.** A file the program writes, standard output included, may reach
-  256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
-  Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
-  so that its writes fail, and its output has reached the limit.
+  `judger.outputLimit` (256 MB; `RLIMIT_FSIZE`). A run whose output reaches the
+  limit is Output Limit Exceeded, whether the kernel's `SIGXFSZ` kills it or it
+  ignores the signal, so that its writes fail.
 - **Standard streams and descriptors.** A run reads its standard input from the
   test's input file and a compilation from `/dev/null`; standard output goes to
   the output file (for a compilation, standard error too: the compile log), and
@@ -180,11 +188,14 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   was started from, for reading (Landlock refuses writing), to read what is
   typed there. Run such a judger under an account no one works in, or as root
   with a sandbox user, which owns no terminal.
-- **Environment.** Only the locale and toolchain variables of the judger are
-  passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
-  its secrets, with `HOME` and `TMPDIR` set to the program's work directory,
+- **Environment.** The judger builds the whole environment
+  (`SandboxPolicy.java`, for every backend): only its locale and toolchain
+  variables are passed on (`PATH`, `LANG`, `LC_ALL`, `TZ`, `JAVA_HOME`,
+  `KOTLIN_HOME`, the Go and Rust settings), never its secrets, with `HOME` and
+  `TMPDIR` set to the program's work directory, `GOCACHE` and `GOPATH` in it,
   and, for a run, `JDK_JAVA_OPTIONS` (see
-  [Java and Kotlin runs](#java-and-kotlin-runs)).
+  [Java and Kotlin runs](#java-and-kotlin-runs)). The program is looked up on
+  that `PATH` by the judger, never in the work directory.
 - **Files and shared state.** Every compilation and run is the same sandbox
   user, so whatever one could leave behind outside its work directory would
   outlive it and could be read by a later submission (say, a run that copies its
@@ -275,9 +286,9 @@ How it behaves at runtime:
 
   | Path | Owner, mode | Contents |
   | --- | --- | --- |
-  | `program/` | `system.username`, `0700`; once compiled, the judger, `0755` | The source and what the compiler made of it (the compiler runs there, and may write there only) |
+  | `program/` | `system.username`, `0700`; once compiled, the judger, `0755` | The source, saved as it was submitted under its language's source file name (e.g. `Main.java`), and what the compiler made of it (the compiler runs there, and may write there only) |
   | `run/` | `system.username`, `0700` | The work directory of a run, created empty before each run and removed after it (the only directory the run may write to) |
-  | `<random>-compile.log`, `output#<checkpoint>.txt` | the judger, `0600` | The compile log and the output of each run, created by the judger before the program starts |
+  | `compile.log`, `output#<checkpoint>.txt` | the judger, `0600` | The compile log and the output of each run, created by the judger before the program starts |
 
   When the judger runs as root, it hands `program/` and `run/` to
   `system.username` (isolate: to the box's UID); once the program is compiled,
@@ -302,8 +313,8 @@ Do not place secrets where the sandbox user can read them. The native backend
 confines what a submission writes, not what it reads, so a submission running as
 the sandbox user can still read world-readable files on the host. Keep
 `voj.properties` and the judger jar readable only by the judger account (for
-example mode `0640`), and use `judger.sandbox = isolate` if you need to prevent
-reads of arbitrary host files entirely.
+example mode `0640`); with `judger.sandbox = isolate`, a program sees only the
+system directories and its judging.
 
 ### Kernel requirements
 
@@ -333,26 +344,27 @@ without extra capabilities. It needs:
 ## The isolate backend
 
 With `judger.sandbox = isolate` the judger (running as root) prepares an isolate
-box for every compilation and run. isolate 2.7 built from source has been
-verified with every language in `sql/seed.sql` (C, C++, Java, Pascal, Python 3,
-Go, Kotlin, JavaScript and Rust).
+box for every compilation and run. isolate runs box *n* as UID
+`first_uid + n` (its default `first_uid` is 60000), so the judger hands each
+submission's program directory, and the work directory of each run, to that
+UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
+`judger.isolate.boxId` to the box id.
 
 - **Filesystem.** The box sees isolate's default mounts (`/bin`, `/lib`, `/usr`,
   ...) plus `judger.isolate.extraDirs` (by default `/etc/alternatives` and
-  `/opt`, read-only), and the submission's program directory at `/work`, writable
-  while compiling and read-only while running (a run writes in its box only, which
-  is emptied after every run). The checkpoint directory is never
-  bound: the input of the current run is copied into the box, and the captured
-  output copied out of it.
+  `/opt`, read-only), and the directory of the judging at `/judging`, read-only,
+  with the program's work directory in it writable: the program directory for a
+  compilation, the run's own for a run (as with the native backend). The
+  program starts in its work directory; the paths in its arguments and
+  environment are rewritten to their place in the box. The checkpoint directory
+  is never bound: the input of the current run is copied into the box, and the
+  captured output copied out of it.
 - **Compiler configuration.** isolate binds directories only, so configuration
-  files a compiler expects outside the box are copied into it before a
-  compilation (`judger.isolate.compileFiles`): Free Pascal's `/etc/fpc.cfg`, which
-  holds its unit search paths, becomes `~/.fpc.cfg` in the box.
-- **Environment.** As with the native backend, the box gets only the locale and
-  toolchain variables of the judger (no secrets), `HOME=/box`, a Go build
-  cache and `GOPATH` of its own in the program directory, seeded from
-  `judger.goBuildCacheSeed`, and, for a run, `JDK_JAVA_OPTIONS` (see
-  [Java and Kotlin runs](#java-and-kotlin-runs)).
+  files a compiler expects outside the box are copied into a compilation's work
+  directory, its `HOME` (`judger.isolate.compileFiles`): Free Pascal's
+  `/etc/fpc.cfg`, which holds its unit search paths, becomes `~/.fpc.cfg`.
+- **Environment and command.** The same as the native backend's (see
+  [Environment](#what-a-submission-is-held-to)): the judger builds them.
 - **System calls.** isolate's own seccomp filter makes file locks fail (`flock`
   with `ENOSYS`), which the Go build cache cannot do without. Compilations, which
   run a trusted compiler rather than the submission, are given
@@ -360,14 +372,22 @@ Go, Kotlin, JavaScript and Rust).
   one on file locks); runs of the submission keep all of them. For an isolate
   without `--syscalls`, set `judger.isolate.compileSyscalls` empty.
 - **Network.** isolate gives each box its own, empty network namespace.
-- **Limits and verdicts.** A run may have `judger.processLimit` processes and
-  threads at once (`--processes`), a compilation `judger.compileProcessLimit`.
-  Files are capped at `judger.isolate.fileSizeLimitKb` (`--fsize`): a run whose
-  output reaches it is judged Output Limit Exceeded, whether `SIGXFSZ` kills it
-  or it ignores the signal, so that its writes fail and it exits on its own. A
-  program killed by the out-of-memory killer of its box's cgroup
-  (`cg-oom-killed`), or that fails at or above its memory limit, is judged
-  Memory Limit Exceeded.
+- **Limits and verdicts.** The judger's limits, as the native backend gets
+  them: the CPU time (`--time`, of the whole box), the wall-clock limit
+  (`--wall-time`, twice the time limit plus a second), `judger.processLimit`
+  processes and threads for a run and `judger.compileProcessLimit` for a
+  compilation (`--processes`), and `judger.outputLimit` for every file
+  (`--fsize`). The verdict is judged as for the native backend, from what
+  isolate stopped the program for (the time limit, the cgroup's out-of-memory
+  killer, `SIGXFSZ`) and its figures. **Memory** differs: isolate enforces the
+  memory limit as the hard limit of the box's cgroup (`--cg-mem`), which counts
+  every process of the box and the page cache of the files it writes, and
+  reports the cgroup's peak; the native backend measures the peak resident set
+  of the program's process (`VmHWM`, without the page cache) and kills it past
+  the limit. A program that writes large files in its work directory may thus
+  reach its memory limit under isolate only. A program the cgroup runs out of
+  memory for is killed by its out-of-memory killer, and judged Memory Limit
+  Exceeded.
 - **Boxes.** Every judger on a host needs a box of its own
   (`judger.isolate.boxId`). The box is cleaned up after every compilation and
   run, which frees the captured output right away; `--init` empties a box that a
@@ -382,8 +402,7 @@ program that merely makes garbage grew its heap far past its limit before the
 JVM first collected it: allocating 2 GB in arrays of 1 MB, each dropped at
 once, peaked at 560 to 670 MB, Memory Limit Exceeded under a 256 MB problem
 limit (512 MB with Java's memory multiplier of 2), on a host with 60 GB of RAM.
-So every run, whatever the backend (native on Linux and Windows, or isolate),
-tells the JVM its limits in the environment variable `JDK_JAVA_OPTIONS`. The
+So every run, whatever the backend, tells the JVM its limits in the environment variable `JDK_JAVA_OPTIONS`. The
 `java` launcher (JDK 9 and later) reads it, and nothing else does, so no
 language's run command has to change and no other language is affected. For a
 run whose memory limit (the problem's, times the language's memory multiplier)
@@ -479,13 +498,16 @@ directory there (see [`configuration.md`](configuration.md#directories)). Their
 sandboxes, though, must be their own:
 
 - **Native sandbox:** give each judger a sandbox account of its own
-  (`system.username`). Runs of the same account could signal one another's
-  processes, read one another's work directories, and share one `RLIMIT_NPROC`,
-  so the runs of a busy judger could leave another's without threads. A judger
-  running as root holds a lock named after the account's uid,
-  `/run/voj-sandbox-<uid>.lock` (in the temporary directory when `/run` is not
-  writable), and refuses to start when another judger on the host already uses
-  the account.
+  (`system.username`). Runs of the same account could signal (on Windows, open
+  and change) one another's processes, read one another's work directories,
+  and share one `RLIMIT_NPROC`, so the runs of a busy judger could leave
+  another's without threads. On Linux, a judger running as root holds a lock
+  named after the account's uid, `/run/voj-sandbox-<uid>.lock` (in the
+  temporary directory when `/run` is not writable), and refuses to start when
+  another judger on the host already uses the account. On Windows, a judger
+  holds the mutex `Global\voj-sandbox-<SID>` of the account from its logon on,
+  and refuses every compilation and run (a System Error) while another judger
+  holds it.
 - **isolate:** give each judger a box of its own (`judger.isolate.boxId`).
 
 Judgers in separate Docker containers do not see each other's lock, and need
@@ -582,7 +604,7 @@ in production.
 
 ## Windows native sandbox
 
-On Windows the native backend is the only option (`isolate` is Linux-only). Each
+On Windows the native backend is the only one (isolate is Linux-only). Each
 submission runs under a **separate low-privilege Windows account**, with **no
 privileges** (its token is restricted: of the privileges the account's groups
 hold, such as `SeShutdownPrivilege` and `SeTimeZonePrivilege` of *Users*, only
@@ -598,9 +620,9 @@ whole process tree when the run ends; the judger waits until every process of
 the Job is gone before it goes on. While the program runs, the judger polls it
 every 2 ms and kills the Job as soon as a limit is exceeded:
 
-- **CPU time**: that of every process of a run (a compilation: the compiler's
-  top-level process), plus a wall-clock guard of the time limit + 1 s for a
-  program that sleeps or blocks.
+- **CPU time**: that of every process of the Job (a run has one; a
+  compilation's compilers all count, as on Linux), plus a wall-clock limit of
+  twice the time limit + 1 s for a program that sleeps or blocks.
 - **Memory**: the peak working set (resident memory) of the program's process,
   like the peak resident set size on Linux (a compilation: the compiler's
   top-level process). Memory that is committed but never touched does not
@@ -608,8 +630,8 @@ every 2 ms and kills the Job as soon as a limit is exceeded:
   its memory limit, see [Java and Kotlin runs](#java-and-kotlin-runs); a
   compiler's RAM / 64).
   The Job also has a hard cap on commit, the counterpart of Linux's
-  `RLIMIT_DATA`: twice the limit plus max(256 MB, RAM / 32), for all of a run's
-  processes together (a compilation: for each process). An allocation refused
+  `RLIMIT_DATA` and the same figure: twice the limit plus max(256 MB, RAM / 32),
+  for the run's process (a compilation: for each process). An allocation refused
   by the cap is judged Memory Limit Exceeded as well. Unlike on Linux, a program
   can lower its own working set (`SetProcessWorkingSetSize(-1, -1)`,
   `EmptyWorkingSet`), which moves pages to the standby list or the page file
@@ -617,15 +639,21 @@ every 2 ms and kills the Job as soon as a limit is exceeded:
   lower that does not also count the JVM's untouched heap. Such a program is
   stopped by the cap only, so on Windows the memory limit is enforced up to
   that cap rather than exactly.
-- **Output**: 256 MB written to standard output (the Linux runner's
-  `RLIMIT_FSIZE`). Other files the program writes are not limited.
-- **Processes**: a run of the submission may not create processes (its Job
-  holds the program and its console host only); a compilation may have up to
-  `judger.compileProcessLimit`.
+- **Output**: `judger.outputLimit` (256 MB) written to standard output: a run
+  whose output reaches it is Output Limit Exceeded, as on Linux. Other files
+  the program writes are not limited (see [Disk](#what-a-submission-is-held-to)).
+- **Processes**: a run of the submission is a single process. Its Job holds two,
+  the program and the console host Windows starts for it, so `CreateProcess`
+  fails; and a run that frees its console to start a process in the console
+  host's place (whose memory would go unmeasured), or starts a console of its
+  own, is ended as soon as the process joins its Job, a Runtime Error (exit
+  code `0xC0000022`). A compilation may have up to `judger.compileProcessLimit`
+  processes.
 
-The final CPU time, memory and output size are checked again after the program
-exits, so a program that exceeds a limit between two polls is never judged on
-its output. As on Linux, a compilation starts in the submission's program
+The judger judges the final figures as on Linux (see
+[Sandbox backends](#sandbox-backends)), so a program that exceeds a limit
+between two polls is never judged on its output. As on Linux, a compilation
+starts in the submission's program
 directory, and a run in a fresh, empty work directory of its own, removed once
 the run is over. The output file is created anew for every run, by the judger,
 in the directory of the judging, which no compilation or run may write to, with
@@ -652,26 +680,38 @@ could otherwise leave data for a later one: once it has loaded the account's
 profile, the judger labels both Medium, with everything in them (once: a later
 start finds them Medium already).
 
-The submission's environment is the system environment (the system variables
-of `HKLM\System\CurrentControlSet\Control\Session Manager\Environment`, such as
-`Path`, `ComSpec` and `PATHEXT`, and `SystemRoot`, `ProgramFiles`, ...), never
-the variables of the sandbox account, plus only these variables of the judger:
-`PATH`, `LANG`, `LC_ALL`, `TZ`,
-`JAVA_HOME`, `KOTLIN_HOME`, `GOROOT`, `GOENV`, `GOTOOLCHAIN`, `GOFLAGS`,
-`RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
-judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
-reaches it. `TEMP`, `TMP`, `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`,
-`GOCACHE` and `GOPATH` point into the program's work directory, the one
-place it can write to, so temporary files stay with the compilation or run and
-every Go build starts from its own empty cache; `USERNAME` is the sandbox account, and a
-run gets
-`JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
-reachable through the judger's `PATH` and readable by the sandbox account; what
-they need of the environment must be a system variable or one of the judger's
-above, as variables set for the sandbox account are ignored. The JVM option
-variables of the system environment (`JDK_JAVA_OPTIONS`,
-`JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`) are dropped, for compilations and runs
-alike, as on Linux, where the sandbox never gets them.
+The submission's environment is built by the judger, as on Linux: these
+variables of the judger's, `PATH`, `LANG`, `LC_ALL`, `TZ`, `JAVA_HOME`,
+`KOTLIN_HOME`, `GOROOT`, `GOENV`, `GOTOOLCHAIN`, `GOFLAGS`, `RUSTUP_HOME`,
+`RUSTUP_TOOLCHAIN` and `CARGO_HOME`, and the system settings programs need
+(`SystemRoot`, `SystemDrive`, `windir`, `ComSpec`, `PATHEXT`, `OS`,
+`ProgramData`, the `ProgramFiles` and `CommonProgramFiles` variables,
+`ALLUSERSPROFILE`, `PUBLIC`, `NUMBER_OF_PROCESSORS`, `PROCESSOR_ARCHITECTURE`).
+Nothing else reaches it: not the judger's secrets (such as `VOJ_DB_PASSWORD` or
+`VOJ_JUDGER_API_TOKEN`), whether set for the judger or as system variables, nor
+the variables of the sandbox account. `TEMP`, `TMP`, `USERPROFILE`, `HOME`,
+`APPDATA`, `LOCALAPPDATA`, `GOCACHE` and `GOPATH` point into the program's work
+directory, the one place it can write to; `USERNAME` is the sandbox account,
+and a run gets `JDK_JAVA_OPTIONS` (see
+[Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
+reachable through the judger's `PATH` (the judger looks the program up there,
+adding `.exe` to a name without an extension) and readable by the sandbox
+account, and what they need of the environment must be one of the variables
+above.
+
+**Network.** Every process of the sandbox account, compilations and runs
+alike, is kept off the network, loopback included: when it logs the account
+on, the judger adds block filters for the account's SID to the
+[Windows Filtering Platform](https://learn.microsoft.com/windows/win32/fwp/windows-filtering-platform-start-page)
+at every ALE layer (binding a socket, listening, connecting and accepting, IPv4
+and IPv6), which no permit of the firewall overrides. They belong to a dynamic
+WFP session, so nothing stays on the host: Windows removes them when the judger
+exits, however it exits. If they cannot be added, the judger runs nothing (a
+System Error). What a service does on a program's behalf is not the account's
+and is not blocked: a program can still have the DNS client service look a
+name up, which leaks the name to the DNS servers of the host, though no answer
+lets it reach anything. Point the host at a resolver that does not forward
+(or at none) if that matters.
 
 ### The sandbox account
 
@@ -695,7 +735,10 @@ Requirements for that account:
 - It must be able to have a **user profile**: the judger logs the account on
   and loads its profile (with `LoadUserProfile`, which creates it the first
   time) once, at the first compilation or run, and keeps both until it exits
-  (then it unloads the profile).
+  (then it unloads the profile). The password is used for that logon only, and
+  not kept.
+- It must be this judger's alone: see
+  [Several judgers on one host](#several-judgers-on-one-host).
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
   read and write the submission's program directory while compiling (the
   compiler writes the program and, for Go, its build cache there), read and
@@ -721,8 +764,9 @@ the judger account.
 Run the judger as an **elevated administrator** ("Run with highest
 privileges"). It creates each compilation and run with a Low integrity copy of
 the sandbox account's token (`CreateProcessWithTokenW`), which takes
-`SeImpersonatePrivilege`; loading the account's profile takes administrative
-rights; and it removes what a submission leaves with its backup, restore and
+`SeImpersonatePrivilege`; loading the account's profile, adding the network
+filters and the mutex in the `Global\` namespace take administrative rights;
+and it removes what a submission leaves with its backup, restore and
 take-ownership privileges (see
 [The checkpoint directory on Windows](#the-checkpoint-directory-on-windows)).
 Without them, every compilation and run fails as a System Error rather than
@@ -836,4 +880,4 @@ and there is no upgrade path from 0.9.x.
 | Upgrading from | Script | What it does |
 | --- | --- | --- |
 | 1.0.0 to 1.0.2 | `decode-legacy-html-entities.sql` | Up to 1.0.2, discussion titles and replies, display names, locations, websites, social links and bios were stored HTML-escaped, so after the upgrade old rows show `&amp;`, `&lt;`, `&gt;` and `&nbsp;` literally. The script decodes them once. Run it before users post on the new version: its first run decodes every such row, so text typed as `&amp;` on the new version before that would be decoded too. |
-| 1.0.0 to 1.0.2 | `upgrade-from-1.0.2.sql` | Required: the new version reads and writes the new schema. It makes the foreign keys of `voj_contest_contestants` and `voj_contest_submissions` cascade, like every other foreign key to users, problems and submissions (without it, deleting a user who attended a contest, a contest submission, or a problem that has contest submissions fails). It replaces the two columns that described a contest's ranking (`contest_mode` and `contest_scoring`) by `contest_scoring` alone, set to the rule each contest was actually ranked by (Codeforces contests and contests created before the scoring setting existed get `ICPC`, or `IOI` if they were ranked OI-style), and drops the unused `contest_is_rated` and `voj_contest_contestants.code_snippet`. The judgers now take the pending submissions from the database rather than from a message queue, so it adds the columns of the judging queue to `voj_submissions`, with an index for it (judge result, queued time, language, lease), which replaces the index of the judge result alone (`submission_runtime_result`, dropped): `submission_queued_time`, when a submission was submitted, last rejudged or last released after a failed judging (the time of the upgrade for the existing ones); `submission_judge_attempts`, how many judgings of it failed since, and `submission_judge_failure`, the reason of the last one (a System Error after 5 failed judgings gives it); and `submission_claim_token` and `submission_lease_expiry_time`, which identify the judging that holds it and until when. It creates `voj_judgers`, where the judgers record their heartbeats (rather than sending them over the message queue). The pending submissions are judged by the judgers of the new version; the judging tasks an old web application queued on `vojSubmissionTaskQueue` are no longer read (drain or delete that queue, and the dead-lettered tasks on `ActiveMQ.DLQ`, if you like), and the judgers publish their progress on the topic `vojJudgeProgressTopic` rather than on the queue `vojJudgeResultQueue` (delete it, too). Stop every judger before running the script, and upgrade the web application and all judgers together: the old judgers do not read the new columns, and the new web application accepts the progress messages of the new judgers only. The web application's `jms.submissionTask.ttl` is gone, and its new `judging.noJudgerTimeout` sets how long the pending submissions in a language wait while no judger takes submissions in it: see [Configuration](configuration.md#judging-queue). A `voj.properties` of your own should get the `connectTimeout` and `socketTimeout` of the `jdbc.url` of the new one. It drops the foreign key from `voj_email_validation` to `voj_users`, so that the daily limit of verification and password-reset emails stays with an address when an account moves to another one. It points Kotlin's default compile command at a temporary directory inside the work directory (`-J-Djava.io.tmpdir=.`), the only place the native sandbox lets a compiler write; a changed command is left alone. Finally, problem descriptions, input and output formats, samples and contest notes were written into the pages as HTML up to 1.0.2 and are now written as text, so entities such as `&lt;`, `&gt;` and `&amp;` in them would show literally (in samples, code and math); the script decodes `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&nbsp;` and `&amp;` once. Other entities (e.g. `&le;` or `&#60;`) are left as they are, and so are HTML tags such as `<br>` or `<sup>`, which the pages now show literally as well: look through the statements that used them and rewrite them in Markdown (or as the characters themselves). Run it before administrators edit statements on the new version: its first run decodes every such field, so an entity typed on the new version before that would be decoded too. The problems of a contest move from the JSON array in `voj_contests.contest_problems` to the new table `voj_contest_problems` (contest, problem, position), whose foreign keys cascade, so deleting a problem removes it from its contests; ids of problems that no longer exist and malformed values are dropped, and `contest_problems` is dropped. |
+| 1.0.0 to 1.0.2 | `upgrade-from-1.0.2.sql` | Required: the new version reads and writes the new schema. It makes the foreign keys of `voj_contest_contestants` and `voj_contest_submissions` cascade, like every other foreign key to users, problems and submissions (without it, deleting a user who attended a contest, a contest submission, or a problem that has contest submissions fails). It replaces the two columns that described a contest's ranking (`contest_mode` and `contest_scoring`) by `contest_scoring` alone, set to the rule each contest was actually ranked by (Codeforces contests and contests created before the scoring setting existed get `ICPC`, or `IOI` if they were ranked OI-style), and drops the unused `contest_is_rated` and `voj_contest_contestants.code_snippet`. The judger now saves a submission under its language's source file name (`Main.java`) rather than under a random name in which it renamed the class `Main`, so it changes Java's default commands to `javac -d {filename} {filename}.java` and `java -cp {filename} Main`; changed commands are left alone (a Java command of your own must compile `Main.java` and run the class `Main`). The judgers now take the pending submissions from the database rather than from a message queue, so it adds the columns of the judging queue to `voj_submissions`, with an index for it (judge result, queued time, language, lease), which replaces the index of the judge result alone (`submission_runtime_result`, dropped): `submission_queued_time`, when a submission was submitted, last rejudged or last released after a failed judging (the time of the upgrade for the existing ones); `submission_judge_attempts`, how many judgings of it failed since, and `submission_judge_failure`, the reason of the last one (a System Error after 5 failed judgings gives it); and `submission_claim_token` and `submission_lease_expiry_time`, which identify the judging that holds it and until when. It creates `voj_judgers`, where the judgers record their heartbeats (rather than sending them over the message queue). The pending submissions are judged by the judgers of the new version; the judging tasks an old web application queued on `vojSubmissionTaskQueue` are no longer read (drain or delete that queue, and the dead-lettered tasks on `ActiveMQ.DLQ`, if you like), and the judgers publish their progress on the topic `vojJudgeProgressTopic` rather than on the queue `vojJudgeResultQueue` (delete it, too). Stop every judger before running the script, and upgrade the web application and all judgers together: the old judgers do not read the new columns, and the new web application accepts the progress messages of the new judgers only. The web application's `jms.submissionTask.ttl` is gone, and its new `judging.noJudgerTimeout` sets how long the pending submissions in a language wait while no judger takes submissions in it: see [Configuration](configuration.md#judging-queue). A `voj.properties` of your own should get the `connectTimeout` and `socketTimeout` of the `jdbc.url` of the new one. It drops the foreign key from `voj_email_validation` to `voj_users`, so that the daily limit of verification and password-reset emails stays with an address when an account moves to another one. It points Kotlin's default compile command at a temporary directory inside the work directory (`-J-Djava.io.tmpdir=.`), the only place the native sandbox lets a compiler write; a changed command is left alone. Finally, problem descriptions, input and output formats, samples and contest notes were written into the pages as HTML up to 1.0.2 and are now written as text, so entities such as `&lt;`, `&gt;` and `&amp;` in them would show literally (in samples, code and math); the script decodes `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&nbsp;` and `&amp;` once. Other entities (e.g. `&le;` or `&#60;`) are left as they are, and so are HTML tags such as `<br>` or `<sup>`, which the pages now show literally as well: look through the statements that used them and rewrite them in Markdown (or as the characters themselves). Run it before administrators edit statements on the new version: its first run decodes every such field, so an entity typed on the new version before that would be decoded too. The problems of a contest move from the JSON array in `voj_contests.contest_problems` to the new table `voj_contest_problems` (contest, problem, position), whose foreign keys cascade, so deleting a problem removes it from its contests; ids of problems that no longer exist and malformed values are dropped, and `contest_problems` is dropped. |

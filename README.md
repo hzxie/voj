@@ -126,6 +126,11 @@ script from [`sql/upgrades/`](sql/upgrades/); see
 
 Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 
+- **Linux (isolate, recommended).** With `judger.sandbox = isolate`, a judger
+  running as root runs every compilation and run in a box of the external
+  [isolate](https://github.com/ioi/isolate) tool, with mount, network, PID and
+  IPC namespaces of its own and a cgroup that accounts for its memory and
+  processes; it sees only the system directories and its own judging.
 - **Linux (native).** Each submission runs in a forked child with `setrlimit`
   (CPU time, memory backstop, output size and thread caps), a seccomp syscall
   filter (blocking creating processes, `ptrace`, `mount`, module loading,
@@ -138,27 +143,26 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
   exactly those of the program, and nothing it starts outlives it. Each Go
   submission gets its own build cache. If the judger runs as root and cannot
   drop privileges, or any part of the sandbox cannot be set up, the submission
-  is refused (a system error) rather than run unconfined.
-- **Linux (isolate).** Optionally set `judger.sandbox = isolate` to delegate to the
-  external [isolate](https://github.com/ioi/isolate) tool instead, which confines
-  each submission to its own mount and network namespaces and cgroup; every
-  seeded language compiles and runs under it.
-- **Windows (native).** Each submission runs under a separate low-privilege Windows
-  account (`CreateProcessWithLogonW`) inside a
+  is refused (a system error) rather than run unconfined. This is the backend
+  for a judger that is not root (development, CI) and for hosts without
+  isolate.
+- **Windows (native).** Each submission runs with a restricted, Low-integrity
+  token of a separate Windows account (`CreateProcessWithTokenW`), on a desktop
+  of its own, off the network (filters of the Windows Filtering Platform), inside a
   [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
-  that keeps a run from creating processes, enforces CPU time, memory and
-  output limits, applies UI restrictions (no access to the interactive desktop
-  or clipboard), and kills the whole process tree when the run ends. The
-  submission sees the sandbox account's own environment plus only the judger's
-  toolchain variables, never its secrets.
+  that keeps a run to a single process, enforces CPU time, memory and output
+  limits, applies UI restrictions, and kills the whole process tree when the
+  run ends.
+
+Both backends get the same command line, environment (the judger's locale and
+toolchain variables only, never its secrets) and limits from the judger, which
+judges what they measure the same way.
 
 The native sandbox confines what a submission writes, not what it reads.
 Reference answers and configuration are protected by file permissions (the work
 directory is handed to the sandbox user, while the checkpoint directory stays
 readable only by the judger), but a submission can still read world-readable host
-files. For complete
-filesystem isolation, run the judger as root with `judger.sandbox = isolate`, which
-confines each submission to its own mount namespace.
+files; isolate shows it only the system directories and its own judging.
 
 For shared, multi-tenant hosts, create a dedicated unprivileged account for
 `system.username` instead of reusing `nobody`. See

@@ -177,8 +177,11 @@ For a real deployment behind a reverse proxy, also pass the web container
 
 The judger container runs as root and drops each submission to the `nobody`
 account, so native sandboxing (resource limits, a seccomp filter that also cuts
-off the network, and privilege drop) works out of the box. See [`../docs/deployment.md`](../docs/deployment.md)
-for the sandbox's filesystem expectations.
+off the network, and privilege drop) works out of the box, without extra
+privileges. isolate, the backend recommended for a Linux host, needs privileges
+a default container lacks and is not in the image. See
+[`../docs/deployment.md`](../docs/deployment.md) for the sandbox's filesystem
+expectations.
 
 The web application is available at
 [http://localhost:8080/voj](http://localhost:8080/voj).

@@ -139,7 +139,7 @@ The policy of the queue is the same on every judger, so it has no settings:
 - While the judging runs, the judger renews its lease in the background every
   15 seconds, however long a compilation or a run takes, until its deadline:
   the download timeout, the wall-clock limits of the compilation and of every
-  run (three times the time limit, plus a second), and the lease timeout. A
+  run (twice the time limit, plus a second), and the lease timeout. A
   judging past its deadline is stuck (e.g. on a connection that went silent):
   its lease is no longer renewed, so another judger takes the submission, and
   the judger is not ready until it is over.
@@ -211,24 +211,23 @@ clocks of the hosts do not matter.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.sandbox` | `native` | Sandbox backend. `native` is the in-process JNI runner (Linux: `setrlimit` + seccomp filter, which also refuses network sockets and System V IPC + Landlock, which confines writes to the submission's work directory and needs Linux 5.13+ with Landlock enabled + network namespace where possible + privilege drop; Windows: separate low-privilege account). `isolate` (Linux only) delegates to the external [isolate](https://github.com/ioi/isolate) tool. See [`deployment.md`](deployment.md). |
-| `judger.compileTimeLimit` | `20000` | CPU time (ms) a compilation may use (measured on the compiler's top-level process). |
+| `judger.sandbox` | `native` | Sandbox backend. `isolate` (Linux, as root, with [isolate](https://github.com/ioi/isolate) installed) runs every program in an isolate box: recommended for Linux in production. `native` is the JNI runner (Linux: rlimits, seccomp filters, Landlock, which needs Linux 5.13+ with Landlock enabled, and `system.username` when the judger is root; Windows: a restricted Low-integrity token of `system.username`, a Job Object and a network filter): the backend on Windows, and on Linux for a judger that is not root. Both enforce the same commands and limits and are judged alike. See [`deployment.md`](deployment.md#sandbox-backends). |
+| `judger.compileTimeLimit` | `20000` | CPU time (ms) a compilation may use: of the compiler and every program it runs. The wall-clock limit of a compilation or run is twice its time limit plus a second. |
 | `judger.compileMemoryLimit` | `524288` | Memory (KB) a compilation may use, scaled by the language's memory multiplier like a run's limit. The native sandbox measures the compiler's top-level process against it and holds every process it runs to a kernel backstop of twice the limit plus headroom (`RLIMIT_DATA`). The base 512 MB caps C/C++/Go/Rust/Pascal "compiler bombs"; Kotlin (multiplier 2) gets 1 GB, since `kotlinc` is a JVM with a 512 MB heap of its own. |
-| `judger.processLimit` | `64` | Processes and threads a run of a submission may have at once. The native sandbox on Linux does not let a run create processes at all, so this is the sandbox user's `RLIMIT_NPROC`, which caps the run's threads; isolate applies it with `--processes` (which counts threads too). On Windows a run's Job Object is capped at 2 processes (the program and its console host) whatever this is set to. |
+| `judger.processLimit` | `64` | Threads a run of a submission may have at once on Linux, where a run is a single process: the sandbox user's `RLIMIT_NPROC`, or isolate's `--processes`, both of which count threads. On Windows, whose Job Objects count processes only, a run is held to its one process (and the console host Windows starts for it) whatever this is set to. |
 | `judger.compileProcessLimit` | `1024` | Processes and threads a compilation may have at once (both backends). Higher than `judger.processLimit` because the Go toolchain runs a compiler per CPU, each with up to a thread per CPU: a cold `go build` used ~100 threads on a 24-core host. |
+| `judger.outputLimit` | `262144` | Largest file (KB) a compilation or run may write, its output included (`RLIMIT_FSIZE`, isolate's `--fsize`; on Windows, the output). A run whose output reaches it is Output Limit Exceeded. |
 | `judger.goBuildCacheSeed` | `${VOJ_GO_BUILD_CACHE_SEED}` *(empty)* | A read-only, root-owned Go build cache that each Go submission's private build cache is seeded from (hard links, or copies across file systems). Empty: every Go build starts from an empty cache. The Docker image builds one at `/opt/go-build-cache`. |
 | `judger.isolate.executable` | `isolate` | Path to the `isolate` binary. Used only when `judger.sandbox = isolate`. |
 | `judger.isolate.boxId` | `0` | isolate box id for this judger. Give each judger on the same host a distinct id. |
-| `judger.isolate.firstUid` | `60000` | isolate's `first_uid`: box *n* runs as UID `first_uid + n`, and the judger hands each program directory to that UID for the compilation. Must match isolate's configuration. |
+| `judger.isolate.firstUid` | `60000` | isolate's `first_uid`: box *n* runs as UID `first_uid + n`, and the judger hands each program directory (for the compilation) and the work directory of each run to that UID. Must match isolate's configuration. |
 | `judger.isolate.extraDirs` | `/etc/alternatives:maybe,/opt:maybe` | Extra directories bound read-only into the box (isolate `--dir` rules, comma-separated), for toolchains outside isolate's default mounts. |
-| `judger.isolate.compileFiles` | `.fpc.cfg=/etc/fpc.cfg` | Host files copied into the box before a compilation (`boxName=hostPath`, comma-separated), for compiler configuration files isolate cannot bind (it binds directories only). The box is the compiler's working directory and `HOME`. |
+| `judger.isolate.compileFiles` | `.fpc.cfg=/etc/fpc.cfg` | Host files copied into a compilation's work directory, its `HOME` (`name=hostPath`, comma-separated), for compiler configuration files isolate cannot bind (it binds directories only). |
 | `judger.isolate.compileSyscalls` | `27` | isolate `--syscalls` flags for a compilation: every restriction but the one on file locks, which the Go build cache needs. Runs keep isolate's configured flags. Empty: use isolate's configuration (e.g. for an isolate without `--syscalls`). |
-| `judger.isolate.fileSizeLimitKb` | `262144` | Largest file (KB) the sandboxed program may create (`--fsize`); 0 means no limit. A run whose output reaches it is Output Limit Exceeded. |
-| `judger.isolate.wallTimeBufferSec` | `1.0` | Extra wall-clock seconds added on top of the CPU-time limit before isolate hard-kills a run. |
 
 ### Privilege drop
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. A dedicated account is preferable on a host where other services use `nobody`. Every judger on a host needs an account of its own, as it needs an isolate box id of its own: a judger running as root holds a lock on `/run/voj-sandbox-<uid>.lock` (the temporary directory if `/run` is not writable) and refuses to start when another judger on the host already uses the account. See [`deployment.md`](deployment.md#several-judgers-on-one-host). |
-| `system.password` | *(empty)* | Unused on Linux; required on Windows for the separate low-privilege logon account. |
+| `system.username` | `nobody` | Unprivileged account the native sandbox runs programs as. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. A dedicated account is preferable on a host where other services use `nobody`. Every judger on a host needs an account of its own, as it needs an isolate box id of its own: on Linux a judger running as root holds a lock on `/run/voj-sandbox-<uid>.lock` (the temporary directory if `/run` is not writable) and refuses to start when another judger on the host already uses the account; on Windows a judger holds the mutex `Global\voj-sandbox-<SID>` and runs nothing while another one holds it. See [`deployment.md`](deployment.md#several-judgers-on-one-host). |
+| `system.password` | *(empty)* | Windows only: the password the judger logs the account on with, once (it is not kept). A judger running as root on Linux switches to the account without one. |
