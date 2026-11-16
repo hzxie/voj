@@ -431,7 +431,7 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(containsString("<meta name=\"color-scheme\" content=\"light dark\"")))
         .andExpect(content().string(containsString("data-vw=\"theme-toggle\" aria-pressed=\"true\"")))
         .andExpect(content().string(containsString("popovertarget=\"vw-menu\" aria-controls=\"vw-menu\"")))
-        .andExpect(content().string(containsString("<ul id=\"vw-menu\" class=\"vw-menu\" data-vw=\"menu\" popover=\"auto\">")))
+        .andExpect(content().string(containsString("<ul id=\"vw-menu\" class=\"vw-menu\" popover=\"auto\">")))
         .andExpect(content().string(containsString("<dialog id=\"vw-dialog\" class=\"vw-dialog\"")))
         .andExpect(content().string(not(containsString("X-UA-Compatible"))));
   }

@@ -11,7 +11,7 @@
   pages, by ExceptionHandlingController), so every page can rely on them.
 
   UI system: terminal aesthetic driven by css/app.css (CSS variables + reusable
-  .vw-* components) and js/theme.js (theme toggle, mobile menu, language menu).
+  .vw-* components) and js/theme.js (theme toggle, language menu, confirm dialog).
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
@@ -64,7 +64,7 @@
     <dialog th:replace="~{fragments/chrome :: dialog}"></dialog>
     <!-- jQuery (page AJAX still uses it). Loaded at the end of <body> so it does not block rendering. -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
-    <!-- UI chrome behaviour (theme toggle, mobile menu, language menu). -->
+    <!-- UI chrome behaviour (theme toggle, language menu, vojConfirm / vojAlert). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
     <!-- Site-wide JavaScript (CSRF token wiring for AJAX). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>

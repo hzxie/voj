@@ -3,8 +3,8 @@
   Public site header (terminal aesthetic). Used via ~{fragments/header :: header}.
   The active navigation item is derived from the current request URI (forwardUri,
   injected by CommonModelPopulator) so no per-page parameter is needed. Styling
-  lives in css/app.css (.vw-header / .vw-site-nav / .vw-menu / ...); behaviour (theme
-  toggle, collapsing navigation) lives in js/theme.js.
+  lives in css/app.css (.vw-header / .vw-site-nav / .vw-menu / ...); the theme toggle's
+  behaviour lives in js/theme.js.
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
@@ -14,20 +14,19 @@
                  navD=${#strings.contains(uri,'/discussion')},
                  navC=${#strings.contains(uri,'/contest')},
                  navS=${#strings.contains(uri,'/submission')}">
-    <!--/* One navigation tree at every width (see the navbar pattern in js/theme.js):
-           the list is a popover opened by the menu button, and becomes the inline row
-           (header.is-wide) whenever brand + links + account actions fit on one line.
-           Without script the header simply stays collapsed. */-->
-    <header class="vw-header" data-vw="site-header">
+    <!--/* One navigation tree at every width: below the breakpoint in css/app.css the list
+           is a popover opened by the menu button, above it the same list is the inline
+           row. Pure CSS, so the header is laid out before any script runs. */-->
+    <header class="vw-header">
         <a class="vw-logo" th:href="@{/}">
             <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
         </a>
         <nav class="vw-site-nav" th:aria-label="#{voj.include.header.main-navigation}">
-            <button class="vw-burger" data-vw="burger" type="button" popovertarget="vw-menu" aria-controls="vw-menu"
+            <button class="vw-burger" type="button" popovertarget="vw-menu" aria-controls="vw-menu"
                     th:title="#{voj.include.header.menu}" th:aria-label="#{voj.include.header.menu}">
                 <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
             </button>
-            <ul id="vw-menu" class="vw-menu" data-vw="menu" popover="auto">
+            <ul id="vw-menu" class="vw-menu" popover="auto">
                 <li><a th:href="@{/p}" th:aria-current="${navP} ? 'page'" th:text="'~/' + #{voj.include.header.nav-problems}">~/problems</a></li>
                 <li><a th:href="@{/discussion}" th:aria-current="${navD} ? 'page'" th:text="'~/' + #{voj.include.header.nav-discussion}">~/discussion</a></li>
                 <li><a th:href="@{/contest}" th:aria-current="${navC} ? 'page'" th:text="'~/' + #{voj.include.header.nav-contests}">~/contests</a></li>

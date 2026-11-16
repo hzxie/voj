@@ -149,14 +149,16 @@ input, textarea, select, button { font-family:inherit; }
 .vw-header-link:hover { color:var(--accent); }
 
 /* ----------------------------------------------------------------------------
- * Site navigation: one <nav> list at every width (js/theme.js decides the layout).
- * Collapsed (default, and without script): the list is a popover anchored under
- * the menu button. .vw-header.is-wide (set when brand + links + account actions
- * fit on one row): the same list sits inline in the header.
+ * Site navigation: one <nav> list at every width, laid out by CSS alone (no script,
+ * so the server-rendered header is already in its final layout on first paint).
+ * Narrow: the list is a popover anchored under the menu button.
+ * Wide: the same list sits inline in the header. The breakpoint is the narrowest
+ * viewport where brand + links + a signed-in administrator's account actions
+ * (~/admin, a 16-character ~/username, sign out) + the theme toggle fit on one row in
+ * every translation, plus some slack. Measured with the bundled fonts: en_US 1120px,
+ * vi_VN 1094px, ru_RU 1076px, ja_JP 1031px, ko_KR 881px, zh_CN / zh_TW 869px.
+ * Re-measure when a label grows.
  * ------------------------------------------------------------------------- */
-/* Keep the row's natural width measurable. */
-[data-vw="site-header"] > * { flex-shrink:0; white-space:nowrap; }
-.vw-header.is-measuring * { transition:none !important; }
 .vw-site-nav { flex:1 0 auto; display:flex; justify-content:flex-end; align-items:center; }
 
 .vw-burger {
@@ -170,7 +172,7 @@ input, textarea, select, button { font-family:inherit; }
   display:none; flex-direction:column; list-style:none; z-index:70;
   position:fixed; inset:auto;
   /* Browsers without anchor() keep the header-height offset. */
-  inset-block-start:66px; inset-block-start:anchor(--vw-burger bottom);
+  inset-block-start:66px; inset-block-start:anchor(--vw-burger bottom, 66px);
   inset-inline-end:var(--pad);
   inline-size:min(80dvw, 22rem); max-inline-size:calc(100dvw - 2rem);
   block-size:fit-content; max-block-size:calc(100dvh - 6rem); overflow:auto;
@@ -178,7 +180,6 @@ input, textarea, select, button { font-family:inherit; }
   border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-card);
 }
 .vw-menu:popover-open { display:flex; }
-.vw-menu.open { display:flex; } /* no-popover fallback (js/theme.js) */
 .vw-menu > li > a:not(.vw-btn) { display:block; font-size:15px; color:var(--text2); padding:12px 0; border-bottom:1px solid var(--line2); }
 .vw-menu > li > a:not(.vw-btn):hover { color:var(--accent); }
 /* Current page: colour plus an underline, never colour alone. */
@@ -187,18 +188,25 @@ input, textarea, select, button { font-family:inherit; }
 }
 .vw-menu-account .vw-btn { display:flex; width:100%; margin-top:12px; padding:12px; font-size:13.5px; }
 
-.vw-header.is-wide .vw-burger { display:none; }
-.vw-header.is-wide .vw-menu {
-  position:static; display:flex; flex:1; flex-direction:row; align-items:center; gap:24px;
-  inline-size:auto; max-inline-size:none; block-size:auto; max-block-size:none; overflow:visible;
-  margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:13px;
+/* The inline row. :not(:popover-open) lets a menu that was open while the window
+   widened stay a dropdown until it is dismissed, instead of jumping into the top layer
+   as a row. */
+@media (min-width:1140px) {
+  .vw-header {
+    .vw-burger { display:none; }
+    .vw-menu:not(:popover-open) {
+      position:static; display:flex; flex:1; flex-direction:row; align-items:center; gap:24px;
+      inline-size:auto; max-inline-size:none; block-size:auto; max-block-size:none; overflow:visible;
+      margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:13px;
+      > li { flex-shrink:0; white-space:nowrap; }
+      > li > a:not(.vw-btn) { display:inline; font-size:13px; padding:0; border:0; }
+      > .vw-menu-account > a:not(.vw-btn) { font-size:12.5px; }
+      /* The account actions sit at the far end of the row. */
+      > li:not(.vw-menu-account) + .vw-menu-account { margin-inline-start:auto; }
+      .vw-menu-account .vw-btn { display:inline-flex; width:auto; margin:0; padding:8px 14px; font-size:12.5px; }
+    }
+  }
 }
-.vw-header.is-wide .vw-menu::backdrop { display:none; }
-.vw-header.is-wide .vw-menu > li > a:not(.vw-btn) { display:inline; font-size:13px; padding:0; border:0; }
-.vw-header.is-wide .vw-menu-account > a:not(.vw-btn) { font-size:12.5px; }
-/* The account actions sit at the far end of the row. */
-.vw-header.is-wide .vw-menu > li:not(.vw-menu-account) + .vw-menu-account { margin-inline-start:auto; }
-.vw-header.is-wide .vw-menu-account .vw-btn { display:inline-flex; width:auto; margin:0; padding:8px 14px; font-size:12.5px; }
 
 /* ----------------------------------------------------------------------------
  * Footer
