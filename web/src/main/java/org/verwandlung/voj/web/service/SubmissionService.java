@@ -660,9 +660,9 @@ public class SubmissionService {
   }
 
   /**
-   * Checks whether the submitter is allowed to submit with respect to email verification. When the
-   * {@code requireEmailVerification} option is enabled, only users whose email address has been
-   * verified may submit; otherwise everyone may submit.
+   * Checks whether the submitter is allowed to submit with respect to email verification. While
+   * email verification is required (see {@link UserService#isEmailVerificationRequired}), only users
+   * whose email address has been verified may submit; otherwise everyone may submit.
    *
    * <p>The user is the one of the current request, which CurrentUserRefreshFilter reloaded from the
    * database, so its verification status is current. A banned user never gets here: the filter
@@ -672,7 +672,7 @@ public class SubmissionService {
    * @return whether the submitter satisfies the email-verification requirement
    */
   private boolean isSubmitterEmailVerified(User user) {
-    if (!optionService.isOptionEnabled("requireEmailVerification", false)) {
+    if (!userService.isEmailVerificationRequired()) {
       return true;
     }
     return user != null && user.isEmailVerified();
@@ -684,8 +684,8 @@ public class SubmissionService {
   /** The autowired JudgeResultMapper object. Used to populate the verdict filter. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 
-  /** The autowired OptionService object. Used to resolve the email-verification requirement. */
-  @Autowired private OptionService optionService;
+  /** The autowired UserService object. Used to resolve the email-verification requirement. */
+  @Autowired private UserService userService;
 
   /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;
