@@ -21,9 +21,7 @@ import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermissions;
 
 import org.junit.jupiter.api.Assertions;
@@ -49,7 +47,6 @@ public class ExclusiveFileLockTest {
 
     try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
       Assertions.assertNotNull(lock);
-      Assertions.assertTrue(lock.isValid());
       Assertions.assertNull(ExclusiveFileLock.tryAcquire(lockFile));
     }
     Assertions.assertEquals(ProcessHandle.current().pid() + "\n", Files.readString(lockFile));
@@ -61,55 +58,15 @@ public class ExclusiveFileLockTest {
   }
 
   /**
-   * Test case: the lock file is removed while it is held (e.g. by a clean-up of old files in /tmp),
-   * or replaced by another file. Expected result: the lock no longer counts, as another process
-   * could lock the file now at the path.
+   * Test case: a lock file locked by this process, then released, while another process (another
+   * judger on the host) tries to lock it. Expected result: the other process cannot lock it until
+   * it is released.
    */
   @Test
-  public void testLockOfARemovedOrReplacedFileIsNotValid() throws Exception {
+  public void testLockIsExclusiveAcrossProcesses() throws Exception {
     Path lockFile = tempDir.resolve("judger-0.lock");
 
     try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
-      Files.delete(lockFile);
-      Assertions.assertFalse(lock.isValid());
-      Files.createFile(lockFile);
-      Assertions.assertFalse(lock.isValid());
-    }
-    try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
-      Path other = Files.createFile(tempDir.resolve("other"));
-      Files.move(other, lockFile, StandardCopyOption.REPLACE_EXISTING);
-      Assertions.assertFalse(lock.isValid());
-    }
-  }
-
-  /**
-   * Test case: a lock file that is still the one locked. Expected result: checking it marks it as
-   * just used, so that a clean-up of old files leaves it alone.
-   */
-  @Test
-  public void testCheckingTheLockMarksTheFileAsUsed() throws Exception {
-    Path lockFile = tempDir.resolve("judger-0.lock");
-
-    try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
-      Files.setLastModifiedTime(lockFile, FileTime.fromMillis(0));
-      Assertions.assertTrue(lock.isValid());
-      Assertions.assertTrue(Files.getLastModifiedTime(lockFile).toMillis() > 0);
-    }
-  }
-
-  /**
-   * Test case: a lock file locked by this process and checked (which marks it as just used), then
-   * released, while another process (another judger on the host) tries to lock it. Expected
-   * result: the other process cannot lock it until it is released: checking the lock never opens
-   * (and closes) the file again, which would release the lock.
-   */
-  @Test
-  public void testCheckedLockIsExclusiveAcrossProcesses() throws Exception {
-    Path lockFile = tempDir.resolve("judger-0.lock");
-
-    try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
-      Assertions.assertFalse(isFreeForAnotherProcess(lockFile));
-      Assertions.assertTrue(lock.isValid());
       Assertions.assertFalse(isFreeForAnotherProcess(lockFile));
     }
     Assertions.assertTrue(isFreeForAnotherProcess(lockFile));

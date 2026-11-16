@@ -85,10 +85,9 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * </ul>
  *
  * <p>The checkpoint root belongs to the judger and only it may write to it (the judger refuses it
- * otherwise), so nobody else can create, remove or replace anything in it. A clean-up of old files
- * in {@code /tmp} may still remove a lock file or a directory: before each use the judger checks
- * that its lock file is still the one it locked (and marks it as just used), claims a slot again if
- * not, and creates its directories again if they are gone.
+ * otherwise), so nobody else can create, remove or replace anything in it. It is a directory for
+ * the state of a service, not a temporary one, so no clean-up of old files removes anything in it
+ * either: what the judger finds there when it claims its slot stays there while it runs.
  *
  * @author Haozhe Xie
  */
@@ -104,52 +103,39 @@ public class CheckpointStore {
    * Opens this judger's cache directory and work directory, claiming a slot under the checkpoint
    * root, and removes the temporary directories of downloads that never completed and the work
    * directories of judgings that never completed. Called at startup; {@link #sync} does it on
-   * first use otherwise.
+   * first use otherwise. The slot is claimed once, and kept until the judger exits.
    *
    * @return this judger's cache directory
    * @throws IOException if the checkpoint root cannot be trusted, every slot is taken, or the
    *     slot's directories cannot be prepared
    */
   public synchronized Path open() throws IOException {
-    Path root = openCheckpointRoot();
-    if (slotLock != null && !slotLock.isValid()) {
-      LOGGER.warn(
-          "The lock file {} of this judger's slot was removed or replaced (e.g. by a clean-up of"
-              + " temporary files): claiming a slot again.",
-          slotLock.getFile());
-      slotLock.close();
-      slotLock = null;
+    if (slotLock != null) {
+      return cacheDirectory;
     }
-    if (slotLock == null) {
-      slotLock =
-          claimSlot(
-              root,
-              number -> {
-                cacheDirectory = root.resolve("judger-" + number);
-                judgerWorkDirectory = root.resolve("work-" + number);
-                if (!Files.exists(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
-                  createDirectory(cacheDirectory, PRIVATE);
-                }
-                ensureOwnedByJudger(cacheDirectory, "judger.checkpointDir");
-                removeTemporaryDirectories(cacheDirectory);
-                FileSystemUtils.deleteRecursively(judgerWorkDirectory);
-                createWorkDirectory(judgerWorkDirectory);
-              });
-      LOGGER.info("Caching checkpoints in {}, judging in {}", cacheDirectory, judgerWorkDirectory);
-      if (!obsoleteWorkDirectory.isBlank()) {
-        LOGGER.warn(
-            "judger.workDir ({}) is no longer used: the judger judges in {}. Remove the setting.",
-            obsoleteWorkDirectory,
-            judgerWorkDirectory);
-      }
-    } else {
-      // Removed behind the judger's back, e.g. by a clean-up of old files in /tmp.
-      if (!Files.isDirectory(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
-        createDirectory(cacheDirectory, PRIVATE);
-      }
-      if (!Files.isDirectory(judgerWorkDirectory, LinkOption.NOFOLLOW_LINKS)) {
-        createWorkDirectory(judgerWorkDirectory);
-      }
+    Path root = openCheckpointRoot();
+    slotLock =
+        claimSlot(
+            root,
+            number -> {
+              Path cache = root.resolve("judger-" + number);
+              Path work = root.resolve("work-" + number);
+              if (!Files.exists(cache, LinkOption.NOFOLLOW_LINKS)) {
+                createDirectory(cache, PRIVATE);
+              }
+              ensureOwnedByJudger(cache, "judger.checkpointDir");
+              removeTemporaryDirectories(cache);
+              FileSystemUtils.deleteRecursively(work);
+              createWorkDirectory(work);
+              cacheDirectory = cache;
+              judgerWorkDirectory = work;
+            });
+    LOGGER.info("Caching checkpoints in {}, judging in {}", cacheDirectory, judgerWorkDirectory);
+    if (!obsoleteWorkDirectory.isBlank()) {
+      LOGGER.warn(
+          "judger.workDir ({}) is no longer used: the judger judges in {}. Remove the setting.",
+          obsoleteWorkDirectory,
+          judgerWorkDirectory);
     }
     return cacheDirectory;
   }
@@ -329,9 +315,8 @@ public class CheckpointStore {
   }
 
   /**
-   * Checks whether the cached copy is present, whole and at the expected version. A clean-up of old
-   * files (e.g. in {@code /tmp}) may remove some of its files and leave the manifest, so the input
-   * and the output of every checkpoint the manifest lists must be there too.
+   * Checks whether the cached copy is present and at the expected version. A copy is swapped into
+   * place whole (see {@link #sync}), so a copy with a manifest is a whole one.
    *
    * @param problemDirectory - the per-problem cache directory
    * @param version - the version the cache must match to be considered fresh
@@ -339,25 +324,12 @@ public class CheckpointStore {
    */
   private boolean isCacheFresh(Path problemDirectory, int version) {
     Path manifestFile = problemDirectory.resolve(MANIFEST_FILE);
-    if (!Files.isDirectory(problemDirectory) || !Files.isRegularFile(manifestFile)) {
+    if (!Files.isRegularFile(manifestFile)) {
       return false;
     }
     try {
       Properties manifest = loadManifest(manifestFile);
-      if (Integer.parseInt(manifest.getProperty("version", "-1")) != version) {
-        return false;
-      }
-      int count = Integer.parseInt(manifest.getProperty("count", "0"));
-      for (int i = 0; i < count; ++i) {
-        String id = manifest.getProperty("checkpoint." + i + ".id");
-        for (String name : new String[] {"input#" + id + ".txt", "output#" + id + ".txt"}) {
-          if (!Files.isRegularFile(problemDirectory.resolve(name))) {
-            LOGGER.warn("{} is missing: downloading it again", problemDirectory.resolve(name));
-            return false;
-          }
-        }
-      }
-      return true;
+      return Integer.parseInt(manifest.getProperty("version", "-1")) == version;
     } catch (IOException | NumberFormatException ex) {
       LOGGER.warn("Ignoring unreadable checkpoint manifest at {}", manifestFile, ex);
       return false;

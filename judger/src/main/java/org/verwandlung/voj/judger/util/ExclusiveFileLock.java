@@ -42,17 +42,14 @@ import java.util.Set;
  * (however it exits), which tells judgers on one host apart.
  *
  * <p>The lock is a POSIX record lock on Linux, which belongs to the process, not to the channel
- * that took it: closing <em>any</em> descriptor of the file, e.g. one opened to set its times,
- * releases it. So a file this process holds is never opened again: it is written to only through
- * the channel that holds the lock, and not opened to be locked again, whatever path names it.
+ * that took it: closing <em>any</em> descriptor of the file releases it. So a file this process
+ * holds is never opened again: it is written to only through the channel that holds the lock, and
+ * not opened to be locked again, whatever path names it.
  *
- * <p>Lock files belong in a directory only the judger may write to, where nobody else can remove
- * or replace them. A clean-up of old files may still remove one (e.g. the age-based clean-up of
- * {@code /tmp}, where the checkpoint root is by default), and another process would then lock a new
- * file at the same path: {@link #isValid} tells whether the file at the path is still the one
- * locked, and marks it as just used, so that such a clean-up leaves it alone. The file holds the
- * process id of its holder, and only its owner may open it, so that nobody else can take a lock on
- * it that would keep the judger from it.
+ * <p>Lock files belong in a directory only the judger may write to, and that no clean-up of old
+ * files touches, so that nobody removes or replaces a lock file while it is held. The file holds
+ * the process id of its holder, and only its owner may open it, so that nobody else can take a lock
+ * on it that would keep the judger from it.
  *
  * @author Haozhe Xie
  */
@@ -76,9 +73,9 @@ public final class ExclusiveFileLock implements Closeable {
           channel.close();
           return null;
         }
-        ExclusiveFileLock lock = new ExclusiveFileLock(lockFile, channel, fileKeyOf(lockFile));
         channel.truncate(0);
-        lock.markAsUsed();
+        channel.write(ByteBuffer.wrap(CONTENT), 0);
+        ExclusiveFileLock lock = new ExclusiveFileLock(lockFile, channel, identityOf(lockFile));
         HELD_LOCK_FILES.add(lock.identity);
         return lock;
       } catch (OverlappingFileLockException ex) {
@@ -94,29 +91,6 @@ public final class ExclusiveFileLock implements Closeable {
         }
         throw ex;
       }
-    }
-  }
-
-  /**
-   * Checks that the lock is still held and still guards the file at its path, i.e. the file was
-   * neither removed nor replaced since it was locked, and marks the file as just used, so that a
-   * clean-up of old files leaves it alone.
-   *
-   * @return whether the lock still guards the file at its path
-   */
-  public boolean isValid() {
-    if (!channel.isOpen()) {
-      return false;
-    }
-    try {
-      // No file key on Windows, where a file cannot be removed while it is open.
-      if (fileKey != null && !fileKey.equals(fileKeyOf(file))) {
-        return false;
-      }
-      markAsUsed();
-      return true;
-    } catch (IOException ex) {
-      return false;
     }
   }
 
@@ -141,30 +115,9 @@ public final class ExclusiveFileLock implements Closeable {
   }
 
   /**
-   * Marks the lock file as just used (sets its modification time) by writing the process id of its
-   * holder to it, through the channel that holds the lock.
-   *
-   * @throws IOException if the file cannot be written
-   */
-  private void markAsUsed() throws IOException {
-    channel.write(ByteBuffer.wrap(CONTENT), 0);
-  }
-
-  /**
-   * Gets what identifies a file (its device and inode on Linux), without following a link.
-   *
-   * @param file - the file
-   * @return the file key, or {@code null} if the platform has none
-   * @throws IOException if the file does not exist
-   */
-  private static Object fileKeyOf(Path file) throws IOException {
-    return Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS)
-        .fileKey();
-  }
-
-  /**
    * Gets what identifies a lock file among those this process holds, without opening it: its file
-   * key, whatever path names it, or its path on a platform without file keys.
+   * key (its device and inode on Linux), whatever path names it, or its path on a platform without
+   * file keys.
    *
    * @param file - the absolute, normalized path of the lock file
    * @return what identifies it, or {@code null} if there is no file at the path
@@ -172,7 +125,9 @@ public final class ExclusiveFileLock implements Closeable {
    */
   private static Object identityOf(Path file) throws IOException {
     try {
-      Object fileKey = fileKeyOf(file);
+      Object fileKey =
+          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS)
+              .fileKey();
       return fileKey != null ? fileKey : file;
     } catch (NoSuchFileException ex) {
       return null;
@@ -198,13 +153,12 @@ public final class ExclusiveFileLock implements Closeable {
    *
    * @param file - the lock file
    * @param channel - the open channel of the lock file, which holds the lock
-   * @param fileKey - what identified the lock file when it was locked
+   * @param identity - what identifies the lock file among those this process holds
    */
-  private ExclusiveFileLock(Path file, FileChannel channel, Object fileKey) {
+  private ExclusiveFileLock(Path file, FileChannel channel, Object identity) {
     this.file = file;
     this.channel = channel;
-    this.fileKey = fileKey;
-    this.identity = fileKey != null ? fileKey : file;
+    this.identity = identity;
   }
 
   /** How a lock file is opened: created if needed, for writing, never through a link. */
@@ -232,9 +186,6 @@ public final class ExclusiveFileLock implements Closeable {
    * held: an unreachable channel is closed (and the lock released) when it is garbage collected.
    */
   private final FileChannel channel;
-
-  /** What identified the lock file when it was locked (its device and inode on Linux). */
-  private final Object fileKey;
 
   /** What identifies the lock file among those this process holds (see {@link #identityOf}). */
   private final Object identity;

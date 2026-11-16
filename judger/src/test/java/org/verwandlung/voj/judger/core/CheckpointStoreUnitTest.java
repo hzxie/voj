@@ -158,8 +158,7 @@ public class CheckpointStoreUnitTest {
   /**
    * Test case: the checkpoint root already exists and is readable by others. Expected result: the
    * download goes into a directory of this judger's own that only the judger can read, and the
-   * checkpoints are then read from there; the same version is not downloaded twice unless a file
-   * of it is gone (e.g. removed by a clean-up of old files), a new one is.
+   * checkpoints are then read from there; the same version is not downloaded twice, a new one is.
    */
   @Test
   public void testSyncDownloadsPrivatelyIntoTheJudgersSlot() throws Exception {
@@ -200,15 +199,12 @@ public class CheckpointStoreUnitTest {
       Assertions.assertEquals(List.of(problemDirectory), entries.toList());
     }
 
-    Files.delete(problemDirectory.resolve("output#3.txt"));
-    checkpointStore.sync(getProblem());
-    Assertions.assertEquals("3\n", Files.readString(problemDirectory.resolve("output#3.txt")));
-    verify(checkpointProvider, times(2)).download(anyLong(), any(File.class));
+    verify(checkpointProvider, times(1)).download(anyLong(), any(File.class));
 
     Problem updated = getProblem();
     updated.setCheckpointsVersion(2);
     checkpointStore.sync(updated);
-    verify(checkpointProvider, times(3)).download(anyLong(), any(File.class));
+    verify(checkpointProvider, times(2)).download(anyLong(), any(File.class));
   }
 
   /**
@@ -260,24 +256,6 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
-   * Test case: a clean-up of old files in /tmp removed the lock file of the judger's slot while it
-   * ran, so another judger could lock a new file at that path and share the slot. Expected result:
-   * the judger notices before it uses its slot again, and locks the file at the path again.
-   */
-  @Test
-  public void testOpenClaimsTheSlotAgainWhenItsLockFileIsRemoved() throws Exception {
-    Path root = tempDir.resolve("voj-testpoints");
-    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-    Path lockFile = root.resolve("judger-0.lock");
-    Assertions.assertEquals(root.resolve("judger-0"), checkpointStore.open());
-
-    Files.delete(lockFile);
-    Assertions.assertEquals(root.resolve("judger-0"), checkpointStore.open());
-
-    Assertions.assertTrue(Files.exists(lockFile));
-  }
-
-  /**
    * Test case: the directory of a slot cannot be prepared, for a reason that is no IOException.
    * Expected result: the slot is released all the same, so that it can be claimed again.
    */
@@ -315,29 +293,6 @@ public class CheckpointStoreUnitTest {
     Path workDirectory = checkpointStore.getWorkDirectory();
 
     Assertions.assertEquals(tempDir.resolve("voj-testpoints").resolve("work-0"), workDirectory);
-    Assertions.assertEquals(
-        "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(workDirectory)));
-  }
-
-  /**
-   * Test case: a clean-up of old files in /tmp removed the directories of the judger's slot while
-   * it ran, but not its lock file. Expected result: the judger creates them again before it uses
-   * them, with their permissions.
-   */
-  @Test
-  public void testOpenCreatesRemovedDirectoriesAgain() throws Exception {
-    Path root = tempDir.resolve("voj-testpoints");
-    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-    Path cacheDirectory = checkpointStore.open();
-    Path workDirectory = checkpointStore.getWorkDirectory();
-
-    Files.delete(cacheDirectory);
-    Files.delete(workDirectory);
-
-    Assertions.assertEquals(cacheDirectory, checkpointStore.open());
-    Assertions.assertEquals(workDirectory, checkpointStore.getWorkDirectory());
-    Assertions.assertEquals(
-        "rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(cacheDirectory)));
     Assertions.assertEquals(
         "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(workDirectory)));
   }
