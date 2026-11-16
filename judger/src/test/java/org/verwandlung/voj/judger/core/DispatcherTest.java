@@ -50,6 +50,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
 import org.verwandlung.voj.judger.exception.RetryableJudgingException;
@@ -236,6 +237,32 @@ public class DispatcherTest {
     dispatcher.createNewTask(100L, GENERATION);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be loaded"));
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the web application refuses this judger
+   * the test data (HTTP 403: its API token is wrong or empty), or refuses the request otherwise
+   * (HTTP 400). Expected result: a System Error, at once, whose judge log says that the judger was
+   * refused (and to check its API token for a 403), rather than tries until the task expires.
+   */
+  @Test
+  public void testCreateNewTaskWithRefusedCheckpointsIsSystemError() throws Exception {
+    org.mockito.Mockito.doThrow(
+            new CheckpointsRefusedException("HTTP 403", 403),
+            new CheckpointsRefusedException("HTTP 400", 400))
+        .when(checkpointStore)
+        .sync(any());
+
+    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION);
+
+    org.mockito.ArgumentCaptor<String> reasons = org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(applicationDispatcher, times(2)).onErrorOccurred(any(), reasons.capture());
+    Assertions.assertTrue(reasons.getAllValues().get(0).contains("refused"));
+    Assertions.assertTrue(reasons.getAllValues().get(0).contains("judger.apiToken"));
+    Assertions.assertTrue(reasons.getAllValues().get(1).contains("(HTTP 400)"));
+    Assertions.assertFalse(reasons.getAllValues().get(1).contains("judger.apiToken"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 

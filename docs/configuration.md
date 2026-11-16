@@ -77,7 +77,7 @@ restarts with it):
 - A task is acknowledged only after its verdict (or a System Error) has been
   recorded. If that is impossible, e.g. while the database is down, if the
   test data cannot be downloaded for now (the web app restarting or
-  unreachable, an error status other than 404, a download that times out), or
+  unreachable, a 5xx status, 408 or 429, a download that times out), or
   if the judger dies while judging, the task goes back to the broker, which
   delivers it again to whichever judger asks for a task first. The judger whose
   judging failed waits before it asks again, 10 s after a failure and twice as
@@ -110,7 +110,7 @@ restarts with it):
 | --- | --- | --- |
 | `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app has no test data for (HTTP 404), or an archive that is malformed, is a System Error; any other failed download is retried (see [Message queue](#message-queue)). |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
-| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty, the web app refuses every download, so every submission is judged a System Error; the judger logs an error at startup. The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403), so every submission is judged a System Error at once, whose judge log says the judger was refused and to check `judger.apiToken`; the judger logs an error at startup when it is empty. (Any client error but 404, 408 and 429 is such a refusal; 404 means the problem has no test data.) The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
 ### Sandbox
 

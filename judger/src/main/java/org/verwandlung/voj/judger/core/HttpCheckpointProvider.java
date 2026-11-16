@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
 
 /**
@@ -72,6 +73,8 @@ public class HttpCheckpointProvider {
    * @param destinationDirectory - the directory the checkpoints are written into
    * @throws InvalidCheckpointsException if the problem has no test data, or its archive is
    *     malformed
+   * @throws CheckpointsRefusedException if the web application refuses the download for good
+   *     (e.g. HTTP 403, as the judger's API token is not the web application's)
    * @throws IOException if the checkpoints cannot be downloaded for another reason, or not in time
    */
   public void download(long problemId, File destinationDirectory) throws IOException {
@@ -102,11 +105,19 @@ public class HttpCheckpointProvider {
     }
     // Closing the body (rather than draining it) also ends the exchange of a failed request.
     try (InputStream body = response.body()) {
-      if (response.statusCode() == 404) {
+      int statusCode = response.statusCode();
+      if (statusCode == 404) {
         throw new InvalidCheckpointsException(
             String.format("Problem %d has no test data to download (HTTP 404)", problemId), null);
       }
-      if (response.statusCode() != 200) {
+      if (isRefusal(statusCode)) {
+        throw new CheckpointsRefusedException(
+            String.format(
+                "The web application refused the checkpoints for problem %d: HTTP %d",
+                problemId, statusCode),
+            statusCode);
+      }
+      if (statusCode != 200) {
         throw new IOException(
             String.format(
                 "Failed to download checkpoints for problem %d: HTTP %d",
@@ -115,6 +126,18 @@ public class HttpCheckpointProvider {
       extractBefore(deadline, body, destinationDirectory, problemId);
     }
     LOGGER.info("Downloaded checkpoints for problem #{} from {}", problemId, uri);
+  }
+
+  /**
+   * Checks whether an answer of the web application refuses a download for good: a client error,
+   * but for 408 (Request Timeout) and 429 (Too Many Requests), which may be over later. Server
+   * errors (5xx), e.g. while the web application restarts behind a proxy, may be over later too.
+   *
+   * @param statusCode - the HTTP status code of the answer
+   * @return whether asking again would get the same answer
+   */
+  private static boolean isRefusal(int statusCode) {
+    return statusCode >= 400 && statusCode < 500 && statusCode != 408 && statusCode != 429;
   }
 
   /**

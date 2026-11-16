@@ -32,6 +32,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
 import org.verwandlung.voj.judger.exception.RetryableJudgingException;
@@ -160,15 +161,15 @@ public class Dispatcher {
   /**
    * Makes the problem's test data available locally.
    *
-   * <p>Only a download whose answer is final (the problem has no test data, or its archive is
-   * malformed) is a System Error. Any other failure (the web application restarting or
-   * overloaded, a network failure or timeout, this judger's own disk) is no fault of the
-   * submission or its problem and likely gone later or on another judger, so the task is
-   * delivered again instead.
+   * <p>Only a download whose answer is final (the problem has no test data, its archive is
+   * malformed, or the web application refuses this judger, e.g. for a wrong API token) is a System
+   * Error. Any other failure (the web application restarting or overloaded, a network failure or
+   * timeout, this judger's own disk) is no fault of the submission or its problem and likely gone
+   * later or on another judger, so the task is delivered again instead.
    *
    * @param submission - the submission object
    * @return the directory holding the problem's test data
-   * @throws SystemError if the problem has no usable test data
+   * @throws SystemError if the problem has no usable test data, or this judger may not get it
    * @throws RetryableJudgingException if the test data cannot be downloaded now
    */
   private Path syncCheckpoints(Submission submission) throws SystemError {
@@ -176,6 +177,19 @@ public class Dispatcher {
       return checkpointStore.sync(submission.getProblem());
     } catch (InvalidCheckpointsException ex) {
       throw new SystemError("The test data of this problem could not be loaded.", ex);
+    } catch (CheckpointsRefusedException ex) {
+      int statusCode = ex.getStatusCode();
+      String reason =
+          String.format(
+              "The web application refused to hand this judger the test data of this problem"
+                  + " (HTTP %d).",
+              statusCode);
+      if (statusCode == 401 || statusCode == 403) {
+        reason +=
+            " Check that the judger's judger.apiToken (VOJ_JUDGER_API_TOKEN) is the web"
+                + " application's.";
+      }
+      throw new SystemError(reason, ex);
     } catch (IOException ex) {
       throw new RetryableJudgingException("The test data could not be downloaded.", ex);
     }

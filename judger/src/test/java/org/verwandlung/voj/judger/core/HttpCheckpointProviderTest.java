@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
 
 /**
@@ -108,9 +109,33 @@ public class HttpCheckpointProviderTest {
   }
 
   /**
-   * Test case: the web application is restarting or overloaded (HTTP 503), or refuses the judger
-   * (HTTP 403, a token this judger got wrong). Expected result: the download fails, but not for
-   * good: another judger, or a later attempt, may succeed.
+   * Test case: the web application refuses the judger (HTTP 403 for a wrong or empty token, 401,
+   * or another client error). Expected result: the download fails for good (a
+   * CheckpointsRefusedException with the status), as asking again would get the same answer.
+   */
+  @Test
+  public void testClientErrorsAreRefusals() throws Exception {
+    int[] status = new int[1];
+    startServer(
+        exchange -> {
+          exchange.sendResponseHeaders(status[0], -1);
+          exchange.close();
+        });
+
+    for (int code : new int[] {403, 401, 400, 410}) {
+      status[0] = code;
+      CheckpointsRefusedException ex =
+          Assertions.assertThrows(
+              CheckpointsRefusedException.class,
+              () -> provider.download(1000, tempDir.toFile()));
+      Assertions.assertEquals(code, ex.getStatusCode());
+    }
+  }
+
+  /**
+   * Test case: the web application is restarting or overloaded (HTTP 503, 502 from a proxy, 500),
+   * or asks the judger to ask again later (HTTP 408, 429). Expected result: the download fails, but
+   * not for good: another judger, or a later attempt, may succeed.
    */
   @Test
   public void testOtherFailuresAreNotFinal() throws Exception {
@@ -121,12 +146,13 @@ public class HttpCheckpointProviderTest {
           exchange.close();
         });
 
-    for (int code : new int[] {503, 403}) {
+    for (int code : new int[] {503, 502, 500, 408, 429}) {
       status[0] = code;
       IOException ex =
           Assertions.assertThrows(
               IOException.class, () -> provider.download(1000, tempDir.toFile()));
       Assertions.assertFalse(ex instanceof InvalidCheckpointsException, ex.toString());
+      Assertions.assertFalse(ex instanceof CheckpointsRefusedException, ex.toString());
     }
   }
 
