@@ -67,7 +67,7 @@
     var burger = document.querySelector('[data-adm="burger"]');
     if (!drawer || !burger) return;
     var closeBtn = drawer.querySelector('[data-adm="drawer-close"]');
-    var narrow = window.matchMedia('(max-width: 860px)');
+    var narrow = window.matchMedia('(width <= 860px)');
 
     burger.addEventListener('click', function () {
       if (drawer.open) return;
