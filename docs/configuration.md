@@ -103,6 +103,19 @@ download, a 404 without that header included (e.g. a wrong
 | `url.base` | `http://localhost:8080/voj` | Public base URL; used to build absolute links (e.g. in emails). |
 | `url.cdn` | `http://localhost:8080/voj/assets` | Base URL for static assets. Point at a CDN in production. |
 
+Behind a reverse proxy, the web app takes the client address and scheme from the
+`X-Forwarded-For` and `X-Forwarded-Proto` headers, but only from the proxies that
+`VOJ_TRUSTED_PROXIES` matches (`server.tomcat.remoteip.internal-proxies` in
+[`application.properties`](../web/src/main/resources/application.properties)): a
+regular expression of addresses, by default the loopback ones, for a proxy on the
+same host. The Docker image adds the gateway of its network, which a proxy on the
+Docker host connects from. Failed logins are counted per client address (an IPv6
+one by its /64), so a client must never be able to choose it: match exactly the
+address a proxy connects from (e.g. `10\.0\.0\.5`), never a whole network, and
+have the proxy replace the `X-Forwarded-For` a client sends (nginx:
+`proxy_set_header X-Forwarded-For $remote_addr;`; see
+[`../docker/reverse-proxy/`](../docker/reverse-proxy/)).
+
 ## Judger
 
 The judger shares the database (`jdbc.*`) and message-queue (`jms.broker.url`)

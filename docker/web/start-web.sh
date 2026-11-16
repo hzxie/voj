@@ -27,6 +27,25 @@ if [ -z "${VOJ_JUDGER_API_TOKEN:-}" ]; then
   export VOJ_JUDGER_API_TOKEN
 fi
 
+# A reverse proxy on the Docker host connects through the gateway of the container's
+# network (a published port is forwarded from there), so the web application takes the
+# client address from the X-Forwarded-For of that address, as well as of loopback (see
+# server.tomcat.remoteip.internal-proxies in application.properties). Set
+# VOJ_TRUSTED_PROXIES to match the address of a proxy that connects from elsewhere (e.g.
+# a container of its own).
+if [ -z "${VOJ_TRUSTED_PROXIES:-}" ]; then
+  VOJ_TRUSTED_PROXIES='127\.0\.0\.1|0:0:0:0:0:0:0:1|::1'
+  # The gateway of the default route, in hexadecimal and little-endian order.
+  while read -r _ destination gateway _; do
+    if [ "$destination" = "00000000" ] && [ "$gateway" != "00000000" ]; then
+      VOJ_TRUSTED_PROXIES+="|$(printf '%d\\.%d\\.%d\\.%d' "0x${gateway:6:2}" \
+        "0x${gateway:4:2}" "0x${gateway:2:2}" "0x${gateway:0:2}")"
+      break
+    fi
+  done < /proc/net/route
+  export VOJ_TRUSTED_PROXIES
+fi
+
 DB_ARGS=(--protocol=TCP -h "${VOJ_DB_HOST:-localhost}" -P "${VOJ_DB_PORT:-3306}"
   -u "${VOJ_DB_USERNAME:-root}" "-p${VOJ_DB_PASSWORD:-}" "${VOJ_DB_NAME:-voj}")
 until mysql "${DB_ARGS[@]}" -e 'SELECT 1' >/dev/null 2>&1; do

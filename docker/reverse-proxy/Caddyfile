@@ -12,6 +12,10 @@
 # Caddy does not buffer reverse_proxy responses by default, so Server-Sent Events
 # (the real-time judge result stream) work out of the box; we only need a longer
 # read timeout so a long-running judge stream is not cut off.
+#
+# Caddy sets X-Forwarded-For to the address the client connected from, ignoring what
+# the client sent (unless it is one of the server's trusted_proxies): the app takes the
+# client address from it, so a client must not be able to choose it.
 
 oj.example.edu {
 	# Problem test-data archives can be large (the app caps multipart at 128 MB).

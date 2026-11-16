@@ -56,6 +56,7 @@ rebuild needed. Common variables:
 | `VOJ_DEMO` | `0` | `1` loads the sample data (passwords = usernames) on the first start |
 | `VOJ_BASE_URL` | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | `/voj` | Servlet context path (`/` serves at root) |
+| `VOJ_TRUSTED_PROXIES` | loopback and the network's gateway | Regular expression of the reverse proxy addresses the client address is taken from (`X-Forwarded-For`); match exactly a proxy's address, never a whole network |
 | `VOJ_JMS_BROKER_EMBEDDED` | `true` | Host the ActiveMQ broker in the web process |
 | `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | empty | SMTP credentials (empty host disables e-mail) |
 | `VOJ_MAIL_PORT` | `587` | SMTP submission port (STARTTLS) |

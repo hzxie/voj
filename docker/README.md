@@ -72,10 +72,17 @@ examples are in [`reverse-proxy/`](reverse-proxy/). Three things matter:
    handle this (nginx needs `proxy_buffering off`; Caddy does not buffer by
    default).
 3. The proxy must pass the client address and scheme in `X-Forwarded-For` /
-   `X-Forwarded-Proto` (Caddy does by default; the nginx example sets them). The
-   app trusts these headers only from loopback and private-network addresses,
-   so the proxy has to reach the container over one of those (as it does through
-   a published port on the same host).
+   `X-Forwarded-Proto`, replacing whatever the client sent (Caddy does by
+   default; the nginx example sets `X-Forwarded-For` to `$remote_addr`). The app
+   counts failed logins per client address, so a client must not be able to
+   choose it: the app takes these headers only from loopback and from the
+   gateway of the container's network, which a proxy on the Docker host connects
+   from through the published port. A proxy that connects from elsewhere (a
+   container of its own, another host) needs `VOJ_TRUSTED_PROXIES`: a regular
+   expression that matches exactly its address, e.g. `-e
+   VOJ_TRUSTED_PROXIES='172\.30\.0\.10'` (never a whole network, whose other
+   hosts could then set their own address). If the logs show every client at the
+   proxy's address, the app does not trust it yet.
 
 ## Configuration model
 
@@ -95,6 +102,7 @@ URL, or to move behind a reverse proxy. The most common variables:
 | `VOJ_DEMO` | web | `0` | `1` loads the sample data on the first start (passwords = usernames) |
 | `VOJ_BASE_URL` | web | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | web | `/voj` | Servlet context path (set `/` to serve at root) |
+| `VOJ_TRUSTED_PROXIES` | web | loopback and the network's gateway | Regular expression of the reverse proxy addresses the client address is taken from (`X-Forwarded-For`) |
 | `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | web | empty | SMTP (empty disables e-mail) |
 
 Behind a reverse proxy, set `VOJ_BASE_URL` (and optionally `VOJ_CONTEXT_PATH=/`)
