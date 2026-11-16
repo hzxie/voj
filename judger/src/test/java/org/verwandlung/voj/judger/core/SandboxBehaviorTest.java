@@ -419,6 +419,34 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run on Windows that tries to write where a later run of the sandbox account would
+   * find it: a variable of the account (HKCU\Environment, whose variables reach the processes the
+   * account starts), a file in its profile and one in C:\Users\Public; and that creates a file in
+   * its work directory and one in its USERPROFILE. Expected result: the run is Low integrity, so
+   * every write is refused but the one into the work directory.
+   */
+  @Test
+  public void testRunWritesOnlyInItsWorkDirectoryOnWindows() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeFalse(isLinux(), "Mandatory integrity control is Windows-only.");
+    Assertions.assertEquals(
+        "AC", judge(900041L, WINDOWS_LEAVE_BEHIND_CODE, 5000, 262144, "voj-sandbox-leak-900041"));
+    Path workDirectory = Path.of(workBaseDirectory, "voj-sandbox-900041");
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "integrity: low",
+            "HKCU\\Environment: denied",
+            "profile: denied",
+            "public: denied",
+            "work: created",
+            "USERPROFILE: denied",
+            ""),
+        Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
+    Assertions.assertTrue(Files.exists(workDirectory.resolve("voj-sandbox-leak-900041")));
+  }
+
+  /**
    * Test case: a run that tries to empty a file of the judger outside its work directory, such as
    * the cached expected output, with truncate(2) and with open(O_RDONLY | O_TRUNC), neither of which
    * Landlock confined before ABI 3 (Linux 6.2). Expected result: both are refused and the file is
@@ -1511,6 +1539,83 @@ public class SandboxBehaviorTest {
               return 6;
           }
       #endif
+          return 0;
+      }
+      """;
+
+  /**
+   * Given a NAME on its input, a Windows program that reports its integrity level, tries to set
+   * the variable NAME of its account (HKCU\Environment) and to create the file NAME in its
+   * account's profile directory and in C:\Users\Public (removing what it managed to write), creates
+   * the file NAME in its work directory and home.txt in its USERPROFILE, and reports how each
+   * attempt ends.
+   */
+  private static final String WINDOWS_LEAVE_BEHIND_CODE =
+      """
+      #include <windows.h>
+      #include <cstdio>
+      #include <string>
+
+      typedef BOOL (WINAPI *GetUserProfileDirectoryFunction)(HANDLE, LPSTR, LPDWORD);
+
+      static const char* create(const std::string& path, bool keep) {
+          HANDLE file = CreateFileA(path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL);
+          if (file == INVALID_HANDLE_VALUE) {
+              return GetLastError() == ERROR_ACCESS_DENIED ? "denied" : "failed";
+          }
+          CloseHandle(file);
+          if (!keep) {
+              DeleteFileA(path.c_str());
+          }
+          return keep ? "created" : "written";
+      }
+
+      int main() {
+          char name[64];
+          if (std::scanf("%63s", name) != 1) {
+              return 1;
+          }
+          HANDLE token;
+          OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token);
+          char label[64];
+          DWORD size;
+          GetTokenInformation(token, TokenIntegrityLevel, label, sizeof(label), &size);
+          PSID sid = ((TOKEN_MANDATORY_LABEL*) label)->Label.Sid;
+          DWORD level = *GetSidSubAuthority(sid, *GetSidSubAuthorityCount(sid) - 1);
+          std::printf("integrity: %s\\n", level == SECURITY_MANDATORY_LOW_RID ? "low" : "not low");
+
+          HKEY key;
+          LONG status = RegOpenKeyExA(HKEY_CURRENT_USER, "Environment", 0, KEY_SET_VALUE, &key);
+          if (status == ERROR_SUCCESS) {
+              status = RegSetValueExA(key, name, 0, REG_SZ, (const BYTE*) "1", 2);
+              if (status == ERROR_SUCCESS) {
+                  RegDeleteValueA(key, name);
+              }
+              RegCloseKey(key);
+          }
+          std::printf("HKCU\\\\Environment: %s\\n", status == ERROR_SUCCESS ? "written"
+                      : status == ERROR_ACCESS_DENIED ? "denied" : "failed");
+
+          char profile[MAX_PATH] = "";
+          DWORD length = MAX_PATH;
+          GetUserProfileDirectoryFunction getUserProfileDirectory =
+              (GetUserProfileDirectoryFunction) (void*) GetProcAddress(
+                  LoadLibraryA("userenv.dll"), "GetUserProfileDirectoryA");
+          if (!getUserProfileDirectory(token, profile, &length)) {
+              return 2;
+          }
+          std::printf("profile: %s\\n", create(std::string(profile) + "\\\\" + name, false));
+          char publicDirectory[MAX_PATH];
+          if (!GetEnvironmentVariableA("PUBLIC", publicDirectory, MAX_PATH)) {
+              return 3;
+          }
+          std::printf("public: %s\\n", create(std::string(publicDirectory) + "\\\\" + name, false));
+          std::printf("work: %s\\n", create(name, true));
+          char home[MAX_PATH];
+          if (!GetEnvironmentVariableA("USERPROFILE", home, MAX_PATH)) {
+              return 4;
+          }
+          std::printf("USERPROFILE: %s\\n", create(std::string(home) + "\\\\home.txt", true));
           return 0;
       }
       """;

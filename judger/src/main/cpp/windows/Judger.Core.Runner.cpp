@@ -27,6 +27,8 @@
 #include <vector>
 
 #include <windows.h>
+#include <aclapi.h>
+#include <sddl.h>
 #include <userenv.h>
 #include <psapi.h>
 
@@ -149,6 +151,41 @@ static const wchar_t* const GO_BUILD_CACHE_DIRECTORY = L"/.cache/go-build"; // G
 static const wchar_t* const GO_PATH_DIRECTORY        = L"/go";              // GOPATH (work dir relative)
 
 /**
+ * The integrity level of every compilation and run: Low (S-1-16-4096), the counterpart of the
+ * Linux runner's Landlock rules. A process may not write to an object labelled with a higher
+ * integrity level than its own (the "no write up" policy every object has), whatever its DACL
+ * grants, and an object without a label is Medium. So a Low process of the sandbox account cannot
+ * write to the account's registry (HKCU, such as HKCU\Environment) and profile (such as the
+ * Python user site), nor to C:\Users\Public or the other directories every account may write
+ * to, but only to what is labelled Low: the work directory (see WORK_DIRECTORY_LABEL), and what
+ * Windows keeps for Low processes, the account's own %USERPROFILE%\AppData\LocalLow (and
+ * HKCU\Software\AppDataLow, once something created it). Reading is not restricted (files have
+ * no "no read up" policy). Nor can it open the processes of the account that are not Low, or
+ * send messages to their windows (UIPI).
+ * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control
+ */
+static const wchar_t* const LOW_INTEGRITY_SID = L"S-1-16-4096";
+/**
+ * The label the work directory gets so that a Low process may write to it (only the DACL decides
+ * then): Low, with the "no write up" policy, inherited by what is created in it (OI, CI), as the
+ * files the judger creates there and the program's own.
+ */
+static const wchar_t* const WORK_DIRECTORY_LABEL = L"S:(ML;OICI;NW;;;LW)";
+/**
+ * What the sandbox account needs of the judger's window station and desktop for its programs to
+ * start: user32 connects to them as a console program starts (a JVM's does, whoami's does), and
+ * without this access it cannot initialise (STATUS_DLL_INIT_FAILED, which Windows reports in a
+ * hard-error box the program then waits on). CreateProcessWithLogonW granted it to the logon of
+ * each run; CreateProcessWithTokenW does not, so the runner grants it to the account (see
+ * grantDesktopAccess). Neither lets a program read the screen, switch desktops, hook the input of
+ * other programs, or create desktops; the Job's UI restrictions apply too (see createJobObject).
+ */
+static const DWORD WINDOW_STATION_ACCESS = READ_CONTROL | WINSTA_ENUMDESKTOPS | WINSTA_READATTRIBUTES |
+                                           WINSTA_ACCESSGLOBALATOMS | WINSTA_EXITWINDOWS;
+static const DWORD DESKTOP_ACCESS        = DESKTOP_READOBJECTS | DESKTOP_CREATEWINDOW |
+                                           DESKTOP_CREATEMENU | DESKTOP_WRITEOBJECTS;
+
+/**
  * Orders environment variable names the way Windows expects an environment block to be sorted:
  * case-insensitively, in Unicode (ordinal) order, without regard to locale. Names that differ only
  * in case (Path, PATH) are the same variable.
@@ -168,7 +205,12 @@ bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDL
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&);
-bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&);
+bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
+HANDLE createLowIntegrityToken(HANDLE);
+bool labelLowIntegrity(const std::wstring&);
+bool hasLowIntegrityLabel(PACL, PSID);
+bool grantDesktopAccess(HANDLE);
+bool grantAccess(HANDLE, PSID, DWORD);
 bool buildEnvironmentBlock(HANDLE, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 std::wstring getWorkDirectory(const std::wstring&);
@@ -178,7 +220,6 @@ unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
 std::wstring getWideString(const std::string&);
 LPWSTR getWideStringPointer(const std::wstring&);
-LPCWSTR getConstWideStringPointer(const std::wstring&);
 
 /**
  * JNI call entry point.
@@ -215,6 +256,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     HANDLE              hOutput             = NULL;
     HANDLE              hError              = NULL;
     HANDLE              hToken              = NULL;
+    HANDLE              hProfile            = NULL;
     HANDLE              hJob                = NULL;
     HANDLE              hCompletionPort     = NULL;
     PROCESS_INFORMATION processInfo         = {0};
@@ -229,10 +271,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // exception does not stop this function, so each failure must clean up and return explicitly
     // instead of carrying on with invalid handles.
     auto cleanup = [&]() {
-        if ( hToken != NULL ) {
-            CloseHandle(hToken);
-            hToken = NULL;
-        }
         if ( processInfo.hThread != NULL ) {
             CloseHandle(processInfo.hThread);
             processInfo.hThread = NULL;
@@ -261,6 +299,14 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         if ( hOutput != NULL ) {
             CloseHandle(hOutput);
             hOutput = NULL;
+        }
+        if ( hProfile != NULL ) {
+            UnloadUserProfile(hToken, hProfile);
+            hProfile = NULL;
+        }
+        if ( hToken != NULL ) {
+            CloseHandle(hToken);
+            hToken = NULL;
         }
     };
     // Reports a failed Windows API call as a Java exception and releases everything. The error
@@ -309,11 +355,18 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         return fail("CreateJobObject");
     }
 
+    // The program runs at Low integrity (see LOW_INTEGRITY_SID): its work directory is the one
+    // place it may write to.
+    std::wstring workDirectory = getWorkDirectory(outputFilePath);
+    if ( !workDirectory.empty() && !labelLowIntegrity(workDirectory) ) {
+        return fail("LabelLowIntegrity");
+    }
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
-    if ( !createProcess(commandLine, username, password, getWorkDirectory(outputFilePath), javaOptions,
-            hToken, startupInfo, processInfo) ) {
-        return fail("CreateProcess");
+    std::string failedApi;
+    if ( !createProcess(commandLine, username, password, workDirectory, javaOptions,
+            hToken, hProfile, startupInfo, processInfo, failedApi) ) {
+        return fail(failedApi);
     }
     // If the assignment fails the process would run outside the Job: without the process limit,
     // without the kill-on-close guarantee, and with the Job reporting no memory at all (a memory
@@ -633,11 +686,16 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
 }
 
 /**
- * Creates a process running as the given (low-privilege) user.
+ * Creates a process running as the given (low-privilege) user, at Low integrity.
  *
- * CreateProcessWithLogonW is used (rather than CreateProcessAsUser) because it does not require the
- * judger process to hold SE_ASSIGNPRIMARYTOKEN/SE_INCREASE_QUOTA. The process is created suspended so
- * the caller can assign it to a Job Object before it runs.
+ * The account is logged on (LogonUserW, as a batch job), its profile loaded, and the process
+ * created with a copy of its token lowered to Low integrity (see LOW_INTEGRITY_SID) by
+ * CreateProcessWithTokenW, which needs the judger to hold SeImpersonatePrivilege (an elevated
+ * administrator does; CreateProcessAsUserW would need SeAssignPrimaryTokenPrivilege, which only
+ * services have). CreateProcessWithLogonW, which needs no privilege, takes no token: the integrity
+ * level of the process it creates cannot be lowered, as the judger may not change that process's
+ * token. The process is created suspended so the caller can assign it to a Job Object before it
+ * runs.
  *
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
@@ -646,27 +704,42 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  *                         unknown: the sandbox account's profile directory)
  * @param  javaOptions   - the value of JDK_JAVA_OPTIONS (empty: not set), see buildEnvironmentBlock
  * @param  hToken        - receives a token that represents the specified user
+ * @param  hProfile      - receives the handle of the user's loaded profile (its registry), which
+ *                         must be unloaded once the process is gone
  * @param  startupInfo   - a STARTUPINFO structure
  * @param  processInfo   - receives identification information for the new process
+ * @param  failedApi     - receives the name of the call that failed, if one did
  * @return whether the process was created successfully (GetLastError() tells why not)
  */
 bool createProcess(const std::wstring& commandLine, const std::wstring& username,
         const std::wstring& password, const std::wstring& workDirectory,
-        const std::wstring& javaOptions, HANDLE& hToken, STARTUPINFOW& startupInfo,
-        PROCESS_INFORMATION& processInfo) {
-    WCHAR   szUserProfile[256]  = L"";
-    DWORD   dwSize              = sizeof(szUserProfile) / sizeof(WCHAR);
-    LPCWSTR lpUsername          = getConstWideStringPointer(username);
-    LPCWSTR lpDomain            = L".";
-    LPCWSTR lpPassword          = getConstWideStringPointer(password);
-    LPWSTR  lpCommandLine       = getWideStringPointer(commandLine);
+        const std::wstring& javaOptions, HANDLE& hToken, HANDLE& hProfile, STARTUPINFOW& startupInfo,
+        PROCESS_INFORMATION& processInfo, std::string& failedApi) {
+    WCHAR   szUserProfile[MAX_PATH] = L"";
+    DWORD   dwSize                  = sizeof(szUserProfile) / sizeof(WCHAR);
+    std::wstring         profileUsername = username;
     std::vector<wchar_t> environmentBlock;
 
-    if ( !LogonUserW(lpUsername, lpDomain, lpPassword, LOGON32_LOGON_BATCH,
+    if ( !LogonUserW(username.c_str(), L".", password.c_str(), LOGON32_LOGON_BATCH,
             LOGON32_PROVIDER_DEFAULT, &hToken) ) {
+        failedApi = "LogonUser";
         return false;
     }
+    // The account's registry (HKCU) and profile, which programs expect (the JVM finds user.home
+    // there). Loaded by the judger with the logon token, not by CreateProcessWithTokenW
+    // (LOGON_WITH_PROFILE) with the Low one, which cannot create the profile of an account that
+    // has none yet (ERROR_INVALID_STATE at its first run).
+    PROFILEINFOW profileInfo = {0};
+    profileInfo.dwSize     = sizeof(profileInfo);
+    profileInfo.dwFlags    = PI_NOUI;
+    profileInfo.lpUserName = &profileUsername[0];
+    if ( !LoadUserProfileW(hToken, &profileInfo) ) {
+        failedApi = "LoadUserProfile";
+        return false;
+    }
+    hProfile = profileInfo.hProfile;
     if ( !buildEnvironmentBlock(hToken, workDirectory, javaOptions, environmentBlock) ) {
+        failedApi = "CreateEnvironmentBlock";
         return false;
     }
     // The program starts in the submission's own work directory, as on Linux, never in a directory
@@ -681,17 +754,221 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
     }
     if ( currentDirectory.empty() ) {
         if ( !GetUserProfileDirectoryW(hToken, szUserProfile, &dwSize) ) {
+            failedApi = "GetUserProfileDirectory";
             return false;
         }
         currentDirectory = szUserProfile;
     }
-    if ( !CreateProcessWithLogonW(lpUsername, lpDomain, lpPassword,
-            LOGON_WITH_PROFILE, NULL, lpCommandLine,
-            CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
-            environmentBlock.data(), currentDirectory.c_str(), &startupInfo, &processInfo) ) {
+    if ( !grantDesktopAccess(hToken) ) {
+        failedApi = "GrantDesktopAccess";
         return false;
     }
-    return true;
+    HANDLE hLowToken = createLowIntegrityToken(hToken);
+    if ( hLowToken == NULL ) {
+        failedApi = "CreateLowIntegrityToken";
+        return false;
+    }
+    // lpDesktop is NULL: the program gets the judger's window station and desktop.
+    BOOL  created = CreateProcessWithTokenW(hLowToken, 0, NULL, getWideStringPointer(commandLine),
+                        CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
+                        environmentBlock.data(), currentDirectory.c_str(), &startupInfo, &processInfo);
+    DWORD error   = GetLastError();
+    CloseHandle(hLowToken);
+    SetLastError(error);
+    failedApi = "CreateProcessWithToken";
+    return created;
+}
+
+/**
+ * Creates a primary token for a process from the logon token of the sandbox account, at Low
+ * integrity (see LOW_INTEGRITY_SID). A token's integrity level can be lowered by whoever may adjust
+ * it, never raised.
+ * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control
+ * @param  hToken - the logon token of the sandbox account
+ * @return the new token, or NULL on failure (GetLastError() tells why)
+ */
+HANDLE createLowIntegrityToken(HANDLE hToken) {
+    // CreateProcessWithTokenW puts the token in the judger's session, which takes
+    // TOKEN_ADJUST_SESSIONID besides the rights it documents (it fails with ERROR_ACCESS_DENIED
+    // otherwise); TOKEN_ADJUST_DEFAULT is for the integrity level.
+    HANDLE hLowToken = NULL;
+    if ( !DuplicateTokenEx(hToken, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY |
+            TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+            NULL, SecurityImpersonation, TokenPrimary, &hLowToken) ) {
+        return NULL;
+    }
+    PSID lowSid = NULL;
+    if ( !ConvertStringSidToSidW(LOW_INTEGRITY_SID, &lowSid) ) {
+        DWORD error = GetLastError();
+        CloseHandle(hLowToken);
+        SetLastError(error);
+        return NULL;
+    }
+    TOKEN_MANDATORY_LABEL label = {};
+    label.Label.Attributes = SE_GROUP_INTEGRITY;
+    label.Label.Sid        = lowSid;
+    BOOL  lowered = SetTokenInformation(hLowToken, TokenIntegrityLevel, &label,
+                        sizeof(label) + GetLengthSid(lowSid));
+    DWORD error   = GetLastError();
+    LocalFree(lowSid);
+    if ( !lowered ) {
+        CloseHandle(hLowToken);
+        SetLastError(error);
+        return NULL;
+    }
+    return hLowToken;
+}
+
+/**
+ * Labels the work directory Low (see WORK_DIRECTORY_LABEL), so that a Low process may write to it,
+ * unless it is already: the first compilation or run in a work directory labels it, before any
+ * program of the submission has run in it, and the label is passed on to what the judger created
+ * in it so far (the source). The program cannot change the label: only the owner of the directory
+ * (the judger) may, and the sandbox account is not given that right (see
+ * CheckpointStore#createWorkDirectory).
+ * @param  directory - the work directory (the judger passes '/'-separated paths)
+ * @return whether the directory is labelled Low (GetLastError() tells why not)
+ */
+bool labelLowIntegrity(const std::wstring& directory) {
+    std::wstring path = directory;
+    for ( wchar_t& c : path ) {
+        if ( c == L'/' ) {
+            c = L'\\';
+        }
+    }
+    PSID lowSid = NULL;
+    if ( !ConvertStringSidToSidW(LOW_INTEGRITY_SID, &lowSid) ) {
+        return false;
+    }
+    PACL                 pSacl       = NULL;
+    PSECURITY_DESCRIPTOR pCurrent    = NULL;
+    DWORD                error       = GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT,
+                                           LABEL_SECURITY_INFORMATION, NULL, NULL, NULL, &pSacl, &pCurrent);
+    bool                 labelled    = error == ERROR_SUCCESS && hasLowIntegrityLabel(pSacl, lowSid);
+    if ( pCurrent != NULL ) {
+        LocalFree(pCurrent);
+    }
+    LocalFree(lowSid);
+    if ( error != ERROR_SUCCESS ) {
+        SetLastError(error);
+        return false;
+    }
+    if ( labelled ) {
+        return true;
+    }
+    PSECURITY_DESCRIPTOR pLabel = NULL;
+    if ( !ConvertStringSecurityDescriptorToSecurityDescriptorW(WORK_DIRECTORY_LABEL, SDDL_REVISION_1,
+            &pLabel, NULL) ) {
+        return false;
+    }
+    BOOL present   = FALSE;
+    BOOL defaulted = FALSE;
+    pSacl = NULL;
+    if ( !GetSecurityDescriptorSacl(pLabel, &present, &pSacl, &defaulted) ) {
+        error = GetLastError();
+    } else {
+        error = SetNamedSecurityInfoW(&path[0], SE_FILE_OBJECT, LABEL_SECURITY_INFORMATION,
+                    NULL, NULL, NULL, pSacl);
+    }
+    LocalFree(pLabel);
+    SetLastError(error);
+    return error == ERROR_SUCCESS;
+}
+
+/**
+ * Checks whether the label of a directory is Low and passed on to what is created in it.
+ * @param  pSacl  - the directory's SACL (its label; may be NULL: Medium)
+ * @param  lowSid - the SID of the Low integrity level
+ * @return whether the directory is labelled as WORK_DIRECTORY_LABEL does
+ */
+bool hasLowIntegrityLabel(PACL pSacl, PSID lowSid) {
+    if ( pSacl == NULL ) {
+        return false;
+    }
+    for ( DWORD i = 0; i < pSacl->AceCount; ++ i ) {
+        PACE_HEADER ace = NULL;
+        if ( !GetAce(pSacl, i, (LPVOID*) &ace) || ace->AceType != SYSTEM_MANDATORY_LABEL_ACE_TYPE ) {
+            continue;
+        }
+        PSYSTEM_MANDATORY_LABEL_ACE label = (PSYSTEM_MANDATORY_LABEL_ACE) ace;
+        BYTE inheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
+        if ( EqualSid((PSID) &label->SidStart, lowSid) && (ace->AceFlags & inheritance) == inheritance &&
+                (ace->AceFlags & INHERIT_ONLY_ACE) == 0 ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Grants the sandbox account the access to the judger's window station and desktop its programs
+ * need to start (see WINDOW_STATION_ACCESS), unless it has it already. The grant is the account's,
+ * so it is made once and stays (until the judger's session ends, which takes its window station
+ * with it): the ACLs do not grow with every run, and judgers sharing the session grant the same.
+ * @param  hToken - the logon token of the sandbox account
+ * @return whether the account has that access (GetLastError() tells why not)
+ */
+bool grantDesktopAccess(HANDLE hToken) {
+    BYTE  tokenUser[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
+    DWORD size = 0;
+    if ( !GetTokenInformation(hToken, TokenUser, tokenUser, sizeof(tokenUser), &size) ) {
+        return false;
+    }
+    PSID    sid      = ((PTOKEN_USER) tokenUser)->User.Sid;
+    HWINSTA hWinsta  = GetProcessWindowStation();
+    HDESK   hDesktop = GetThreadDesktop(GetCurrentThreadId());
+    if ( hWinsta == NULL || hDesktop == NULL ) {
+        return false;
+    }
+    return grantAccess(hWinsta, sid, WINDOW_STATION_ACCESS) && grantAccess(hDesktop, sid, DESKTOP_ACCESS);
+}
+
+/**
+ * Grants an account access to a window station or desktop, unless an entry of its DACL already
+ * allows the account all of it.
+ * @param  hObject - the window station or desktop
+ * @param  sid     - the account
+ * @param  access  - the access to grant
+ * @return whether the account has that access (GetLastError() tells why not)
+ */
+bool grantAccess(HANDLE hObject, PSID sid, DWORD access) {
+    PACL                 pDacl = NULL;
+    PSECURITY_DESCRIPTOR pSd   = NULL;
+    DWORD error = GetSecurityInfo(hObject, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL,
+                      &pDacl, NULL, &pSd);
+    if ( error != ERROR_SUCCESS ) {
+        SetLastError(error);
+        return false;
+    }
+    // A NULL DACL allows everyone everything.
+    bool granted = pDacl == NULL;
+    for ( DWORD i = 0; !granted && i < pDacl->AceCount; ++ i ) {
+        PACE_HEADER ace = NULL;
+        if ( GetAce(pDacl, i, (LPVOID*) &ace) && ace->AceType == ACCESS_ALLOWED_ACE_TYPE &&
+                (ace->AceFlags & INHERIT_ONLY_ACE) == 0 ) {
+            PACCESS_ALLOWED_ACE allowed = (PACCESS_ALLOWED_ACE) ace;
+            granted = EqualSid((PSID) &allowed->SidStart, sid) && (allowed->Mask & access) == access;
+        }
+    }
+    if ( !granted ) {
+        EXPLICIT_ACCESSW entry = {};
+        entry.grfAccessPermissions = access;
+        entry.grfAccessMode        = GRANT_ACCESS;
+        entry.grfInheritance       = NO_INHERITANCE;
+        entry.Trustee.TrusteeForm  = TRUSTEE_IS_SID;
+        entry.Trustee.TrusteeType  = TRUSTEE_IS_USER;
+        entry.Trustee.ptstrName    = (LPWSTR) sid;
+        PACL pNewDacl = NULL;
+        error = SetEntriesInAclW(1, &entry, pDacl, &pNewDacl);
+        if ( error == ERROR_SUCCESS ) {
+            error = SetSecurityInfo(hObject, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL,
+                        pNewDacl, NULL);
+            LocalFree(pNewDacl);
+        }
+    }
+    LocalFree(pSd);
+    SetLastError(error);
+    return error == ERROR_SUCCESS;
 }
 
 /**
@@ -966,13 +1243,4 @@ std::wstring getWideString(const std::string& str) {
  */
 LPWSTR getWideStringPointer(const std::wstring& str) {
     return const_cast<LPWSTR>(str.c_str());
-}
-
-/**
- * Gets the LPCWSTR pointer corresponding to a std::wstring.
- * @param  str - a std::wstring string
- * @return the corresponding LPCWSTR pointer
- */
-LPCWSTR getConstWideStringPointer(const std::wstring& str) {
-    return str.c_str();
 }

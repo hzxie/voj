@@ -538,7 +538,8 @@ in production.
 ## Windows native sandbox
 
 On Windows the native backend is the only option (`isolate` is Linux-only). Each
-submission runs under a **separate low-privilege Windows account** inside a
+submission runs under a **separate low-privilege Windows account**, at **Low
+integrity**, inside a
 [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
 that applies UI restrictions and kills the whole process tree when the run
 ends. While the program runs, the judger polls it every 2 ms and kills the Job
@@ -576,6 +577,24 @@ output file is created anew for every run: whatever the sandbox account may have
 left at its path (such as a hard link to another file) is removed first, never
 written through.
 
+**Writes** are confined by
+[mandatory integrity control](https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control),
+the counterpart of Landlock on Linux: compilations and runs are Low integrity
+processes, which may not write to anything labelled with a higher integrity
+level, whatever its ACL grants, and anything without a label is Medium. Before
+the first compilation in a submission's work directory, the judger labels the
+directory Low (and so what is created in it), so that is where a submission can
+write. It cannot write to the sandbox account's registry (`HKCU`, such as the
+account's variables in `HKCU\Environment`), its profile (such as the Python
+user site in `%APPDATA%`), `C:\Users\Public`, `%ProgramData%` or anywhere else
+every account may write to, nor open the account's processes that are not Low.
+What Windows keeps for Low processes stays writable: the account's own
+`%USERPROFILE%\AppData\LocalLow` (and `HKCU\Software\AppDataLow`, once
+something created it). No toolchain reads anything from there, but a run can
+leave files there for a later one; to close that too, label the folder Medium
+before the account's first run:
+`icacls C:\Users\voj-sandbox\AppData\LocalLow /setintegritylevel (OI)(CI)M`.
+
 The submission's environment is the sandbox account's own (system variables,
 the account's variables and profile paths such as `APPDATA`) plus
 only these variables of the judger: `PATH`, `LANG`, `LC_ALL`, `TZ`,
@@ -610,23 +629,32 @@ Requirements for that account:
   (`SeBatchLogonRight`) — the judger logs it in with `LOGON32_LOGON_BATCH`. Grant
   it via *Local Security Policy → Local Policies → User Rights Assignment → Log
   on as a batch job*, or `secedit`.
-- It must have a **loadable user profile**; the judger creates each submission
-  process with `LOGON_WITH_PROFILE`. Logging in once interactively, or letting
-  the first batch logon create it, is enough.
+- It must be able to have a **user profile**: the judger loads it for each
+  compilation and run (with `LoadUserProfile`), and creates it at the first.
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
   read and write the submission's work directory (each compilation and run
   starts there; the compiler writes the program and, for Go, its build cache
   there) and execute the compiled program. The judger grants it that access
   itself, to what it creates in its `work-<n>\` directory under
   `judger.checkpointDir`; the account needs no access to anything else there.
+  The judger also grants it the access to its window station and desktop that a
+  program needs to start (not to read the screen, hook input or switch
+  desktops); the grant lasts until the judger's session ends.
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
 
+Run the judger as an **elevated administrator** ("Run with highest
+privileges"). It creates each compilation and run with a Low integrity copy of
+the sandbox account's token (`CreateProcessWithTokenW`), which takes
+`SeImpersonatePrivilege`, and loading the account's profile takes
+administrative rights. Without them, every compilation and run fails as a
+System Error rather than running with more access than it should.
+
 Run the judger in an interactive session (for example a scheduled task that runs
 at logon, or a console of a logged-on user), not as a service or from an SSH
 session. Processes the judger starts as the sandbox account
-(`CreateProcessWithLogonW`) from session 0 cannot initialise on its window
+(`CreateProcessWithTokenW`) from session 0 cannot initialise on its window
 station: the JVM (javac, java, kotlinc) then exits at once with
 `STATUS_DLL_INIT_FAILED` (0xC0000142), so Java and Kotlin submissions could not
 be compiled or run, while C and C++ ones may still work.
