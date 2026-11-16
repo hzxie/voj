@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
@@ -38,16 +39,18 @@ public interface LanguageMapper {
    * @return the expected programming language object, or a null reference
    */
   @Select("SELECT * FROM voj_languages WHERE language_id = #{languageId}")
-  @Results({
-    @Result(property = "languageId", column = "language_id"),
-    @Result(property = "languageSlug", column = "language_slug"),
-    @Result(property = "languageName", column = "language_name"),
-    @Result(property = "compileCommand", column = "language_compile_command"),
-    @Result(property = "runCommand", column = "language_run_command"),
-    @Result(property = "sourceFilename", column = "language_source_filename"),
-    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
-    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
-  })
+  @Results(
+      id = "language",
+      value = {
+        @Result(property = "languageId", column = "language_id"),
+        @Result(property = "languageSlug", column = "language_slug"),
+        @Result(property = "languageName", column = "language_name"),
+        @Result(property = "compileCommand", column = "language_compile_command"),
+        @Result(property = "runCommand", column = "language_run_command"),
+        @Result(property = "sourceFilename", column = "language_source_filename"),
+        @Result(property = "timeMultiplier", column = "language_time_multiplier"),
+        @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
+      })
   Language getLanguageUsingId(@Param("languageId") int languageId);
 
   /**
@@ -56,15 +59,6 @@ public interface LanguageMapper {
    * @return the list of programming languages (a List<Language> object)
    */
   @Select("SELECT * FROM voj_languages")
-  @Results({
-    @Result(property = "languageId", column = "language_id"),
-    @Result(property = "languageSlug", column = "language_slug"),
-    @Result(property = "languageName", column = "language_name"),
-    @Result(property = "compileCommand", column = "language_compile_command"),
-    @Result(property = "runCommand", column = "language_run_command"),
-    @Result(property = "sourceFilename", column = "language_source_filename"),
-    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
-    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
-  })
+  @ResultMap("language")
   List<Language> getAllLanguages();
 }

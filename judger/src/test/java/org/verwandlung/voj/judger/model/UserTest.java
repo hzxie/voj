@@ -26,32 +26,29 @@ import org.junit.jupiter.api.Test;
  */
 public class UserTest {
   /**
-   * Test case: tests the five-argument constructor. Expected result: the getters return the values
+   * Test case: tests the four-argument constructor. Expected result: the getters return the values
    * passed to the constructor and the identifier defaults to zero.
    */
   @Test
   public void testConstructorWithoutId() {
     UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
-    Language language = new Language("cpp", "C++", "g++", "./a.out");
-    User user = new User("judger", "password", "judger@voj.org", userGroup, language);
+    User user = new User("judger", "password", "judger@voj.org", userGroup);
 
     Assertions.assertEquals(0, user.getUid());
     Assertions.assertEquals("judger", user.getUsername());
     Assertions.assertEquals("password", user.getPassword());
     Assertions.assertEquals("judger@voj.org", user.getEmail());
     Assertions.assertSame(userGroup, user.getUserGroup());
-    Assertions.assertSame(language, user.getPreferLanguage());
   }
 
   /**
-   * Test case: tests the six-argument constructor. Expected result: the getters return the values
+   * Test case: tests the five-argument constructor. Expected result: the getters return the values
    * passed to the constructor, including the identifier.
    */
   @Test
   public void testConstructorWithId() {
     UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
-    Language language = new Language("cpp", "C++", "g++", "./a.out");
-    User user = new User(1, "judger", "password", "judger@voj.org", userGroup, language);
+    User user = new User(1, "judger", "password", "judger@voj.org", userGroup);
 
     Assertions.assertEquals(1, user.getUid());
     Assertions.assertEquals("judger", user.getUsername());
@@ -64,27 +61,24 @@ public class UserTest {
   @Test
   public void testSetters() {
     UserGroup userGroup = new UserGroup(1, "users", "Users");
-    Language language = new Language("java", "Java", "javac", "java");
     User user = new User();
     user.setUid(2);
     user.setUsername("alice");
     user.setPassword("secret");
     user.setEmail("alice@voj.org");
     user.setUserGroup(userGroup);
-    user.setPreferLanguage(language);
 
     Assertions.assertEquals(2, user.getUid());
     Assertions.assertEquals("alice", user.getUsername());
     Assertions.assertEquals("secret", user.getPassword());
     Assertions.assertEquals("alice@voj.org", user.getEmail());
     Assertions.assertSame(userGroup, user.getUserGroup());
-    Assertions.assertSame(language, user.getPreferLanguage());
   }
 
   /** Test case: tests toString. Expected result: a string containing the username. */
   @Test
   public void testToString() {
-    User user = new User("judger", "password", "judger@voj.org", null, null);
+    User user = new User("judger", "password", "judger@voj.org", null);
     Assertions.assertTrue(user.toString().contains("judger"));
   }
 }

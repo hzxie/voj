@@ -34,19 +34,12 @@ public class User implements Serializable {
    * @param password - the password
    * @param email - the email address
    * @param userGroup - the user group
-   * @param preferLanguage - the user's preferred language
    */
-  public User(
-      String username,
-      String password,
-      String email,
-      UserGroup userGroup,
-      Language preferLanguage) {
+  public User(String username, String password, String email, UserGroup userGroup) {
     this.username = username;
     this.password = password;
     this.email = email;
     this.userGroup = userGroup;
-    this.preferLanguage = preferLanguage;
   }
 
   /**
@@ -57,16 +50,9 @@ public class User implements Serializable {
    * @param password - the password
    * @param email - the email address
    * @param userGroup - the user group
-   * @param preferLanguage - the user's preferred language
    */
-  public User(
-      int uid,
-      String username,
-      String password,
-      String email,
-      UserGroup userGroup,
-      Language preferLanguage) {
-    this(username, password, email, userGroup, preferLanguage);
+  public User(int uid, String username, String password, String email, UserGroup userGroup) {
+    this(username, password, email, userGroup);
     this.uid = uid;
   }
 
@@ -160,31 +146,13 @@ public class User implements Serializable {
     this.userGroup = userGroup;
   }
 
-  /**
-   * Gets the user's preferred language object.
-   *
-   * @return the user's preferred language object
-   */
-  public Language getPreferLanguage() {
-    return preferLanguage;
-  }
-
-  /**
-   * Sets the user's preferred language object.
-   *
-   * @param preferLanguage - the user's preferred language object
-   */
-  public void setPreferLanguage(Language preferLanguage) {
-    this.preferLanguage = preferLanguage;
-  }
-
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   public String toString() {
     return String.format(
-        "User: [Uid=%s, Username=%s, Password=%s, Email=%s, UserGroup={%s}, Language={%s}]",
-        new Object[] {uid, username, password, email, userGroup, preferLanguage});
+        "User: [Uid=%s, Username=%s, Password=%s, Email=%s, UserGroup={%s}]",
+        new Object[] {uid, username, password, email, userGroup});
   }
 
   /** The unique identifier of the user. */
@@ -201,9 +169,6 @@ public class User implements Serializable {
 
   /** The user group object. */
   private UserGroup userGroup;
-
-  /** The user's preferred language object. */
-  private Language preferLanguage;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 2264535351943252507L;

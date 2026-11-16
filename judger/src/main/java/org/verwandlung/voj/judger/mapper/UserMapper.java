@@ -22,7 +22,6 @@ import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
-import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.User;
 import org.verwandlung.voj.judger.model.UserGroup;
 
@@ -39,23 +38,12 @@ public interface UserMapper {
    * @return the expected user object, or a null reference
    */
   @Select("SELECT * FROM voj_users WHERE username = #{username}")
-  @Results(
-      value = {
-        @Result(
-            property = "userGroup",
-            column = "user_group_id",
-            javaType = UserGroup.class,
-            one =
-                @One(
-                    select =
-                        "org.verwandlung.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId")),
-        @Result(
-            property = "preferLanguage",
-            column = "prefer_language_id",
-            javaType = Language.class,
-            one =
-                @One(
-                    select = "org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId"))
-      })
+  @Results({
+    @Result(
+        property = "userGroup",
+        column = "user_group_id",
+        javaType = UserGroup.class,
+        one = @One(select = "org.verwandlung.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId"))
+  })
   User getUserUsingUsername(@Param("username") String username);
 }

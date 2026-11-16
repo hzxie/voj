@@ -30,7 +30,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.mapper.UserMapper;
-import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.User;
 import org.verwandlung.voj.judger.model.UserGroup;
 
@@ -49,16 +48,13 @@ public class JudgerAccountTest {
    */
   @Test
   public void testAuthenticate() {
-    Language language = new Language("cpp", "C++", "g++", "./a.out");
     User judger =
         new User(
-            "judger", "{bcrypt}stored-hash", "judger@voj.org", new UserGroup(4, "judgers", "J"),
-            language);
+            "judger", "{bcrypt}stored-hash", "judger@voj.org", new UserGroup(4, "judgers", "J"));
     judger.setUid(1234);
     User user =
         new User(
-            "user", "{bcrypt}stored-hash", "user@voj.org", new UserGroup(2, "users", "U"),
-            language);
+            "user", "{bcrypt}stored-hash", "user@voj.org", new UserGroup(2, "users", "U"));
     when(userMapper.getUserUsingUsername("judger")).thenReturn(judger);
     when(userMapper.getUserUsingUsername("user")).thenReturn(user);
     when(passwordEncoder.matches("secret", "{bcrypt}stored-hash")).thenReturn(true);

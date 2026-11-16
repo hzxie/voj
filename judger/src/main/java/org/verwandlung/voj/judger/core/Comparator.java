@@ -53,9 +53,6 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  */
 @Component
 public class Comparator {
-  /** The judge result slug of an accepted output. */
-  public static final String ACCEPTED = "AC";
-
   /** The judge result slug of an output that only differs in whitespace / blank lines. */
   public static final String PRESENTATION_ERROR = "PE";
 
@@ -68,7 +65,7 @@ public class Comparator {
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
    * @param exactlyMatch - whether the checkpoint requires an exact match
-   * @return {@link #ACCEPTED}, {@link #PRESENTATION_ERROR} (only when {@code exactlyMatch} is set
+   * @return {@link CheckpointResult#ACCEPTED}, {@link #PRESENTATION_ERROR} (only when {@code exactlyMatch} is set
    *     and the outputs differ only in trailing whitespace / blank lines) or {@link #WRONG_ANSWER}
    * @throws IOException if the standard output cannot be read, or either file cannot be read to the
    *     end; a user's output that cannot be opened as a plain file is a {@link #WRONG_ANSWER}
@@ -77,12 +74,12 @@ public class Comparator {
       String standardOutputFilePath, String outputFilePath, boolean exactlyMatch)
       throws IOException {
     if (exactlyMatch && isOutputExactlyTheSame(standardOutputFilePath, outputFilePath)) {
-      return ACCEPTED;
+      return CheckpointResult.ACCEPTED;
     }
     if (!isOutputTheSame(standardOutputFilePath, outputFilePath)) {
       return WRONG_ANSWER;
     }
-    return exactlyMatch ? PRESENTATION_ERROR : ACCEPTED;
+    return exactlyMatch ? PRESENTATION_ERROR : CheckpointResult.ACCEPTED;
   }
 
   /**
