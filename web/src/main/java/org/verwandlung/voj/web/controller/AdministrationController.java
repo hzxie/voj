@@ -559,10 +559,9 @@ public class AdministrationController {
 
     // STATS: solved-problem count and global rank (shared with the user list), the total
     // number of submissions, and the most recent submissions for the activity feed.
-    Map<Long, Long> solvedCounts = submissionService.getSolvedProblemCountForAllUsers();
-    Map<Long, Long> userRanks = computeUserRanks(solvedCounts);
-    long solvedCount = solvedCounts.getOrDefault(userId, 0L);
-    Long userRank = userRanks.get(userId);
+    Map<String, Long> solvedCountAndRank = submissionService.getSolvedCountAndRankOfUser(userId);
+    long solvedCount = solvedCountAndRank.get("solvedCount");
+    Long userRank = solvedCountAndRank.get("rank");
     Map<String, Long> submissionStats = submissionService.getSubmissionStatsOfUser(userId);
     List<Submission> recentSubmissions =
         submissionService.getLatestSubmissions(

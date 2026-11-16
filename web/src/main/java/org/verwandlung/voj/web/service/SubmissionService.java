@@ -403,6 +403,27 @@ public class SubmissionService {
   }
 
   /**
+   * Gets the number of distinct problems a user has solved and the user's global rank by it, with
+   * the same standard competition ranking as the administration's user list (ties share the
+   * lowest rank, e.g. 1, 1, 3), but with two targeted queries instead of the counts of every user.
+   *
+   * @param userId - the unique identifier of the user
+   * @return a Map with {@code solvedCount} and {@code rank} (null when the user has solved nothing,
+   *     as such users are not ranked)
+   */
+  public Map<String, Long> getSolvedCountAndRankOfUser(long userId) {
+    long solvedCount = submissionMapper.getNumberOfSolvedProblemsOfUser(userId);
+    Map<String, Long> result = new HashMap<>(4, 1);
+    result.put("solvedCount", solvedCount);
+    result.put(
+        "rank",
+        solvedCount == 0
+            ? null
+            : 1 + submissionMapper.getNumberOfUsersSolvedMoreProblems(solvedCount));
+    return result;
+  }
+
+  /**
    * Creates a submission and adds the judging task to the message queue.
    *
    * @param user - the logged-in user object

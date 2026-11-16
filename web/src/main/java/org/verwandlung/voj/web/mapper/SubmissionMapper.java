@@ -290,6 +290,24 @@ public interface SubmissionMapper {
   List<Map<String, Object>> getSolvedProblemCountForAllUsers();
 
   /**
+   * Gets the number of distinct problems a user has solved (any problem, like {@link
+   * #getSolvedProblemCountForAllUsers}).
+   *
+   * @param uid - the unique identifier of the user
+   * @return the number of distinct problems the user has solved
+   */
+  long getNumberOfSolvedProblemsOfUser(@Param("uid") long uid);
+
+  /**
+   * Gets the number of users who have solved more distinct problems than the given number.
+   *
+   * @param numberOfSolvedProblems - the number of solved problems to compare with
+   * @return the number of users who solved more problems
+   */
+  long getNumberOfUsersSolvedMoreProblems(
+      @Param("numberOfSolvedProblems") long numberOfSolvedProblems);
+
+  /**
    * Creates a submission.
    *
    * @param submission - the submission object to create

@@ -302,6 +302,25 @@
 		GROUP BY uid
 		ORDER BY solved DESC, uid ASC
 	</select>
+	<select id="getNumberOfSolvedProblemsOfUser"
+		parameterType="long"
+		resultType="long">
+		SELECT COUNT(DISTINCT problem_id)
+		FROM voj_submissions
+		WHERE uid = #{uid} AND submission_judge_result = 'AC'
+	</select>
+	<select id="getNumberOfUsersSolvedMoreProblems"
+		parameterType="long"
+		resultType="long">
+		SELECT COUNT(*)
+		FROM (
+			SELECT uid
+			FROM voj_submissions
+			WHERE submission_judge_result = 'AC'
+			GROUP BY uid
+			HAVING COUNT(DISTINCT problem_id) &gt; #{numberOfSolvedProblems}
+		) users_ahead
+	</select>
 	<insert id="createSubmission"
 		parameterType="org.verwandlung.voj.web.model.Submission"
 		keyProperty="submissionId" 

@@ -779,6 +779,8 @@ class ViewRenderSmokeTest {
   void adminEditUserViewRenders() throws Exception {
     authenticateAdmin();
     when(userService.getUserUsingUid(2000L)).thenReturn(aUser(2000L, usersGroup()));
+    when(submissionService.getSolvedCountAndRankOfUser(2000L))
+        .thenReturn(Map.of("solvedCount", 3L, "rank", 1L));
     mockMvc.perform(getWithCsrf("/administration/edit-user/2000")).andExpect(status().isOk());
   }
 
@@ -797,6 +799,11 @@ class ViewRenderSmokeTest {
     user.setEmail("bob@example.com");
     user.setUserGroup(usersGroup());
     when(userService.getUserUsingUid(2000L)).thenReturn(user);
+    // A user who has solved nothing has no rank.
+    java.util.Map<String, Long> unranked = new java.util.HashMap<>();
+    unranked.put("solvedCount", 0L);
+    unranked.put("rank", null);
+    when(submissionService.getSolvedCountAndRankOfUser(2000L)).thenReturn(unranked);
 
     mockMvc.perform(getWithCsrf("/administration/new-user")).andExpect(status().isOk());
     mockMvc.perform(getWithCsrf("/administration/edit-user/2000")).andExpect(status().isOk());

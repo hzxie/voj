@@ -277,6 +277,39 @@ public class SubmissionServiceTest {
             submissionService.getLatestSubmissions(0, "", 0, 100, administrator()), submissionId));
   }
 
+  /**
+   * Test case: tests getSolvedCountAndRankOfUser(long). Test data: user 1000 solved 2 problems,
+   * user 1001 none; then user 1002 solves one problem, then a second one. Expected: the counts, and
+   * the same standard competition ranks as the user list computes from everyone's counts (ties
+   * share a rank; users who solved nothing are not ranked).
+   */
+  @Test
+  public void testGetSolvedCountAndRankOfUser() {
+    Assertions.assertEquals(
+        2L, submissionService.getSolvedCountAndRankOfUser(1000).get("solvedCount"));
+    Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1000).get("rank"));
+    Assertions.assertEquals(
+        0L, submissionService.getSolvedCountAndRankOfUser(1001).get("solvedCount"));
+    Assertions.assertNull(submissionService.getSolvedCountAndRankOfUser(1001).get("rank"));
+
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    String insertAccepted =
+        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
+            + " submission_code) VALUES (?, 1002, 2, 'AC', 'Code')";
+    jdbcTemplate.update(insertAccepted, 1000);
+    Assertions.assertEquals(2L, submissionService.getSolvedCountAndRankOfUser(1002).get("rank"));
+    jdbcTemplate.update(insertAccepted, 1003);
+    // The rows were inserted behind MyBatis's back: any MyBatis update (this one changes no row)
+    // clears the query results it cached in this transaction.
+    submissionService.markSubmissionUnjudgeable(0);
+    Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1002).get("rank"));
+    Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1000).get("rank"));
+    Assertions.assertEquals(
+        submissionService.getSolvedProblemCountForAllUsers().get(1002L),
+        submissionService.getSolvedCountAndRankOfUser(1002).get("solvedCount"));
+  }
+
   /** Tests whether a list of submissions contains the submission with the given identifier. */
   private static boolean containsSubmission(List<Submission> submissions, long submissionId) {
     return submissions.stream().anyMatch(s -> s.getSubmissionId() == submissionId);
