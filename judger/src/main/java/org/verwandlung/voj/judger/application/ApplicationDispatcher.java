@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.NonTransientDataAccessException;
@@ -37,11 +36,9 @@ import org.verwandlung.voj.judger.core.Outcome;
 import org.verwandlung.voj.judger.core.Superseded;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
-import org.verwandlung.voj.judger.mapper.UserMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.JudgeResult;
 import org.verwandlung.voj.judger.model.Submission;
-import org.verwandlung.voj.judger.model.User;
 
 /**
  * The application dispatcher: claims the submissions to judge in the database, records the outcome
@@ -84,7 +81,7 @@ public class ApplicationDispatcher {
       // Another judger may have claimed the submission since it was read: then the next one.
       long claimToken = RANDOM.nextLong();
       if (submissionMapper.claimSubmission(
-              submissionId, claimToken, getJudgerUid(), leaseSeconds, INTERRUPTED_REASON)
+              submissionId, claimToken, judgerAccount.getUid(), leaseSeconds, INTERRUPTED_REASON)
           == 1) {
         Submission submission = submissionMapper.getSubmission(submissionId);
         if (submission != null) {
@@ -314,23 +311,6 @@ public class ApplicationDispatcher {
         || ex instanceof DataAccessResourceFailureException;
   }
 
-  /**
-   * Resolves and caches the uid of this judger, so each judged submission records which judger
-   * processed it. The judger is a regular user account (in the {@code judgers} group) identified by
-   * the configured username.
-   *
-   * @return the uid of this judger, or null if the account cannot be resolved
-   */
-  private Long getJudgerUid() {
-    if (judgerUid == null && judgerUsername != null && !judgerUsername.isEmpty()) {
-      User judger = userMapper.getUserUsingUsername(judgerUsername);
-      if (judger != null) {
-        judgerUid = judger.getUid();
-      }
-    }
-    return judgerUid;
-  }
-
   /** The autowired MessageSender object, used to send messages to the message queue. */
   @Autowired private MessageSender messageSender;
 
@@ -340,15 +320,8 @@ public class ApplicationDispatcher {
   /** The autowired JudgeResultMapper object, used to access information about all judge results. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 
-  /** The autowired UserMapper object, used to resolve this judger's own user account. */
-  @Autowired private UserMapper userMapper;
-
-  /** The judger's username, used to resolve which judger processed each submission. */
-  @Value("${judger.username}")
-  private String judgerUsername;
-
-  /** The lazily-resolved, cached uid of this judger (null until resolved). */
-  private Long judgerUid;
+  /** The account of the judger, which its claims are recorded by. */
+  @Autowired private JudgerAccount judgerAccount;
 
   /** The names of the judge results, by their slug, as read so far. */
   private final Map<String, String> judgeResultNames = new ConcurrentHashMap<>();

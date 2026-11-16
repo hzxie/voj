@@ -29,13 +29,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.mapper.JudgerMapper;
-import org.verwandlung.voj.judger.mapper.UserMapper;
-import org.verwandlung.voj.judger.model.User;
 
 /**
  * The application heartbeat: records, every {@value #HEARTBEAT_INTERVAL_MS} ms, in the registry of
@@ -85,7 +82,7 @@ public class ApplicationHeartbeat implements Runnable {
 
   /**
    * Sets the languages this judger supports, which its heartbeats record. Until it is set, the
-   * judger records none, and is not ready.
+   * judger records none (and is not ready, see {@link Dispatcher#isReady}).
    *
    * @param languageIds - the unique identifiers of the languages
    */
@@ -105,10 +102,10 @@ public class ApplicationHeartbeat implements Runnable {
     }
     judgerMapper.recordHeartbeat(
         INSTANCE,
-        judgerUid,
+        judgerAccount.getUid(),
         description,
         languages.stream().map(String::valueOf).collect(Collectors.joining(",")),
-        !languages.isEmpty() && dispatcher.isReady(),
+        dispatcher.isReady(),
         getCpuLoad(),
         getMemoryUsage());
     isFirstHeartbeat = false;
@@ -219,34 +216,7 @@ public class ApplicationHeartbeat implements Runnable {
     }
   }
 
-  /**
-   * Checks whether the judger's identity information is valid, and remembers the uid of its
-   * account, which its heartbeats are recorded by. Invoked once at startup, so that the judger fails
-   * fast on bad credentials before accepting any judging task.
-   *
-   * @return whether the judger's identity information is valid
-   */
-  public boolean isIdentityValid() {
-    User user = userMapper.getUserUsingUsername(judgerUsername);
-
-    if (user != null
-        && "judgers".equals(user.getUserGroup().getUserGroupSlug())
-        && passwordEncoder.matches(judgerPassword, user.getPassword())) {
-      judgerUid = user.getUid();
-      return true;
-    }
-    return false;
-  }
-
-  /** The judger's identity information: the judger's username. */
-  @Value("${judger.username}")
-  private String judgerUsername;
-
-  /** The judger's identity information: the judger's password. */
-  @Value("${judger.password}")
-  private String judgerPassword;
-
-  /** The judger's identity information: the judger's description. */
+  /** The judger's description. */
   @Value("${judger.description}")
   private String judgerDescription;
 
@@ -256,14 +226,8 @@ public class ApplicationHeartbeat implements Runnable {
   /** The autowired Dispatcher object, which tells whether this judger takes submissions. */
   @Autowired private Dispatcher dispatcher;
 
-  /** The autowired UserMapper object, used to verify the judger's identity information. */
-  @Autowired private UserMapper userMapper;
-
-  /** The autowired password encoder, used to verify the judger's password against the stored hash. */
-  @Autowired private PasswordEncoder passwordEncoder;
-
-  /** The uid of the judger's account, known once its identity was checked. */
-  private long judgerUid;
+  /** The account of the judger, which its heartbeats are recorded by. */
+  @Autowired private JudgerAccount judgerAccount;
 
   /** The unique identifiers of the languages this judger supports. */
   private volatile List<Integer> languageIds = List.of();

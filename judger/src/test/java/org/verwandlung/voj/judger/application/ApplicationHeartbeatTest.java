@@ -43,15 +43,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.mapper.JudgerMapper;
-import org.verwandlung.voj.judger.mapper.UserMapper;
-import org.verwandlung.voj.judger.model.Language;
-import org.verwandlung.voj.judger.model.User;
-import org.verwandlung.voj.judger.model.UserGroup;
 
 /**
  * Test class for ApplicationHeartbeat.
@@ -64,10 +59,8 @@ public class ApplicationHeartbeatTest {
   /** Injects the configuration values that would normally come from the property files. */
   @BeforeEach
   public void setUp() {
-    ReflectionTestUtils.setField(applicationHeartbeat, "judgerUsername", "judger");
-    ReflectionTestUtils.setField(applicationHeartbeat, "judgerPassword", "secret");
     ReflectionTestUtils.setField(applicationHeartbeat, "judgerDescription", "Test Judger");
-    ReflectionTestUtils.setField(applicationHeartbeat, "judgerUid", 1001L);
+    when(judgerAccount.getUid()).thenReturn(1001L);
     when(dispatcher.isReady()).thenReturn(true);
   }
 
@@ -98,19 +91,15 @@ public class ApplicationHeartbeatTest {
   }
 
   /**
-   * Test case: tests the run method. Test data: a judger that supports no language, and one whose
-   * dispatcher is not ready (e.g. too many of its judgings in a row failed). Expected result:
-   * neither is recorded ready.
+   * Test case: tests the run method. Test data: a judger whose dispatcher is not ready (e.g. too
+   * many of its judgings in a row failed). Expected result: it is recorded not ready.
    */
   @Test
   public void testRunRecordsAJudgerThatTakesNothingAsNotReady() {
-    applicationHeartbeat.run();
     applicationHeartbeat.setLanguageIds(List.of(2));
     when(dispatcher.isReady()).thenReturn(false);
     applicationHeartbeat.run();
 
-    verify(judgerMapper)
-        .recordHeartbeat(anyString(), eq(1001L), anyString(), eq(""), eq(false), anyInt(), anyInt());
     verify(judgerMapper)
         .recordHeartbeat(
             anyString(), eq(1001L), anyString(), eq("2"), eq(false), anyInt(), anyInt());
@@ -141,37 +130,14 @@ public class ApplicationHeartbeatTest {
     verify(judgerMapper, times(2)).deleteStoppedJudgers();
   }
 
-  /**
-   * Test case: tests the isIdentityValid method. Test data: the judger's account, with the right
-   * and a wrong password. Expected result: only the right password is valid, and the heartbeats
-   * are recorded by the uid of the account.
-   */
-  @Test
-  public void testIsIdentityValid() {
-    UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
-    Language language = new Language("cpp", "C++", "g++", "./a.out");
-    User user = new User("judger", "{bcrypt}stored-hash", "judger@voj.org", userGroup, language);
-    user.setUid(1234);
-    when(userMapper.getUserUsingUsername("judger")).thenReturn(user);
-    when(passwordEncoder.matches("secret", "{bcrypt}stored-hash")).thenReturn(true);
-
-    Assertions.assertTrue(applicationHeartbeat.isIdentityValid());
-    Assertions.assertEquals(1234L, ReflectionTestUtils.getField(applicationHeartbeat, "judgerUid"));
-    ReflectionTestUtils.setField(applicationHeartbeat, "judgerPassword", "wrong");
-    Assertions.assertFalse(applicationHeartbeat.isIdentityValid());
-  }
-
   /** The mocked JudgerMapper object. */
   @Mock private JudgerMapper judgerMapper;
 
   /** The mocked Dispatcher object. */
   @Mock private Dispatcher dispatcher;
 
-  /** The mocked UserMapper object. */
-  @Mock private UserMapper userMapper;
-
-  /** The mocked password encoder. */
-  @Mock private PasswordEncoder passwordEncoder;
+  /** The mocked account of the judger. */
+  @Mock private JudgerAccount judgerAccount;
 
   /** The ApplicationHeartbeat object under test. */
   @InjectMocks private ApplicationHeartbeat applicationHeartbeat;

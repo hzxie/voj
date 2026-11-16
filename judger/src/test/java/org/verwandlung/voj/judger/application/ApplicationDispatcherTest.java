@@ -109,8 +109,12 @@ public class ApplicationDispatcherTest {
   @Test
   public void testClaimSubmissionClaimsTheNextOne() throws Exception {
     when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L, 101L);
-    when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(0);
-    when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(1);
+    when(submissionMapper.claimSubmission(
+            eq(100L), anyLong(), eq(1001L), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON)))
+        .thenReturn(0);
+    when(submissionMapper.claimSubmission(
+            eq(101L), anyLong(), eq(1001L), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON)))
+        .thenReturn(1);
     Submission pending = new Submission();
     pending.setSubmissionId(101L);
     when(submissionMapper.getSubmission(101L)).thenReturn(pending);
@@ -122,10 +126,10 @@ public class ApplicationDispatcherTest {
     org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(submissionMapper);
     inOrder
         .verify(submissionMapper)
-        .claimSubmission(eq(100L), claimTokenCaptor.capture(), any(), eq(60L), any());
+        .claimSubmission(eq(100L), claimTokenCaptor.capture(), anyLong(), eq(60L), any());
     inOrder
         .verify(submissionMapper)
-        .claimSubmission(eq(101L), claimTokenCaptor.capture(), any(), eq(60L), any());
+        .claimSubmission(eq(101L), claimTokenCaptor.capture(), anyLong(), eq(60L), any());
     inOrder.verify(submissionMapper).getSubmission(101L);
     List<Long> claimTokens = claimTokenCaptor.getAllValues();
     Assertions.assertNotEquals(claimTokens.get(0), claimTokens.get(1));
@@ -142,7 +146,8 @@ public class ApplicationDispatcherTest {
     when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(null);
 
     Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, 60));
-    verify(submissionMapper, never()).claimSubmission(anyLong(), anyLong(), any(), anyLong(), any());
+    verify(submissionMapper, never())
+        .claimSubmission(anyLong(), anyLong(), anyLong(), anyLong(), any());
   }
 
   /**
@@ -451,6 +456,7 @@ public class ApplicationDispatcherTest {
   @BeforeEach
   public void setUp() {
     when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(1);
+    when(judgerAccount.getUid()).thenReturn(1001L);
   }
 
   /** The claim token of the judgings of the tests. */
@@ -467,6 +473,9 @@ public class ApplicationDispatcherTest {
 
   /** The mocked JudgeResultMapper object. */
   @Mock private JudgeResultMapper judgeResultMapper;
+
+  /** The mocked account of the judger. */
+  @Mock private JudgerAccount judgerAccount;
 
   /** The ApplicationDispatcher object under test. */
   @InjectMocks private ApplicationDispatcher applicationDispatcher;

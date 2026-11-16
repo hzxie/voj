@@ -143,11 +143,11 @@ public class SubmissionMapperTest {
   @Test
   public void testExpiredLeaseIsClaimedAgain() {
     setPending(1000, "2020-01-01 00:00:00");
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1001L, 60, INTERRUPTED));
     expireLease(1000);
 
     Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, 1001L, 60, INTERRUPTED));
     Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getFailedJudgings());
     Assertions.assertEquals(INTERRUPTED, submissionMapper.getSubmission(1000).getLastFailure());
     Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
@@ -239,7 +239,7 @@ public class SubmissionMapperTest {
   @Test
   public void testSupersededJudgingIsStopped() {
     setPending(1000, "2020-01-01 00:00:00");
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1001L, 60, INTERRUPTED));
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
     // A renewal within the same second as the previous one counts too.
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
@@ -248,7 +248,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
     Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 9L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 9L, 1001L, 60, INTERRUPTED));
     Assertions.assertEquals(0, submissionMapper.getSubmission(1000).getFailedJudgings());
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 9L, 3600));
     Assertions.assertTrue(

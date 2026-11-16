@@ -117,7 +117,7 @@ public interface SubmissionMapper {
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging, a random number
-   * @param judgerUid - the uid of the judger, or null if unknown
+   * @param judgerUid - the uid of the judger's account
    * @param leaseSeconds - how long the lease lasts, in seconds
    * @param interruptedReason - the reason of a failed judging whose lease expired
    * @return 1 if the submission is now claimed by the judging, 0 if it was not to be claimed (any
@@ -138,7 +138,7 @@ public interface SubmissionMapper {
   int claimSubmission(
       @Param("submissionId") long submissionId,
       @Param("claimToken") long claimToken,
-      @Param("judgerUid") Long judgerUid,
+      @Param("judgerUid") long judgerUid,
       @Param("leaseSeconds") long leaseSeconds,
       @Param("interruptedReason") String interruptedReason);
 

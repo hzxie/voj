@@ -455,10 +455,8 @@ public class JudgingQueueTest {
   @BeforeEach
   public void setUpJudger() throws Exception {
     messageSender = mock(MessageSender.class);
-    ApplicationDispatcher judgerApplication = new ApplicationDispatcher();
-    ReflectionTestUtils.setField(judgerApplication, "submissionMapper", submissionMapper);
-    ReflectionTestUtils.setField(judgerApplication, "judgeResultMapper", judgeResultMapper);
-    ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
+    ApplicationDispatcher judgerApplication = newApplicationDispatcher(messageSender);
+    applicationDispatcher = newApplicationDispatcher(mock(MessageSender.class));
 
     checkpointStore = mock(CheckpointStore.class);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-judging-queue-tests"));
@@ -477,6 +475,23 @@ public class JudgingQueueTest {
     ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
     ReflectionTestUtils.setField(dispatcher, "isJudging", true);
+  }
+
+  /**
+   * Creates the application dispatcher of a judger, on the database of the tests.
+   *
+   * @param messageSender - its messages
+   * @return the application dispatcher
+   */
+  private ApplicationDispatcher newApplicationDispatcher(MessageSender messageSender) {
+    JudgerAccount judgerAccount = mock(JudgerAccount.class);
+    when(judgerAccount.getUid()).thenReturn(1001L);
+    ApplicationDispatcher judgerApplication = new ApplicationDispatcher();
+    ReflectionTestUtils.setField(judgerApplication, "submissionMapper", submissionMapper);
+    ReflectionTestUtils.setField(judgerApplication, "judgeResultMapper", judgeResultMapper);
+    ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
+    ReflectionTestUtils.setField(judgerApplication, "judgerAccount", judgerAccount);
+    return judgerApplication;
   }
 
   /**
@@ -586,7 +601,7 @@ public class JudgingQueueTest {
   private MessageSender messageSender;
 
   /** Another judger, which claims the submissions with the claim statements of the judger. */
-  @Autowired private ApplicationDispatcher applicationDispatcher;
+  private ApplicationDispatcher applicationDispatcher;
 
   /** The SubmissionMapper of the judgers. */
   @Autowired private SubmissionMapper submissionMapper;

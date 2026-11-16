@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
+import org.verwandlung.voj.judger.application.JudgerAccount;
 import org.verwandlung.voj.judger.core.CheckpointStore;
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.core.SandboxAccountLock;
@@ -70,6 +71,7 @@ public class VojJudgerApplication {
    * pending submissions.
    *
    * @param languageMapper - the data access object for programming languages
+   * @param judgerAccount - the account of the judger, checked first
    * @param heartbeat - the heartbeat task
    * @param sandboxAccountLock - the lock that keeps other judgers off this judger's sandbox account
    * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
@@ -81,6 +83,7 @@ public class VojJudgerApplication {
   @Bean
   public ApplicationRunner startupRunner(
       LanguageMapper languageMapper,
+      JudgerAccount judgerAccount,
       ApplicationHeartbeat heartbeat,
       SandboxAccountLock sandboxAccountLock,
       CheckpointStore checkpointStore,
@@ -97,7 +100,7 @@ public class VojJudgerApplication {
       // Fail fast: verify the judger's credentials against the shared user table before taking any
       // submission. Otherwise a misconfigured judger would accept submissions and abort them
       // mid-judging (leaving them stuck) once the heartbeat later detected the bad credentials.
-      if (!heartbeat.isIdentityValid()) {
+      if (!judgerAccount.authenticate()) {
         LOGGER.error("Unauthorized: please check judger.username / judger.password. Shutting down.");
         System.exit(-1);
       }
