@@ -28,9 +28,10 @@ Highlights:
   inside a Job Object that caps the process count and enforces resource limits.
 - **Real-time feedback** streamed to the browser with Server-Sent Events (SSE), so
   results appear progressively as each test case finishes.
-- **Horizontally scalable judging.** The web app and the judgers are decoupled
-  through an [Apache ActiveMQ](https://activemq.apache.org/) queue, so you can run
-  as many judgers in parallel as you need.
+- **Horizontally scalable judging.** The judgers take the pending submissions
+  from the shared database and stream their progress to the web app through
+  [Apache ActiveMQ](https://activemq.apache.org/), so you can run as many judgers
+  in parallel as you need.
 - **Contests** and **internationalization** (English and Chinese) out of the box.
 
 It is built on [Spring Boot](https://spring.io/projects/spring-boot) with the
@@ -39,7 +40,7 @@ It is built on [Spring Boot](https://spring.io/projects/spring-boot) with the
 ### Architecture
 
 Verwandlung has two components, the **web application** and one or more
-**judgers**, communicating over ActiveMQ:
+**judgers**, sharing the database and communicating over ActiveMQ:
 
 ![Software Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.webp)
 

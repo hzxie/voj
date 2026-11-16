@@ -38,19 +38,28 @@ Email (verification, password reset, notifications) is disabled when `mail.host`
 
 ### Message queue
 
-The web app survives a restart of an external broker: its listeners (the judgers'
-messages, the dead-letter queue) try to reconnect every 5 seconds until the broker
-is back, and the next judging task after the restart is sent over a new connection.
+The judgers stream the progress of their judgings (shown live on a submission's
+page) and their heartbeats to the web app over the message queue; the web app
+sends nothing. It survives a restart of an external broker: its listener tries
+to reconnect every 5 seconds until the broker is back.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app publishes judging tasks to. |
-| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) of a judging task: how long a submission may wait for a judger to take it. Every minute the web app marks as a System Error each pending submission that no judger took within this window after its task was queued (no running judger supports its language, all of them were busy, or the task was lost, e.g. when it could not be sent); an administrator can rejudge it. Keep it generous: a busy or briefly offline (but capable) cluster must not fail valid submissions. It does not limit how long a judging may take once a judger took the submission (see `judging.leaseTimeout`). `0` (or less): tasks never expire, and a submission waits for a judger as long as it takes. |
-| `judging.leaseTimeout` | `600000` | How long (ms) a judging may go without renewing its lease. The judger that took a submission renews its lease after each step of the judging: the download of the test data, the compilation, and the run of each checkpoint. Every minute the web app marks as a System Error each pending submission whose lease is older than this (the judger stopped, or could not reach the database), however long the judging as a whole takes; the judging, should it still be running, stops at its next step. It must exceed the longest step: a download (`judger.web.downloadTimeout`, 300 s by default), a compilation (`judger.compileTimeLimit` of CPU time, and at most three times that plus a second of wall-clock time) and the run of one checkpoint (at most three times the problem's time limit, scaled by the language's time multiplier, plus a second). Must be positive. |
+| `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app receives the judgers' messages from. |
 
-Both times are measured by the database's clock: the web app sets the queued
-time, and the judger the lease, with `NOW()`, so the clocks of the hosts do not
-matter.
+### Judging queue
+
+The queue of the submissions to judge is the database: a pending submission
+waits in `voj_submissions` until a judger that supports its language takes it
+(see [Judging queue](#judging-queue-1) of the judger).
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `judging.maxWait` | `1800000` | How long (ms) a submission may wait for a judger to take it. Every minute the web app marks as a System Error each pending submission that no judger took within this time after it was submitted or rejudged (no running judger supports its language, or all of them were busy for that long); an administrator can rejudge it. Keep it longer than the longest queue you expect, so that a busy cluster does not fail valid submissions. It does not limit a submission a judger took: the judgers retry that one until `judging.maxAttempts` of the judger. `0` (or less): a submission waits for a judger as long as it takes. |
+
+The wait is measured by the database's clock: the web app sets the queued time
+of a submission, and checks it, with `NOW()`, so the clocks of the hosts do not
+matter. The live view of a submission it marks ends with the System Error.
 
 ### Checkpoint distribution
 
@@ -74,39 +83,47 @@ settings above. Judger-specific keys:
 
 ### Message queue
 
-The judger dials the same `jms.broker.url` as the web app, a plain `tcp://` URL.
-It is built to share the queue with other judgers and to survive the broker
-going away (in the Docker setup the broker lives in the web container, so it
-restarts with it):
+The judger dials the same `jms.broker.url` as the web app, a plain `tcp://` URL,
+and sends the progress of its judgings and its heartbeats there. When the broker
+goes away (in the Docker setup it lives in the web container, so it restarts
+with it), a message that cannot be sent is dropped and the next one is sent over
+a new connection: the verdicts are in the database, the messages only stream
+the progress.
 
-- When the broker becomes unreachable, the judger tries to reconnect every 5
-  seconds until it is back, then receives tasks and sends results again.
-- It takes a judging task only once it is idle (no prefetch), so a busy judger
-  never holds back tasks that another judger could judge meanwhile.
-- A task is acknowledged only after its verdict (or a System Error) has been
-  recorded. If that is impossible, e.g. while the database is down, if the
-  test data cannot be downloaded for now (the web app restarting or
-  unreachable, a 5xx status, 408 or 429, a download that times out), or
-  if the judger dies while judging, the task goes back to the broker, which
-  delivers it again to whichever judger asks for a task first. The judger whose
-  judging failed waits before it asks again, 10 s after a failure and twice as
-  long after each further failure in a row (up to 160 s), so an idle judger
-  takes the task first, and a judger on its own retries it with a growing
-  delay (10 s, 20 s, 40 s, ...). A task is delivered at most 6 times (5
-  redeliveries). On its last delivery, a judging that could succeed later
-  (e.g. the test data cannot be downloaded) is judged a System Error that says
-  why, instead of being handed back. A judger that hands a task back releases
-  the submission, which waits for a judger again. A task that is handed back
-  nevertheless (the database is down, the judger dies) or expires
-  (`jms.submissionTask.ttl`) ends on `ActiveMQ.DLQ`, from which the web app
-  removes it; the submission is marked as a System Error once no judger took it
-  in time, or its judging stopped renewing its lease (see
-  `jms.submissionTask.ttl` and `judging.leaseTimeout`).
+### Judging queue
+
+The judger takes the pending submissions from the database, in the languages
+whose compilers it found at startup, the one submitted (or rejudged) first
+first, and judges one at a time. Any number of judgers can share the database:
+
+- A judger claims a submission with a statement that only one judger can
+  succeed with; the claim counts as an attempt and gives the judging a lease.
+- While the judging runs, the judger renews its lease in the background every
+  quarter of `judging.leaseTimeout`, however long a compilation or a run takes.
+  A step itself is bounded by the sandbox's limits, e.g. at most three times
+  the time limit of a run, plus a second, of wall-clock time.
+- When the lease expired, any judger takes the submission again, as another
+  attempt: its judger stopped or lost the database, or its judging failed for a
+  reason likely gone later (the test data cannot be downloaded for now: the web
+  app restarting or unreachable, a 5xx status, 408 or 429, a download that
+  times out), which the lease timeout gives time to recover.
+- On its last attempt (`judging.maxAttempts`), such a judging judges the
+  submission a System Error that says why instead; a submission whose last
+  attempt stopped without an outcome is judged a System Error by the judger
+  that takes it next.
 - A judging stops, without recording a verdict or sending anything more, once
   it finds (when it renews its lease) that it was superseded: the submission was
-  rejudged, taken by a later delivery of the same task, or marked as a System
-  Error. The web app shows the messages of the current judging of a submission
-  only.
+  rejudged, or taken by another judging as its lease had expired. The web app
+  shows the messages of the current judging of a submission only.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `judging.pollInterval` | `2000` | How long (ms) an idle judger waits before it looks for a pending submission again. |
+| `judging.leaseTimeout` | `60000` | How long (ms) the lease of a judging lasts; it is renewed every quarter of it. A submission whose judger stopped is judged again after at most this long. Must be positive. |
+| `judging.maxAttempts` | `3` | How many times judgers may take a submission before it is judged a System Error. Must be positive. |
+
+The lease is measured by the database's clock (`NOW()`), so the clocks of the
+hosts do not matter.
 
 ### Identity
 
@@ -127,7 +144,7 @@ restarts with it):
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app has no test data for (HTTP 404), or an archive that is malformed, is a System Error; any other failed download is retried (see [Message queue](#message-queue)). |
+| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app has no test data for (HTTP 404), or an archive that is malformed, is a System Error; any other failed download is retried (see [Judging queue](#judging-queue-1)). |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
 | `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403), so every submission is judged a System Error at once, whose judge log says the judger was refused and to check `judger.apiToken`; the judger logs an error at startup when it is empty. (Any client error but 404, 408 and 429 is such a refusal; 404 means the problem has no test data.) The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
