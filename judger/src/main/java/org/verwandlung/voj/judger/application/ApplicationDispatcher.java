@@ -151,18 +151,40 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Releases a submission at its place in the queue, without counting a failed judging, so that
-   * another judger takes it at once: its judging stops as this judger shuts down, or failed for a
-   * reason of the judger or its environment (see {@code Dispatcher}). A judging that was superseded
-   * meanwhile releases nothing.
+   * Releases a submission whose judging failed for a reason of the judger or its environment (see
+   * {@code Dispatcher}), to the end of the queue, without counting a failed judging on it: a
+   * submission whose judgings fail that way every time holds no other submission up. A judging that
+   * was superseded meanwhile releases nothing.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return whether the submission was released
    */
   public boolean releaseSubmission(Submission submission) {
-    return submissionMapper.releaseSubmission(
-            submission.getSubmissionId(), submission.getClaimToken())
-        == 1;
+    return release(submission.getSubmissionId(), submission.getClaimToken(), false);
+  }
+
+  /**
+   * Releases a submission whose judging stops as this judger shuts down, at its place in the queue,
+   * without counting a failed judging on it, so that another judger takes it at once. A judging
+   * that was superseded meanwhile releases nothing.
+   *
+   * @param submission - the submission, claimed by {@link #claimSubmission}
+   * @return whether the submission was released
+   */
+  public boolean handBackSubmission(Submission submission) {
+    return release(submission.getSubmissionId(), submission.getClaimToken(), true);
+  }
+
+  /**
+   * Releases a submission that a judging claimed, without counting a failed judging on it.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging
+   * @param keepsPlace - whether it keeps its place in the queue, rather than going to the end
+   * @return whether the submission was released
+   */
+  private boolean release(long submissionId, long claimToken, boolean keepsPlace) {
+    return submissionMapper.releaseSubmission(submissionId, claimToken, keepsPlace) == 1;
   }
 
   /**

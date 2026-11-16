@@ -111,8 +111,9 @@ public interface SubmissionMapper {
    * one does.
    *
    * <p>A submission that still has a claim token was held by a judging whose lease expired: its
-   * judger stopped (or was killed, or lost the database) while judging it. That judging failed, which is counted here, with its reason (both are set first,
-   * while the claim token is still the old one). A submission a judging released (see {@link
+   * judger stopped (or was killed, or lost the database) while judging it. That judging failed,
+   * which is counted here, with its reason (both are set first, while the claim token is still the
+   * old one). A submission a judging released (see {@link
    * #releaseSubmission} and {@link #requeueSubmission}), or that was rejudged, has none.
    *
    * @param submissionId - the unique identifier of the submission
@@ -165,28 +166,37 @@ public interface SubmissionMapper {
       @Param("leaseSeconds") long leaseSeconds);
 
   /**
-   * Releases a submission whose judging stops as its judger shuts down, or failed for a reason of
-   * the judger or its environment: it is pending and held by no judging again, at its place in the
-   * queue, so that the next judger that looks takes it. The judging is not counted as a failed one.
+   * Releases a submission without counting a failed judging: it is pending and held by no judging
+   * again. A judging that failed for a reason of the judger or its environment releases it to the
+   * end of the queue (its queued time is now), so that a submission whose judgings fail that way
+   * every time (e.g. its test data cannot be read) holds no other submission up; one that stops as
+   * its judger shuts down releases it at its place, for the next judger that looks to take it.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging
+   * @param keepsPlace - whether it keeps its place in the queue, rather than going to the end
    * @return 1 if the submission was released, 0 if the judging was superseded meanwhile
    */
-  @Update(
-      "UPDATE voj_submissions SET submission_claim_token = NULL,"
-          + " submission_lease_expiry_time = NULL, submission_execute_time = NULL,"
-          + " judger_uid = NULL"
-          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_claim_token = #{claimToken}")
+  @Update({
+    "<script>",
+    "UPDATE voj_submissions SET submission_claim_token = NULL,",
+    " submission_lease_expiry_time = NULL, submission_execute_time = NULL, judger_uid = NULL",
+    " <if test='!keepsPlace'>, submission_queued_time = NOW()</if>",
+    " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'",
+    " AND submission_claim_token = #{claimToken}",
+    "</script>"
+  })
   @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
   int releaseSubmission(
-      @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
+      @Param("submissionId") long submissionId,
+      @Param("claimToken") long claimToken,
+      @Param("keepsPlace") boolean keepsPlace);
 
   /**
    * Releases a submission whose judging failed in a way it may have caused (see {@code
-   * Dispatcher}): it is pending and held by no judging again, at the end of the queue (its queued time is now), so that it holds no other
-   * submission up, and the failed judging is counted, with its reason.
+   * Dispatcher}): it is pending and held by no judging again, at the end of the queue (its queued
+   * time is now), so that it holds no other submission up, and the failed judging is counted, with
+   * its reason.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging

@@ -175,12 +175,14 @@ two ways:
   `judger.web.baseUrl`, an archive that is malformed) or read, the source code
   cannot be written, or the database is unreachable when the verdict is recorded
   (it is tried 3 times within a few seconds first). The judger releases the
-  submission at its place in the queue and counts nothing on it, so an outage
-  of the web app or the database does not use up its budget (a submission that
-  cannot even be released, as the database is down, is left to its lease, which
-  counts one failed judging). The judgers then soon are not ready, and an
-  outage longer than `judging.noJudgerTimeout` of the web app has the waiting
-  submissions judged a System Error (see [Judging queue](#judging-queue)).
+  submission to the end of the queue and counts nothing on it, so an outage of
+  the web app or the database does not use up its budget, and a submission whose
+  judgings fail this way every time (e.g. as its test data is broken) holds no
+  other submission up. A submission that cannot even be released, as the
+  database is down, is left to its lease, which counts one failed judging. The
+  judgers then soon are not ready, and an outage longer than
+  `judging.noJudgerTimeout` of the web app has the waiting submissions judged a
+  System Error (see [Judging queue](#judging-queue)).
 
 Two budgets, independent of each other, keep failed judgings from going on for
 ever:
@@ -220,7 +222,7 @@ clocks of the hosts do not matter.
 | --- | --- | --- |
 | `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app says it has no test data for (HTTP 404 with the header `X-Checkpoints-Missing`) is a System Error; any other failed download (a wrong URL, whose 404 has no such header, included) is a failed judging (see [Judging queue](#judging-queue-1)), and the judger logs the status and, for a 404, to check this setting. |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
-| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403 or 401): every judging of the judger that needs test data it has not cached fails (the submission is released at its place in the queue, without counting the judging on it, for another judger), the judger logs the status and to check `judger.apiToken`, and after three failed judgings in a row it is not ready (it takes no submission but a retry every minute at most); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. The web application refuses tokens shorter than 16 characters. The web Docker image generates one when none is given, and `docker-compose.yml` requires it in `.env`; use a long random string. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403 or 401): every judging of the judger that needs test data it has not cached fails (the submission is released to the end of the queue, without counting the judging on it, for another judger), the judger logs the status and to check `judger.apiToken`, and after three failed judgings in a row it is not ready (it takes no submission but a retry every minute at most); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. The web application refuses tokens shorter than 16 characters. The web Docker image generates one when none is given, and `docker-compose.yml` requires it in `.env`; use a long random string. |
 
 ### Sandbox
 

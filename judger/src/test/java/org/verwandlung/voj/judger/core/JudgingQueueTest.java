@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -326,9 +327,10 @@ public class JudgingQueueTest {
   /**
    * Test case: a judger whose downloads of the test data all fail with an HTTP 404 that the web
    * application did not mark (its judger.web.baseUrl is wrong). Test data: three pending
-   * submissions in C++. Expected result: each failed judging releases the first one at its place,
-   * without counting it there, so the judger takes it again; it is not ready after as many failed
-   * judgings in a row as allowed, and neither judges nor counts anything on any submission.
+   * submissions in C++. Expected result: each failed judging releases its submission to the end of
+   * the queue, without counting it there, so the judger takes each of them in turn; it is not
+   * ready after as many failed judgings in a row as allowed, and neither judges nor counts anything
+   * on any submission.
    */
   @Test
   public void testAJudgerWhoseDownloadsFailIsNotReadyWithoutFailingSubmissions()
@@ -352,9 +354,36 @@ public class JudgingQueueTest {
       Assertions.assertEquals("PD", row.get("submission_judge_result"), row.toString());
       Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
       Assertions.assertNull(row.get("submission_claim_token"));
+      // Each was taken once, and released to the end of the queue.
+      Assertions.assertTrue(
+          ((Number) row.get("queued_seconds_ago")).longValue() <= 5, row.toString());
     }
-    Assertions.assertEquals(
-        submissionIds.get(0), applicationDispatcher.claimSubmission(CPP, 60).getSubmissionId());
+  }
+
+  /**
+   * Test case: the judgings of a submission fail for a reason of the judger every time (e.g. its
+   * source cannot be written), while another submission waits behind it. Test data: two pending
+   * submissions in C++, the failing one queued first. Expected result: the failed judging sends the
+   * failing submission to the end of the queue without counting it there, so that the other one is
+   * judged next.
+   */
+  @Test
+  public void testASubmissionWhoseJudgingsFailForTheJudgerHoldsUpNoOther() throws Exception {
+    long failing = insertPendingSubmission(FIRST_SUBMISSION_ID, 120);
+    long other = insertPendingSubmission(FIRST_SUBMISSION_ID + 1, 60);
+    doThrow(new java.io.IOException("Permission denied"))
+        .when(preprocessor)
+        .createTestCode(argThat(submission -> submission.getSubmissionId() == failing), anyString());
+    when(compiler.getCompileResult(any(), anyString())).thenReturn(compileResult(false));
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+    Map<String, Object> row = getRow(failing);
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertTrue(
+        ((Number) row.get("queued_seconds_ago")).longValue() <= 5, row.toString());
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+    Assertions.assertEquals("CE", getRow(other).get("submission_judge_result"));
   }
 
   /**
@@ -381,8 +410,8 @@ public class JudgingQueueTest {
    * Test case: the web application cannot be reached from the judger (e.g. while it restarts), for
    * longer than as many judgings as a submission may fail. Test data: a pending submission in C++,
    * queued an hour ago. Expected result: each judging fails and releases the submission at once,
-   * pending and held by no judging, at its place in the queue, without counting anything on it;
-   * once the web application is back, the submission is judged.
+   * pending and held by no judging, to the end of the queue, without counting anything on it; once
+   * the web application is back, the submission is judged.
    */
   @Test
   public void testAnOutageDoesNotCountOnTheSubmission() throws Exception {
@@ -400,7 +429,7 @@ public class JudgingQueueTest {
     Assertions.assertNull(row.get("submission_claim_token"));
     Assertions.assertNull(row.get("submission_lease_expiry_time"));
     Assertions.assertTrue(
-        ((Number) row.get("queued_seconds_ago")).longValue() >= 3500, row.toString());
+        ((Number) row.get("queued_seconds_ago")).longValue() <= 5, row.toString());
     verify(messageSender, never()).sendMessage(any());
 
     org.mockito.Mockito.reset(checkpointStore);
@@ -455,11 +484,12 @@ public class JudgingQueueTest {
         .thenReturn(List.of(new Checkpoint(1000L, 1, true, 100, "input", "output")));
     compiler = mock(Compiler.class);
     programRunner = mock(ProgramRunner.class);
+    preprocessor = mock(Preprocessor.class);
     Judge judge =
         new Judge(
             judgerApplication,
             checkpointStore,
-            mock(Preprocessor.class),
+            preprocessor,
             compiler,
             programRunner,
             mock(Comparator.class));
@@ -578,6 +608,9 @@ public class JudgingQueueTest {
 
   /** The mocked test data of that judger. */
   private CheckpointStore checkpointStore;
+
+  /** The mocked preprocessor of that judger, which writes the source. */
+  private Preprocessor preprocessor;
 
   /** The mocked compiler of that judger. */
   private Compiler compiler;

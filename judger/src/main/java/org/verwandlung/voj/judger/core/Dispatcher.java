@@ -51,10 +51,14 @@ import org.verwandlung.voj.judger.model.Submission;
  *       {@value #MAX_FAILED_JUDGINGS} failed judgings judges it a System Error that gives the
  *       reason of the last one.
  *   <li>One of the judger or its environment: the test data cannot be downloaded or read, the
- *       source code cannot be written, the database is unreachable. The submission is released at
- *       its place in the queue without counting anything on it, so that an outage of the web
- *       application or the database does not use up the budget of a submission.
+ *       source code cannot be written, the database is unreachable. The submission is released to
+ *       the end of the queue without counting anything on it, so that an outage of the web
+ *       application or the database does not use up the budget of a submission, and a submission
+ *       that fails this way every time (e.g. its test data is broken) holds no other one up.
  * </ul>
+ *
+ * <p>Only a judging that stops as its judger shuts down releases its submission at its place in the
+ * queue (see {@link #destroy}).
  *
  * <p>Either kind counts on the judger: after a failed judging it pauses (see {@link #getPause}),
  * and after {@value #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a
@@ -225,7 +229,7 @@ public class Dispatcher implements DisposableBean {
       return;
     }
     try {
-      if (applicationDispatcher.releaseSubmission(submission)) {
+      if (applicationDispatcher.handBackSubmission(submission)) {
         LOGGER.info(
             String.format(
                 "Released submission #%d, whose judging stops as this judger shuts down.",
@@ -265,7 +269,7 @@ public class Dispatcher implements DisposableBean {
     try {
       if (isStopping) {
         // The judger started to shut down while it claimed the submission (see #destroy).
-        applicationDispatcher.releaseSubmission(submission);
+        applicationDispatcher.handBackSubmission(submission);
       } else {
         judgeSubmission(submission);
       }
@@ -351,10 +355,9 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Records a failed judging (see {@link Dispatcher}): releases its submission, to the end of the
-   * queue counting the failure on it if the submission may have caused it, else at its place
-   * without counting anything on it, and counts it on this judger, which pauses (see {@link
-   * #getPause}).
+   * Records a failed judging (see {@link Dispatcher}): releases its submission to the end of the
+   * queue, counting the failure on it if the submission may have caused it, and counts it on this
+   * judger, which pauses (see {@link #getPause}).
    *
    * @param submission - the submission of the judging
    * @param failure - why the judging failed

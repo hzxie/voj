@@ -103,7 +103,7 @@ public class DispatcherTest {
   /**
    * Test case: judgings that fail for the judger or its environment: a failure of the judger, and
    * the database unreachable as the verdict is recorded. Expected result: each releases its
-   * submission at its place, counting nothing on it.
+   * submission (to the end of the queue), counting nothing on it.
    */
   @Test
   public void testAFailureOfTheJudgerReleasesTheSubmission() throws Exception {
@@ -118,6 +118,7 @@ public class DispatcherTest {
     verify(applicationDispatcher, times(2))
         .releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
+    verify(applicationDispatcher, never()).handBackSubmission(any());
   }
 
   /**
@@ -346,6 +347,7 @@ public class DispatcherTest {
     Assertions.assertEquals(List.of(Dispatcher.FATAL_ERROR_EXIT_STATUS), exitStatuses);
     Assertions.assertFalse(dispatcher.isReady());
     verify(applicationDispatcher, never()).releaseSubmission(any());
+    verify(applicationDispatcher, never()).handBackSubmission(any());
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
   }
@@ -385,7 +387,7 @@ public class DispatcherTest {
    */
   @Test
   public void testAShutdownReleasesTheSubmission() throws Exception {
-    when(applicationDispatcher.releaseSubmission(any())).thenReturn(true);
+    when(applicationDispatcher.handBackSubmission(any())).thenReturn(true);
     doAnswer(
             invocation -> {
               dispatcher.destroy();
@@ -396,7 +398,9 @@ public class DispatcherTest {
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    verify(applicationDispatcher).releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
+    verify(applicationDispatcher)
+        .handBackSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
+    verify(applicationDispatcher, never()).releaseSubmission(any());
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     Assertions.assertFalse(dispatcher.isReady());
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));

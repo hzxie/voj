@@ -162,16 +162,20 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the releaseSubmission method. Test data: a judging that is still current, then
-   * one that was superseded. Expected result: the submission of the judging's claim token is
-   * released, and whether it was is returned.
+   * Test case: tests the releaseSubmission and handBackSubmission methods. Test data: a judging
+   * that is still current, then one that was superseded. Expected result: the submission of the
+   * judging's claim token is released, to the end of the queue after a failed judging and at its
+   * place as the judger shuts down, and whether it was is returned.
    */
   @Test
   public void testReleaseSubmission() throws Exception {
-    when(submissionMapper.releaseSubmission(100L, CLAIM_TOKEN)).thenReturn(1, 0);
+    when(submissionMapper.releaseSubmission(100L, CLAIM_TOKEN, false)).thenReturn(1, 0);
+    when(submissionMapper.releaseSubmission(100L, CLAIM_TOKEN, true)).thenReturn(1, 0);
 
     Assertions.assertTrue(applicationDispatcher.releaseSubmission(submission()));
     Assertions.assertFalse(applicationDispatcher.releaseSubmission(submission()));
+    Assertions.assertTrue(applicationDispatcher.handBackSubmission(submission()));
+    Assertions.assertFalse(applicationDispatcher.handBackSubmission(submission()));
   }
 
   /**

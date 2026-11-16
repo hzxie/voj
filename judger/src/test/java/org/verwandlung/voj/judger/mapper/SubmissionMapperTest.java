@@ -157,7 +157,8 @@ public class SubmissionMapperTest {
 
   /**
    * Test case: tests the releaseSubmission method. Test data: a submission claimed by a judging
-   * after an interrupted one, which releases it (as its judger shuts down). Expected result: it
+   * after an interrupted one, which releases it at its place (as its judger shuts down). Expected
+   * result: it
    * holds no claim token, lease, start time or judger any more and is the next one again, at its
    * place in the queue; the judging that claims it next counts no further failed judging, and a
    * release by the superseded judging changes nothing.
@@ -169,7 +170,7 @@ public class SubmissionMapperTest {
     expireLease(1000);
     Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60, INTERRUPTED));
 
-    Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L));
+    Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L, true));
     Map<String, Object> released =
         jdbcTemplate()
             .queryForMap(
@@ -189,8 +190,35 @@ public class SubmissionMapperTest {
 
     Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
     Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getFailedJudgings());
-    Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 7L));
+    Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 7L, true));
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 8L, 60));
+  }
+
+  /**
+   * Test case: tests the releaseSubmission method. Test data: pending submissions #1000 and #1002
+   * in C++, #1000 queued first and claimed by a judging that fails for a reason of the judger.
+   * Expected result: #1000 is released to the end of the queue, after #1002, held by no judging and
+   * without a failed judging counted on it.
+   */
+  @Test
+  public void testReleasedSubmissionGoesToTheEndOfTheQueue() {
+    setPending(1000, "2020-01-01 00:00:00");
+    setPending(1002, "2020-01-02 00:00:00");
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60, INTERRUPTED));
+
+    Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L, false));
+    Assertions.assertEquals(1002L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(
+        1L,
+        jdbcTemplate()
+            .queryForObject(
+                "SELECT COUNT(*) FROM voj_submissions WHERE submission_id = 1000"
+                    + " AND submission_judge_result = 'PD' AND submission_judge_attempts = 0"
+                    + " AND submission_claim_token IS NULL"
+                    + " AND submission_lease_expiry_time IS NULL AND judger_uid IS NULL"
+                    + " AND ABS(TIMESTAMPDIFF(SECOND, submission_queued_time, NOW())) <= 5",
+                Long.class));
+    Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 7L, false));
   }
 
   /**
