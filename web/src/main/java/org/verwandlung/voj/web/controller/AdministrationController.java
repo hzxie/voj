@@ -1593,21 +1593,6 @@ public class AdministrationController {
   }
 
   /**
-   * Loads the programming language settings page.
-   *
-   * @param request - the HttpServletRequest object
-   * @param response - the HttpServletResponse object
-   * @return a ModelAndView object containing the programming language settings information
-   */
-  @RequestMapping(value = "/language-settings", method = RequestMethod.GET)
-  public ModelAndView languageSettingsView(
-      HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("pages/administration/language-settings");
-    view.addObject("languages", languageService.getAllLanguages());
-    return view;
-  }
-
-  /**
    * Updates the programming language settings of the website.
    *
    * @param languages - the array containing the programming language settings

@@ -80,7 +80,7 @@
                 <div class="adm-langcard-head">
                     <button type="button" role="switch" class="adm-switch sm lang-enabled" th:classappend="${language.enabled} ? 'on'"><span class="knob"></span></button>
                     <input class="adm-langname language-name" type="text" th:value="${language.languageName}" maxlength="16"
-                           th:aria-label="#{voj.administration.language-settings.language-name}" />
+                           th:aria-label="#{voj.administration.judgers.language-name}" />
                     <span class="ext" th:text="${language.languageSlug}">slug</span>
                     <div class="adm-flex1"></div>
                     <button type="button" class="del-lang" th:aria-label="#{voj.administration.include.remove} + ': ' + ${language.languageName}">&#10005;</button>
@@ -159,7 +159,7 @@
             pleaseWait:     [[#{voj.administration.judgers.please-wait}]],
             settingsSaved:  [[#{voj.administration.judgers.settings-saved}]],
             saveLabel:      [[#{voj.administration.judgers.save}]],
-            languageName:   [[#{voj.administration.language-settings.language-name}]],
+            languageName:   [[#{voj.administration.judgers.language-name}]],
             remove:         [[#{voj.administration.include.remove}]]
         };
     </script>

@@ -246,7 +246,6 @@ class ViewRenderSmokeTest {
         "/administration/problem-categories",
         "/administration/all-submissions",
         "/administration/general-settings",
-        "/administration/language-settings",
         "/administration/judgers",
         "/administration/all-bulletins",
         "/administration/new-bulletin",
