@@ -29,9 +29,9 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * The options every run of a submission gives a JVM it starts (Java, Kotlin, ...), so that the JVM
- * sizes itself to the run's limits rather than to the host. Every sandbox (the native ones on Linux
- * and Windows, and isolate) passes them in the environment variable {@value #ENVIRONMENT_VARIABLE},
- * which only the {@code java} launcher reads (JDK 9 and later): no other runtime or compiler is
+ * sizes itself to the run's limits rather than to the host. {@link SandboxPolicy} passes them in
+ * the environment variable {@value #ENVIRONMENT_VARIABLE}, which only the {@code java} launcher
+ * reads (JDK 9 and later): no other runtime or compiler is
  * affected, and no language's run command has to change. Options on the run command itself come
  * after them, and the last of an option given twice wins, so a command can set its own {@code -Xmx}
  * (or {@code -XX:ActiveProcessorCount}, ...) instead. A command that selects another collector
@@ -196,14 +196,12 @@ final class JavaOptions {
    * /usr/bin/env java} or {@code JAVA.EXE} would be missed, and a program of another language that
    * happens to be named {@code java} taken for one.
    *
-   * @param verdict - the verdict of the run
    * @param exitCode - the exit code of the run
    * @param outputFilePath - the file that holds the run's standard output ({@code null} for none)
    * @return whether the JVM of the run ran out of memory
    */
-  static boolean isOutOfMemoryExit(Verdict verdict, int exitCode, String outputFilePath) {
-    if (verdict != Verdict.RUNTIME_ERROR
-        || exitCode != OUT_OF_MEMORY_EXIT_CODE
+  static boolean isOutOfMemoryExit(int exitCode, String outputFilePath) {
+    if (exitCode != OUT_OF_MEMORY_EXIT_CODE
         || outputFilePath == null
         || outputFilePath.isEmpty()) {
       return false;

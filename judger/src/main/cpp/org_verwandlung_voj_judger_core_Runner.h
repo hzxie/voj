@@ -9,18 +9,34 @@ extern "C" {
 #endif
 /*
  * Class:     org_verwandlung_voj_judger_core_Runner
- * Method:    getRuntimeResult
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZILjava/lang/String;)Ljava/util/Map;
+ * Method:    execute
+ * Signature: ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZIIIIII)[I
  */
-JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult
-  (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jint, jint, jboolean, jint, jstring);
+JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute
+  (JNIEnv *, jobject, jobjectArray, jobjectArray, jstring, jstring, jstring, jboolean, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     org_verwandlung_voj_judger_core_Runner
- * Method:    closeSandboxSession
+ * Method:    selectSandboxAccount
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandboxAccount
+  (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     org_verwandlung_voj_judger_core_Runner
+ * Method:    logOnSandboxAccount
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_logOnSandboxAccount
+  (JNIEnv *, jclass, jstring, jstring);
+
+/*
+ * Class:     org_verwandlung_voj_judger_core_Runner
+ * Method:    logOffSandboxAccount
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_closeSandboxSession
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_logOffSandboxAccount
   (JNIEnv *, jclass);
 
 #ifdef __cplusplus

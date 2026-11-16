@@ -19,6 +19,7 @@ package org.verwandlung.voj.judger.core;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.util.AopTestUtils;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,7 +69,8 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testMemoryLimitExceeded() throws Exception {
-    Assertions.assertEquals("MLE", judge(900001L, MEMORY_BOMB_CODE, 5000, 65536));
+    Assertions.assertEquals(
+        Verdict.MEMORY_LIMIT_EXCEEDED, judge(900001L, MEMORY_BOMB_CODE, 5000, 65536));
   }
 
   /**
@@ -79,7 +80,8 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testSingleHugeAllocationIsMemoryLimitExceeded() throws Exception {
-    Assertions.assertEquals("MLE", judge(900015L, HUGE_ALLOCATION_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        Verdict.MEMORY_LIMIT_EXCEEDED, judge(900015L, HUGE_ALLOCATION_CODE, 5000, 262144));
   }
 
   /**
@@ -88,7 +90,7 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testAbortIsARuntimeError() throws Exception {
-    Assertions.assertEquals("RE", judge(900016L, ABORT_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, judge(900016L, ABORT_CODE, 5000, 262144));
   }
 
   /**
@@ -98,7 +100,8 @@ public class SandboxBehaviorTest {
   public void testTimeLimitExceeded() throws Exception {
     // No memory limit: this case is purely about the time limit, so it must not depend on the
     // sandbox's memory measurement.
-    Assertions.assertEquals("TLE", judge(900002L, INFINITE_LOOP_CODE, 1000, 0));
+    Assertions.assertEquals(
+        Verdict.TIME_LIMIT_EXCEEDED, judge(900002L, INFINITE_LOOP_CODE, 1000, 0));
   }
 
   /**
@@ -107,7 +110,7 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testExitZeroOverTheTimeLimit() throws Exception {
-    Assertions.assertEquals("TLE", judge(900013L, CPU_THREADS_CODE, 1000, 0));
+    Assertions.assertEquals(Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, 0));
   }
 
   /**
@@ -120,12 +123,14 @@ public class SandboxBehaviorTest {
   public void testOutputLimitExceeded() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     try {
-      Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144));
+      Assertions.assertEquals(
+          Verdict.OUTPUT_LIMIT_EXCEEDED, judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144));
       if (!isLinux()) {
         return;
       }
       Files.deleteIfExists(Path.of(workBaseDirectory, "voj-sandbox-900014", "output.txt"));
-      Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144, "ignore"));
+      Assertions.assertEquals(
+          Verdict.OUTPUT_LIMIT_EXCEEDED, judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144, "ignore"));
     } finally {
       Files.deleteIfExists(Path.of(workBaseDirectory, "voj-sandbox-900014", "output.txt"));
     }
@@ -140,7 +145,8 @@ public class SandboxBehaviorTest {
     // using little memory must be a Runtime Error, not MLE, even with a memory limit set. It used to
     // be reported with the JVM's resident memory (shared across the fork/exec window) and so was
     // misclassified MLE whenever the limit was below the judger JVM's footprint.
-    Assertions.assertEquals("RE", judge(900003L, RUNTIME_ERROR_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR, judge(900003L, RUNTIME_ERROR_CODE, 5000, 262144));
   }
 
   /**
@@ -181,8 +187,8 @@ public class SandboxBehaviorTest {
     Assumptions.assumeFalse(
         System.getProperty("os.name").contains("Windows"),
         "The fork-bomb test uses fork() and is POSIX-only.");
-    String slug = judge(900004L, FORK_BOMB_CODE, 2000, 262144);
-    Assertions.assertNotEquals("AC", slug, "A fork bomb must not be accepted.");
+    Verdict verdict = judge(900004L, FORK_BOMB_CODE, 2000, 262144);
+    Assertions.assertNotEquals(Verdict.NORMAL, verdict, "A fork bomb must not be accepted.");
   }
 
   /**
@@ -194,7 +200,7 @@ public class SandboxBehaviorTest {
   public void testUserNamespacesAreDenied() throws Exception {
     Assumptions.assumeTrue(
         System.getProperty("os.name").contains("Linux"), "User namespaces are Linux-only.");
-    Assertions.assertEquals("AC", judge(900005L, USER_NAMESPACE_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900005L, USER_NAMESPACE_CODE, 5000, 262144));
   }
 
   /**
@@ -207,7 +213,7 @@ public class SandboxBehaviorTest {
   public void testRunCannotCreateProcesses() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The test program uses fork() and posix_spawn().");
-    Assertions.assertEquals("AC", judge(900011L, FORK_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900011L, FORK_CODE, 5000, 262144));
     Assertions.assertEquals(
         "fork: EPERM\nSYS_fork: ENOSYS\nposix_spawn: EPERM\n",
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900011", "output.txt")));
@@ -219,7 +225,7 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testRunCanCreateThreads() throws Exception {
-    Assertions.assertEquals("AC", judge(900012L, THREADS_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900012L, THREADS_CODE, 5000, 262144));
     // printf writes "\r\n" on Windows.
     Assertions.assertEquals(
         "8\n",
@@ -239,7 +245,7 @@ public class SandboxBehaviorTest {
         System.getProperty("os.name").contains("Windows"), "This test uses fork().");
     Assumptions.assumeFalse(
         "native".equalsIgnoreCase(sandbox), "A native run cannot create processes.");
-    Assertions.assertEquals("AC", judge(900006L, SHARED_MEMORY_CODE, 5000, 131072));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900006L, SHARED_MEMORY_CODE, 5000, 131072));
   }
 
   /**
@@ -255,7 +261,8 @@ public class SandboxBehaviorTest {
         System.getProperty("os.name").contains("Windows"), "This test uses fork().");
     Assumptions.assumeFalse(
         "native".equalsIgnoreCase(sandbox), "A native run cannot create processes.");
-    Assertions.assertEquals("TLE", judge(900007L, ORPHAN_CPU_CODE, 1000, 262144));
+    Assertions.assertEquals(
+        Verdict.TIME_LIMIT_EXCEEDED, judge(900007L, ORPHAN_CPU_CODE, 1000, 262144));
   }
 
   /**
@@ -272,7 +279,7 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue(
         System.getProperty("os.name").contains("Linux"), "The socket filter is Linux-only.");
     String mode = "native".equalsIgnoreCase(sandbox) ? "strict" : "lenient";
-    Assertions.assertEquals("AC", judge(900009L, NETWORK_CODE, 10000, 262144, mode));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900009L, NETWORK_CODE, 10000, 262144, mode));
   }
 
   /**
@@ -281,19 +288,14 @@ public class SandboxBehaviorTest {
    * the submission).
    */
   @Test
-  public void testMissingSandboxUserIsASystemError() {
+  public void testMissingSandboxUserIsASystemError() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(
         "root".equals(System.getProperty("user.name")), "Privileges are only dropped by root.");
-    Object runner = AopTestUtils.getUltimateTargetObject(sandboxRunner);
-    Object username = ReflectionTestUtils.getField(runner, "systemUsername");
-    ReflectionTestUtils.setField(runner, "systemUsername", "voj-no-such-user");
-    try {
-      RunResult result = sandboxRunner.run("/bin/true", null, null, null, null, 1000, 65536, false);
-      Assertions.assertEquals(Verdict.INTERNAL_ERROR, result.getVerdict());
-    } finally {
-      ReflectionTestUtils.setField(runner, "systemUsername", username);
-    }
+    Runner runner = new Runner();
+    ReflectionTestUtils.setField(runner, "sandboxUsername", "voj-no-such-user");
+    SandboxCommand command = command("/bin/true", createWorkDirectory(900046L), null, false);
+    Assertions.assertThrows(IOException.class, () -> runner.run(command));
   }
 
   /**
@@ -301,15 +303,14 @@ public class SandboxBehaviorTest {
    * run as well as for a compilation (not a runtime error, nor a compile error with an empty log).
    */
   @Test
-  public void testUnrunnableCommandIsASystemError() {
+  public void testUnrunnableCommandIsASystemError() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
-    String command = "/voj-no-such-directory/program";
-    Assertions.assertEquals(
-        Verdict.INTERNAL_ERROR,
-        sandboxRunner.run(command, null, null, null, null, 1000, 65536, false).getVerdict());
-    Assertions.assertEquals(
-        Verdict.INTERNAL_ERROR,
-        sandboxRunner.run(command, null, null, null, null, 1000, 65536, true).getVerdict());
+    String workDirectory = Preprocessor.getProgramDirectory(createWorkDirectory(900047L));
+    for (boolean compilation : new boolean[] {false, true}) {
+      SandboxCommand command =
+          command("/voj-no-such-directory/program", workDirectory, null, compilation);
+      Assertions.assertThrows(IOException.class, () -> sandboxRunner.run(command));
+    }
   }
 
   /**
@@ -324,11 +325,8 @@ public class SandboxBehaviorTest {
     String workDirectory = createWorkDirectory(900010L);
     String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
     String logFile = workDirectory + "/stdin.log";
-    RunResult result =
-        sandboxRunner.run(
-            "readlink /proc/self/fd/0", programDirectory, programDirectory, null, logFile, 5000, 0,
-            true);
-    Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+    Assertions.assertEquals(
+        Verdict.NORMAL, execute("readlink /proc/self/fd/0", programDirectory, logFile, true));
     Assertions.assertEquals("/dev/null", Files.readString(Path.of(logFile)).strip());
   }
 
@@ -349,10 +347,7 @@ public class SandboxBehaviorTest {
     String command = isLinux() ? "/bin/pwd" : "cmd /c cd";
     for (String directory : new String[] {programDirectory, runDirectory}) {
       boolean isCompilation = directory.equals(programDirectory);
-      RunResult result =
-          sandboxRunner.run(
-              command, programDirectory, directory, null, logFile, 5000, 0, isCompilation);
-      Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+      Assertions.assertEquals(Verdict.NORMAL, execute(command, directory, logFile, isCompilation));
       String expected = Path.of(directory).toRealPath().toString();
       String actual = Files.readString(Path.of(logFile)).strip();
       Assertions.assertTrue(
@@ -384,9 +379,8 @@ public class SandboxBehaviorTest {
     submission.setCode(code);
     String workDirectory = workBaseDirectory + "/voj-sandbox-900043";
     preprocessor.createTestCode(submission, workDirectory);
-    Map<String, Object> compileResult =
-        compiler.getCompileResult(submission, workDirectory);
-    Assertions.assertEquals(true, compileResult.get("isSuccessful"), compileResult.toString());
+    CompileResult compileResult = compiler.getCompileResult(submission, workDirectory);
+    Assertions.assertTrue(compileResult.isSuccessful(), compileResult.toString());
     Path programDirectory = Path.of(Preprocessor.getProgramDirectory(workDirectory));
     Path program = programDirectory.resolve("Main.exe");
     byte[] binary = Files.readAllBytes(program);
@@ -409,10 +403,10 @@ public class SandboxBehaviorTest {
 
     for (int checkpoint = 1; checkpoint <= 2; ++checkpoint) {
       Path outputFile = Path.of(workDirectory, "output#" + checkpoint + ".txt");
-      Map<String, Object> result =
+      RunResult result =
           programRunner.getRuntimeResult(
               submission, workDirectory, inputFile.toString(), outputFile.toString());
-      Assertions.assertEquals("AC", result.get("runtimeResult"), "Checkpoint " + checkpoint);
+      Assertions.assertEquals(Verdict.NORMAL, result.verdict(), "Checkpoint " + checkpoint);
       Assertions.assertEquals(expected, Files.readString(outputFile).replace("\r\n", "\n"));
       Assertions.assertArrayEquals(binary, Files.readAllBytes(program));
       Assertions.assertEquals(programFiles, listFiles(programDirectory));
@@ -438,7 +432,8 @@ public class SandboxBehaviorTest {
     for (String directory : directories) {
       Files.deleteIfExists(Path.of(directory, name)); // left behind by an unconfined sandbox
     }
-    Assertions.assertEquals("AC", judge(900018L, LEAVE_BEHIND_CODE, 5000, 262144, "leave " + name));
+    Assertions.assertEquals(
+        Verdict.NORMAL, judge(900018L, LEAVE_BEHIND_CODE, 5000, 262144, "leave " + name));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -460,7 +455,8 @@ public class SandboxBehaviorTest {
     for (String directory : directories) {
       Assertions.assertFalse(Files.exists(Path.of(directory, name)), directory + " was written");
     }
-    Assertions.assertEquals("AC", judge(900019L, LEAVE_BEHIND_CODE, 5000, 262144, "find " + name));
+    Assertions.assertEquals(
+        Verdict.NORMAL, judge(900019L, LEAVE_BEHIND_CODE, 5000, 262144, "find " + name));
     Assertions.assertEquals(
         "/tmp: absent\n/var/tmp: absent\n/dev/shm: absent\n",
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900019", "output.txt")));
@@ -506,10 +502,79 @@ public class SandboxBehaviorTest {
    * @param logFile - the compile log
    * @return the verdict
    */
-  private Verdict compile(String commandLine, String programDirectory, String logFile) {
-    return sandboxRunner
-        .run(commandLine, programDirectory, programDirectory, null, logFile, 5000, 0, true)
-        .getVerdict();
+  private Verdict compile(String commandLine, String programDirectory, String logFile)
+      throws IOException {
+    return execute(commandLine, programDirectory, logFile, true);
+  }
+
+  /**
+   * Runs a command in the sandbox, with the environment the policy gives a program in its work
+   * directory, under a 5 s time limit and no memory limit, and judges it.
+   *
+   * @param commandLine - the command, its arguments separated by spaces
+   * @param workDirectory - the work directory
+   * @param outputFile - the output file ({@code null}: none)
+   * @param compilation - whether it is a compilation
+   * @return the verdict
+   * @throws IOException if the sandbox fails
+   */
+  private Verdict execute(
+      String commandLine, String workDirectory, String outputFile, boolean compilation)
+      throws IOException {
+    SandboxCommand command = command(commandLine, workDirectory, outputFile, compilation);
+    return Verdict.of(command, sandboxRunner.run(command));
+  }
+
+  /**
+   * Builds a command as the policy builds a compilation or a run, under a 5 s time limit and no
+   * memory limit.
+   *
+   * @param commandLine - the command, its arguments separated by spaces
+   * @param workDirectory - the work directory
+   * @param outputFile - the output file ({@code null}: none)
+   * @param compilation - whether it is a compilation
+   * @return the command
+   */
+  private SandboxCommand command(
+      String commandLine, String workDirectory, String outputFile, boolean compilation) {
+    return command(
+        commandLine, workDirectory, outputFile, compilation, new Limits(5000, 0, 262144, 0));
+  }
+
+  /**
+   * Builds a command as the policy builds a compilation or a run.
+   *
+   * @param commandLine - the command, its arguments separated by spaces
+   * @param workDirectory - the work directory
+   * @param outputFile - the output file ({@code null}: none)
+   * @param compilation - whether it is a compilation
+   * @param limits - the limits (a process limit of 0: the policy's)
+   * @return the command
+   */
+  private SandboxCommand command(
+      String commandLine,
+      String workDirectory,
+      String outputFile,
+      boolean compilation,
+      Limits limits) {
+    Map<String, String> environment = sandboxPolicy.environment(workDirectory, null);
+    List<String> arguments = new ArrayList<>(List.of(commandLine.split(" ")));
+    arguments.set(0, SandboxPolicy.findExecutable(arguments.get(0), environment.get("PATH")));
+    List<String> variables = new ArrayList<>();
+    environment.forEach((name, value) -> variables.add(name + "=" + value));
+    int processLimit = compilation ? 1024 : isLinux() ? 64 : 2;
+    return new SandboxCommand(
+        arguments,
+        variables,
+        workDirectory,
+        null,
+        outputFile,
+        compilation,
+        new Limits(
+            limits.timeLimitMs(),
+            limits.memoryLimitKb(),
+            limits.outputLimitKb(),
+            limits.processLimit() > 0 ? limits.processLimit() : processLimit));
   }
 
   /**
@@ -526,7 +591,8 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeFalse(isLinux(), "Mandatory integrity control is Windows-only.");
     Assertions.assertEquals(
-        "AC", judge(900041L, WINDOWS_LEAVE_BEHIND_CODE, 5000, 262144, "voj-sandbox-leak-900041"));
+        Verdict.NORMAL,
+        judge(900041L, WINDOWS_LEAVE_BEHIND_CODE, 5000, 262144, "voj-sandbox-leak-900041"));
     Path workDirectory = Path.of(workBaseDirectory, "voj-sandbox-900041");
     Assertions.assertEquals(
         String.join(
@@ -556,7 +622,7 @@ public class SandboxBehaviorTest {
   public void testWhatARunDeniesTheJudgerIsRemovedOnWindows() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeFalse(isLinux(), "ACLs are Windows-only here.");
-    Assertions.assertEquals("AC", judge(900042L, WINDOWS_DENY_JUDGER_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900042L, WINDOWS_DENY_JUDGER_CODE, 5000, 262144));
     Path workDirectory = Path.of(workBaseDirectory, "voj-sandbox-900042");
     Assertions.assertEquals(
         "locked\n", Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
@@ -579,7 +645,7 @@ public class SandboxBehaviorTest {
   public void testRunIsIsolatedFromTheDesktopOnWindows() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeFalse(isLinux(), "Tokens and desktops are Windows-only here.");
-    Assertions.assertEquals("AC", judge(900044L, WINDOWS_ISOLATION_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900044L, WINDOWS_ISOLATION_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -619,20 +685,18 @@ public class SandboxBehaviorTest {
     Files.delete(Path.of(programDirectory, "missing.dll"));
 
     long startNanos = System.nanoTime();
-    RunResult result =
-        sandboxRunner.run(
-            programDirectory + "/program.exe",
-            programDirectory,
+    SandboxCommand command =
+        command(
+            Path.of(programDirectory, "program.exe").toString(),
             preprocessor.createRunDirectory(workDirectory),
-            null,
             workDirectory + "/output.txt",
-            5000,
-            65536,
-            false);
+            false,
+            new Limits(5000, 65536, 262144, 0));
+    SandboxResult result = sandboxRunner.run(command);
     long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
 
-    Assertions.assertEquals(Verdict.RUNTIME_ERROR, result.getVerdict());
-    Assertions.assertEquals(0xC0000135, result.getExitCode());
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, Verdict.of(command, result));
+    Assertions.assertEquals(0xC0000135, result.exitCode());
     Assertions.assertTrue(elapsedMs < 3000, "The run took " + elapsedMs + " ms.");
   }
 
@@ -674,7 +738,7 @@ public class SandboxBehaviorTest {
     Files.writeString(expectedOutput, "42\n");
     try {
       Assertions.assertEquals(
-          "AC", judge(900022L, TRUNCATE_CODE, 5000, 262144, expectedOutput.toString()));
+          Verdict.NORMAL, judge(900022L, TRUNCATE_CODE, 5000, 262144, expectedOutput.toString()));
       Assertions.assertEquals(
           "truncate: EACCES\nopen: EACCES\n",
           Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900022", "output.txt")));
@@ -697,7 +761,7 @@ public class SandboxBehaviorTest {
   public void testRunCannotPageOutItsMemory() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The seccomp filter is Linux-only.");
-    Assertions.assertEquals("AC", judge(900023L, PAGE_OUT_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900023L, PAGE_OUT_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -723,7 +787,7 @@ public class SandboxBehaviorTest {
   public void testSystemCallsOffTheAllowlistAreNotImplemented() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
-    Assertions.assertEquals("AC", judge(900024L, UNLISTED_SYSCALLS_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900024L, UNLISTED_SYSCALLS_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -747,7 +811,7 @@ public class SandboxBehaviorTest {
   public void testRunHasFewDescriptors() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "RLIMIT_NOFILE and clone are Linux-only.");
-    Assertions.assertEquals("AC", judge(900025L, DESCRIPTOR_LIMIT_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900025L, DESCRIPTOR_LIMIT_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -770,7 +834,7 @@ public class SandboxBehaviorTest {
   public void testRunCanOnlyChangeItsOwnLimits() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "prlimit64 is Linux-only.");
-    Assertions.assertEquals("AC", judge(900026L, PRLIMIT_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900026L, PRLIMIT_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -792,7 +856,7 @@ public class SandboxBehaviorTest {
   public void testRunHasNoControllingTerminal() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The test program uses getsid().");
-    Assertions.assertEquals("AC", judge(900027L, TERMINAL_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900027L, TERMINAL_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -814,7 +878,7 @@ public class SandboxBehaviorTest {
   public void testRunCannotSendToAnAddress() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
-    Assertions.assertEquals("AC", judge(900028L, SEND_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900028L, SEND_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -840,7 +904,7 @@ public class SandboxBehaviorTest {
   public void testRunCanCreateThreadsWithAnExplicitPolicy() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
-    Assertions.assertEquals("AC", judge(900040L, EXPLICIT_SCHED_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900040L, EXPLICIT_SCHED_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -861,7 +925,7 @@ public class SandboxBehaviorTest {
   public void testRunCannotEnlargeItsKernelBuffers() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
-    Assertions.assertEquals("AC", judge(900033L, KERNEL_BUFFER_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900033L, KERNEL_BUFFER_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -888,7 +952,7 @@ public class SandboxBehaviorTest {
   public void testRunHasFewQueuedSignals() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "RLIMIT_SIGPENDING is Linux-only.");
-    Assertions.assertEquals("AC", judge(900034L, SIGNAL_QUEUE_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900034L, SIGNAL_QUEUE_CODE, 5000, 262144));
     Assertions.assertEquals(
         String.join(
             "\n",
@@ -916,31 +980,25 @@ public class SandboxBehaviorTest {
     String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
     Path source = Files.writeString(Path.of(programDirectory, "static.cpp"), HUGE_STATIC_DATA_CODE);
     String program = programDirectory + "/static.exe";
-    RunResult compilation =
-        sandboxRunner.run(
+    SandboxCommand compilation =
+        command(
             "g++ -O2 -mcmodel=medium -o " + program + " " + source,
             programDirectory,
-            programDirectory,
-            null,
             workDirectory + "/compile.log",
-            20000,
-            0,
-            true);
+            true,
+            new Limits(20000, 0, 262144, 0));
     Assertions.assertEquals(
         Verdict.NORMAL,
-        compilation.getVerdict(),
+        Verdict.of(compilation, sandboxRunner.run(compilation)),
         Files.readString(Path.of(workDirectory, "compile.log")));
-    RunResult run =
-        sandboxRunner.run(
+    SandboxCommand run =
+        command(
             program,
-            programDirectory,
             preprocessor.createRunDirectory(workDirectory),
-            null,
             workDirectory + "/output.txt",
-            5000,
-            65536,
-            false);
-    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, run.getVerdict());
+            false,
+            new Limits(5000, 65536, 262144, 0));
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, Verdict.of(run, sandboxRunner.run(run)));
   }
 
   /**
@@ -955,10 +1013,10 @@ public class SandboxBehaviorTest {
   @Test
   public void testJavaGarbageWithinTheLimitIsAccepted() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Map<String, Object> result =
+    RunResult result =
         judge(900029L, "text/x-java", JAVA_GARBAGE_CODE, 5000, 262144, "");
-    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
-    Assertions.assertTrue((Integer) result.get("usedMemory") < 262144, result.toString());
+    Assertions.assertEquals(Verdict.NORMAL, result.verdict(), result.toString());
+    Assertions.assertTrue(result.usedMemory() < 262144, result.toString());
     Assertions.assertEquals(
         "2048\n", Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900029", "output.txt")));
   }
@@ -972,9 +1030,9 @@ public class SandboxBehaviorTest {
   @Test
   public void testJavaThatNeedsMoreThanItsLimitIsMemoryLimitExceeded() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Map<String, Object> result = judge(900030L, "text/x-java", JAVA_HOARD_CODE, 5000, 262144, "");
-    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
-    Assertions.assertTrue((Integer) result.get("usedMemory") >= 524288, result.toString());
+    RunResult result = judge(900030L, "text/x-java", JAVA_HOARD_CODE, 5000, 262144, "");
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, result.verdict(), result.toString());
+    Assertions.assertTrue(result.usedMemory() >= 524288, result.toString());
   }
 
   /**
@@ -986,10 +1044,10 @@ public class SandboxBehaviorTest {
   @Test
   public void testJavaThatAsksForTooLargeAnArrayIsMemoryLimitExceeded() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Map<String, Object> result =
+    RunResult result =
         judge(900035L, "text/x-java", JAVA_HUGE_ARRAY_CODE, 5000, 262144, "");
-    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
-    Assertions.assertTrue((Integer) result.get("usedMemory") >= 524288, result.toString());
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, result.verdict(), result.toString());
+    Assertions.assertTrue(result.usedMemory() >= 524288, result.toString());
   }
 
   /**
@@ -1003,9 +1061,9 @@ public class SandboxBehaviorTest {
   public void testJavaThatRunsOutOfMemoryWhileAnotherThreadWritesIsMemoryLimitExceeded()
       throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Map<String, Object> result =
+    RunResult result =
         judge(900041L, "text/x-java", JAVA_HOARD_WHILE_WRITING_CODE, 5000, 262144, "");
-    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, result.verdict(), result.toString());
   }
 
   /**
@@ -1026,8 +1084,8 @@ public class SandboxBehaviorTest {
     language.setSourceFilename(java.getSourceFilename());
     language.setTimeMultiplier(java.getTimeMultiplier());
     language.setMemoryMultiplier(java.getMemoryMultiplier());
-    Map<String, Object> result = judge(900036L, language, JAVA_HOARD_CODE, 5000, 262144, "");
-    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+    RunResult result = judge(900036L, language, JAVA_HOARD_CODE, 5000, 262144, "");
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, result.verdict(), result.toString());
   }
 
   /**
@@ -1040,14 +1098,14 @@ public class SandboxBehaviorTest {
   @Test
   public void testJavaConcurrencyKeepsToTheThreadLimit() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Map<String, Object> result =
+    RunResult result =
         judge(900038L, "text/x-java", JAVA_COMPLETABLE_FUTURE_CODE, 5000, 262144, "");
-    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
+    Assertions.assertEquals(Verdict.NORMAL, result.verdict(), result.toString());
     Assertions.assertEquals(
         "4950 2\n",
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900038", "output.txt")));
     result = judge(900039L, "text/x-java", JAVA_PARALLEL_STREAM_CODE, 5000, 262144, "");
-    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
+    Assertions.assertEquals(Verdict.NORMAL, result.verdict(), result.toString());
     Assertions.assertEquals(
         "149999998\n",
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900039", "output.txt")));
@@ -1063,10 +1121,11 @@ public class SandboxBehaviorTest {
   public void testOtherFailuresAreRuntimeErrors() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
     Assertions.assertEquals(
-        "RE",
-        judge(900031L, "text/x-java", JAVA_EXCEPTION_CODE, 5000, 262144, "").get("runtimeResult"));
-    Assertions.assertEquals("RE", judge(900032L, EXIT_3_CODE, 5000, 262144));
-    Assertions.assertEquals("RE", judge(900037L, CRASH_AFTER_ALLOCATION_CODE, 5000, 262144));
+        Verdict.RUNTIME_ERROR,
+        judge(900031L, "text/x-java", JAVA_EXCEPTION_CODE, 5000, 262144, "").verdict());
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, judge(900032L, EXIT_3_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR, judge(900037L, CRASH_AFTER_ALLOCATION_CODE, 5000, 262144));
   }
 
   /**
@@ -1116,10 +1175,10 @@ public class SandboxBehaviorTest {
    * @param code - the C++ source code to compile and run
    * @param timeLimitMs - the time limit (ms)
    * @param memoryLimitKb - the memory limit (KB)
-   * @return the verdict slug (AC/TLE/MLE/RE/SE)
+   * @return the verdict
    * @throws Exception if the test fixtures cannot be set up
    */
-  private String judge(long id, String code, int timeLimitMs, int memoryLimitKb) throws Exception {
+  private Verdict judge(long id, String code, int timeLimitMs, int memoryLimitKb) throws Exception {
     return judge(id, code, timeLimitMs, memoryLimitKb, "");
   }
 
@@ -1131,13 +1190,12 @@ public class SandboxBehaviorTest {
    * @param timeLimitMs - the time limit (ms)
    * @param memoryLimitKb - the memory limit (KB)
    * @param input - the program's standard input
-   * @return the verdict slug (AC/TLE/MLE/RE/SE)
+   * @return the verdict
    * @throws Exception if the test fixtures cannot be set up
    */
-  private String judge(long id, String code, int timeLimitMs, int memoryLimitKb, String input)
+  private Verdict judge(long id, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
-    return (String)
-        judge(id, "text/x-c++src", code, timeLimitMs, memoryLimitKb, input).get("runtimeResult");
+    return judge(id, "text/x-c++src", code, timeLimitMs, memoryLimitKb, input).verdict();
   }
 
   /**
@@ -1150,10 +1208,10 @@ public class SandboxBehaviorTest {
    * @param timeLimitMs - the time limit of the problem (ms)
    * @param memoryLimitKb - the memory limit of the problem (KB)
    * @param input - the program's standard input
-   * @return the result of the run ("runtimeResult": the verdict slug, "usedTime", "usedMemory")
+   * @return the result of the run
    * @throws Exception if the test fixtures cannot be set up
    */
-  private Map<String, Object> judge(
+  private RunResult judge(
       long id, String languageSlug, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
@@ -1171,10 +1229,10 @@ public class SandboxBehaviorTest {
    * @param timeLimitMs - the time limit of the problem (ms)
    * @param memoryLimitKb - the memory limit of the problem (KB)
    * @param input - the program's standard input
-   * @return the result of the run ("runtimeResult": the verdict slug, "usedTime", "usedMemory")
+   * @return the result of the run
    * @throws Exception if the test fixtures cannot be set up
    */
-  private Map<String, Object> judge(
+  private RunResult judge(
       long id, Language language, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
     Problem problem =
@@ -1188,10 +1246,9 @@ public class SandboxBehaviorTest {
     String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
     preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> compileResult = compiler.getCompileResult(submission, workDirectory);
-    Assertions.assertEquals(
-        true, compileResult.get("isSuccessful"),
-        "The test program must compile: " + compileResult.get("log"));
+    CompileResult compileResult = compiler.getCompileResult(submission, workDirectory);
+    Assertions.assertTrue(
+        compileResult.isSuccessful(), "The test program must compile: " + compileResult.log());
 
     Path inputFile = Path.of(workDirectory, "input.txt");
     Files.writeString(inputFile, input);
@@ -2664,6 +2721,9 @@ public class SandboxBehaviorTest {
 
   /** The active sandbox runner, exercised directly by the tests of the runner itself. */
   @Autowired private SandboxRunner sandboxRunner;
+
+  /** The policy, which builds the commands the tests of the runner itself run. */
+  @Autowired private SandboxPolicy sandboxPolicy;
 
   /** The ProgramRunner object under test. */
   @Autowired private ProgramRunner programRunner;

@@ -31,6 +31,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.stereotype.Component;
 
+import org.verwandlung.voj.judger.core.CompileResult;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -160,8 +161,8 @@ public class ApplicationDispatcher {
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param result - the compilation result
    */
-  public void onCompileFinished(Submission submission, Map<String, Object> result) {
-    boolean isSuccessful = (Boolean) result.get("isSuccessful");
+  public void onCompileFinished(Submission submission, CompileResult result) {
+    boolean isSuccessful = result.isSuccessful();
     String log = getJudgeLog(result);
 
     if (!isSuccessful && !updateSubmission(submission, 0, 0, 0, "CE", log)) {
@@ -362,12 +363,12 @@ public class ApplicationDispatcher {
   /**
    * Formats the compile-time log.
    *
-   * @param result - the Map<String, Object> object containing the compilation status
+   * @param result - the result of the compilation
    * @return the formatted log
    */
-  private String getJudgeLog(Map<String, Object> result) {
-    boolean isSuccessful = (Boolean) result.get("isSuccessful");
-    String compileLog = (String) result.get("log");
+  private String getJudgeLog(CompileResult result) {
+    boolean isSuccessful = result.isSuccessful();
+    String compileLog = result.log();
 
     StringBuilder formatedLogBuilder = new StringBuilder();
     formatedLogBuilder.append(

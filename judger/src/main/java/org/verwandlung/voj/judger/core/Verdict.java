@@ -16,37 +16,117 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+
 /**
- * The reason a sandboxed process terminated, as reported (or inferred) by a {@link SandboxRunner}.
- *
- * <p>This is intentionally a small, platform-neutral vocabulary: every {@code SandboxRunner}
- * implementation (isolate on Linux, Job Objects on Windows, or the legacy JNI runner) is responsible
- * for translating its platform-specific exit information into one of these values, so that the
- * judging verdict no longer depends on guessing from a raw process exit code.
- *
- * <p>Note that {@link #NORMAL} only means "the process finished within its limits". Whether the run
- * is actually <em>Accepted</em> is decided later by comparing the program output against the
- * expected output (see {@code Comparator}); a {@code NORMAL} run with mismatching output becomes a
- * Wrong Answer.
+ * How a compilation or run ended. {@link #NORMAL} only means that the program exited with 0 within
+ * its limits: whether a run is Accepted is up to the comparison of its output.
  *
  * @author Haozhe Xie
  */
 public enum Verdict {
-  /** The process exited normally and stayed within the time and memory limits. */
-  NORMAL,
+  /** The program exited with 0 within its limits. */
+  NORMAL(null),
 
-  /** The process exceeded the time limit and was killed. */
-  TIME_LIMIT_EXCEEDED,
+  /** The program used more than its time limit. */
+  TIME_LIMIT_EXCEEDED("TLE"),
 
-  /** The process exceeded the memory limit and was killed. */
-  MEMORY_LIMIT_EXCEEDED,
+  /** The program used more than its memory limit. */
+  MEMORY_LIMIT_EXCEEDED("MLE"),
 
-  /** The process exceeded the output size limit and was killed. */
-  OUTPUT_LIMIT_EXCEEDED,
+  /** The program's output reached the output limit. */
+  OUTPUT_LIMIT_EXCEEDED("OLE"),
 
-  /** The process exited abnormally (non-zero exit code or terminated by a signal). */
-  RUNTIME_ERROR,
+  /** The program failed (a non-zero exit code, or a signal). */
+  RUNTIME_ERROR("RE"),
 
-  /** The sandbox itself failed to run the process (e.g. it could not be launched). */
-  INTERNAL_ERROR;
+  /** The sandbox failed to run the program: no verdict on the program. */
+  INTERNAL_ERROR("SE");
+
+  /**
+   * Creates a verdict.
+   *
+   * @param slug - the judge result it stands for
+   */
+  Verdict(String slug) {
+    this.slug = slug;
+  }
+
+  /**
+   * Gets the judge result this verdict stands for.
+   *
+   * @return the slug of the judge result ({@code null} for {@link #NORMAL}, which is up to the
+   *     comparison of the output)
+   */
+  public String getSlug() {
+    return slug;
+  }
+
+  /**
+   * Judges how a program ended, the same way whatever sandbox ran it: a limit the sandbox stopped
+   * the program for; else a limit its final figures exceed (the sandboxes measure as they go, so a
+   * program may exit just past one before it is stopped), an output that reached the output limit
+   * included; else its exit code. A run whose JVM ran out of heap (see {@link
+   * JavaOptions#isOutOfMemoryExit}) used more memory than it may, as one stopped at its limit.
+   *
+   * @param command - what the sandbox ran
+   * @param result - what the sandbox measured
+   * @return the verdict
+   */
+  public static Verdict of(SandboxCommand command, SandboxResult result) {
+    Limits limits = command.limits();
+    switch (result.stoppedFor()) {
+      case TIME:
+        return TIME_LIMIT_EXCEEDED;
+      case MEMORY:
+        return MEMORY_LIMIT_EXCEEDED;
+      case OUTPUT:
+        return OUTPUT_LIMIT_EXCEEDED;
+      default:
+        break;
+    }
+    if (limits.timeLimitMs() > 0 && result.cpuTimeMs() > limits.timeLimitMs()) {
+      return TIME_LIMIT_EXCEEDED;
+    }
+    if (limits.memoryLimitKb() > 0 && result.peakMemoryKb() > limits.memoryLimitKb()) {
+      return MEMORY_LIMIT_EXCEEDED;
+    }
+    if (sizeOf(command.outputFile()) >= limits.outputLimitKb() * 1024L) {
+      return OUTPUT_LIMIT_EXCEEDED;
+    }
+    if (result.exitCode() == 0) {
+      return NORMAL;
+    }
+    if (!command.compilation()
+        && JavaOptions.isOutOfMemoryExit(result.exitCode(), command.outputFile())) {
+      return MEMORY_LIMIT_EXCEEDED;
+    }
+    return RUNTIME_ERROR;
+  }
+
+  /**
+   * Gets the size of the output file, created by the sandbox for the judger.
+   *
+   * @param outputFile - the output file ({@code null}: none)
+   * @return its size (bytes), 0 for none
+   */
+  private static long sizeOf(String outputFile) {
+    if (outputFile == null) {
+      return 0;
+    }
+    try {
+      return Files.readAttributes(
+              Paths.get(outputFile), BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS)
+          .size();
+    } catch (IOException ex) {
+      return 0;
+    }
+  }
+
+  /** The slug of the judge result this verdict stands for. */
+  private final String slug;
 }

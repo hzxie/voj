@@ -17,87 +17,11 @@
 package org.verwandlung.voj.judger.core;
 
 /**
- * The structured result of running a single command inside a {@link SandboxRunner}.
+ * The outcome of a run of a submission on one checkpoint, before its output is compared.
  *
- * <p>This replaces the previous untyped {@code Map<String, Object>} contract between the runner and
- * the dispatcher. It carries an explicit {@link Verdict} (so the judging outcome no longer has to be
- * re-derived from a raw exit code) together with the measured resource usage.
- *
- * <p>Instances are immutable.
- *
+ * @param verdict - how the run ended ({@link Verdict#NORMAL}: its output is up to the comparison)
+ * @param usedTime - the CPU time it used (ms), at least the limit if it exceeded it
+ * @param usedMemory - the memory it used (KB), at least the limit if it exceeded it
  * @author Haozhe Xie
  */
-public final class RunResult {
-  /**
-   * Creates a run result.
-   *
-   * @param verdict - why the process terminated
-   * @param cpuTimeMs - the CPU time used by the process (ms). Implementations that cannot measure
-   *     CPU time may report wall-clock time instead; this should be documented by the implementation
-   * @param peakMemoryKb - the peak memory used by the process (KB)
-   * @param exitCode - the raw exit code reported by the platform (for diagnostics/logging only)
-   */
-  public RunResult(Verdict verdict, int cpuTimeMs, int peakMemoryKb, int exitCode) {
-    this.verdict = verdict;
-    this.cpuTimeMs = cpuTimeMs;
-    this.peakMemoryKb = peakMemoryKb;
-    this.exitCode = exitCode;
-  }
-
-  /**
-   * Creates a result representing a sandbox-level failure (the process could not be run or measured).
-   *
-   * @return a run result with verdict {@link Verdict#INTERNAL_ERROR} and zeroed measurements
-   */
-  public static RunResult internalError() {
-    return new RunResult(Verdict.INTERNAL_ERROR, 0, 0, -1);
-  }
-
-  /**
-   * Gets the reason the process terminated.
-   *
-   * @return the verdict
-   */
-  public Verdict getVerdict() {
-    return verdict;
-  }
-
-  /**
-   * Gets the CPU time used by the process (ms).
-   *
-   * @return the CPU time in milliseconds
-   */
-  public int getCpuTimeMs() {
-    return cpuTimeMs;
-  }
-
-  /**
-   * Gets the peak memory used by the process (KB).
-   *
-   * @return the peak memory in kilobytes
-   */
-  public int getPeakMemoryKb() {
-    return peakMemoryKb;
-  }
-
-  /**
-   * Gets the raw platform exit code (for diagnostics only).
-   *
-   * @return the exit code
-   */
-  public int getExitCode() {
-    return exitCode;
-  }
-
-  /** Why the process terminated. */
-  private final Verdict verdict;
-
-  /** The CPU time used by the process (ms). */
-  private final int cpuTimeMs;
-
-  /** The peak memory used by the process (KB). */
-  private final int peakMemoryKb;
-
-  /** The raw platform exit code (diagnostics only). */
-  private final int exitCode;
-}
+public record RunResult(Verdict verdict, int usedTime, int usedMemory) {}

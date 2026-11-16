@@ -19,7 +19,6 @@
 #endif
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
-#include "../org_verwandlung_voj_jni_hashmap.h"
 #include "../org_verwandlung_voj_jni_library.h"
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
@@ -30,8 +29,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
-#include <iterator>
-#include <sstream>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -131,60 +128,27 @@ static const uint64_t SCOPE_ABSTRACT_UNIX_SOCKET = 1ULL << 0;  // ABI 6
 static const uint64_t SCOPE_SIGNAL               = 1ULL << 1;  // ABI 6
 }
 
-/**
- * Tunables for the sandbox.
- */
 // The output file is the judger's: a later run of the same program, as the sandbox user, cannot
 // read it (and no run may write anywhere but its own work directory, see confineFileSystemWrites).
 static const mode_t    OUTPUT_FILE_MODE       = 0600;
 static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1 ms)
-static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backstop multiplier
-static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
-static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
-static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (threads)
-// RLIMIT_NOFILE (soft = hard, so it cannot be raised): open pipes and sockets hold kernel memory
-// that no memory limit sees (a socket pair with full buffers holds hundreds of KB), so a run gets
-// few descriptors. Its runtimes need a handful (Java, Go, Python, ...) to a few dozen: Node.js
-// opens about 24, and about 6 more for each worker thread, so 128 leaves room for some 16 workers.
-// A compilation runs trusted toolchains that open many files at once (javac and kotlinc their
-// jars, go build its packages), so it gets more, as a backstop against a toolchain gone wrong.
+// RLIMIT_NOFILE (soft = hard): open pipes and sockets hold kernel memory no memory limit sees, so a
+// run gets few descriptors (Node.js opens about 24, and 6 per worker thread); a compilation runs
+// toolchains that open many files at once (javac and kotlinc their jars, go build its packages).
 static const rlim_t    RUN_FILE_LIMIT         = 128;
 static const rlim_t    COMPILE_FILE_LIMIT     = 4096;
-// RLIMIT_SIGPENDING of a run (soft = hard): the signals queued to it and its POSIX timers, each a
-// kernel object outside any memory limit. Without it, the bound is the default of about half the
-// host's threads-max (some 240,000 on a host with 60 GB of RAM); no runtime needs more than a few.
+// RLIMIT_SIGPENDING of a run (soft = hard): its queued signals and POSIX timers, kernel objects no
+// memory limit sees; the default is about half the host's threads-max.
 static const rlim_t    RUN_SIGNAL_QUEUE_LIMIT = 1024;
 static const int       CLEANUP_ATTEMPTS       = 1000;        // wait rounds (x 1 ms) after a run
-// RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
-// headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
-static const unsigned long long DATA_LIMIT_MIN_HEADROOM_KB = 256ULL * 1024;
-static const unsigned long long DATA_LIMIT_RAM_DIVISOR     = 32;
 
 /**
- * The only environment variables the sandboxed process inherits from the judger. The judger's own
- * environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN, ...) that a submission could
- * otherwise read, e.g. with `#include "/proc/self/environ"` echoed into the compile log. Only
- * locale and toolchain settings that compilers and runtimes genuinely need are passed through.
+ * The account a judger running as root runs programs as (see selectSandboxAccount); a judger that
+ * is not root runs them as itself.
  */
-static const char* const INHERITED_ENVIRONMENT_VARIABLES[] = {
-    "PATH", "LANG", "LC_ALL", "TZ",
-    "JAVA_HOME", "KOTLIN_HOME",
-    "GOROOT", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
-    "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_HOME",
-};
-/**
- * The Go toolchain's writable state, which must never be shared between submissions: a cache that
- * one submission (compiled or run as the sandbox user) can write is one it can poison for every
- * later Go build. These are not inherited but placed in the work directory, which is fresh and
- * private for every submission (the judger may seed the build cache there from a read-only copy,
- * see judger.goBuildCacheSeed).
- */
-static const char* const GO_BUILD_CACHE_DIRECTORY = "/.cache/go-build"; // GOCACHE (work dir relative)
-static const char* const GO_PATH_DIRECTORY        = "/go";              // GOPATH (work dir relative)
-static const char* const DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin";
-// The options of the JVM of a run (see JavaOptions.java): read by the java launcher only (JDK 9+).
-static const char* const JAVA_OPTIONS_VARIABLE = "JDK_JAVA_OPTIONS";
-static const char* const DEFAULT_LANG = "C.UTF-8";
+static bool  sandboxAccountSelected = false;
+static uid_t sandboxUid             = 0;
+static gid_t sandboxGid             = 0;
 
 /**
  * Everything the (async-signal-safe) child needs is resolved in the parent before fork, so that
@@ -192,9 +156,9 @@ static const char* const DEFAULT_LANG = "C.UTF-8";
  * are frozen by fork.
  */
 struct ChildPlan {
-  std::string              executable;     // absolute path or PATH-resolved program to exec
-  std::vector<char*>       argv;           // NULL-terminated argument vector
-  std::vector<std::string> environment;    // sanitized "NAME=value" environment
+  std::vector<std::string> arguments;      // the program (resolved by the judger) and its arguments
+  std::vector<char*>       argv;           // NULL-terminated pointers into arguments
+  std::vector<std::string> environment;    // "NAME=value", built by the judger
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
   int                      outputFd;       // stdout redirect, opened by the judger (-1 = /dev/null)
@@ -203,6 +167,7 @@ struct ChildPlan {
   bool                     compileStep;    // compile: stderr also goes to the output file
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
+  rlim_t                   outputLimit;    // RLIMIT_FSIZE in bytes
   unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
   rlim_t                   fileLimit;      // RLIMIT_NOFILE (open descriptors per process)
@@ -213,11 +178,10 @@ struct ChildPlan {
 };
 
 /**
- * The limit a program exceeded, reported as "limitExceeded" in the result (the Java side maps it to
- * the verdict before looking at the exit code).
+ * The limit the sandbox stopped a program for (SandboxResult.Stop): Java judges the verdict.
  */
-enum LimitExceeded {
-  LIMIT_NONE = 0, LIMIT_TIME = 1, LIMIT_MEMORY = 2, LIMIT_OUTPUT = 3,
+enum Stop {
+  STOP_NONE = 0, STOP_TIME = 1, STOP_MEMORY = 2, STOP_OUTPUT = 3,
 };
 
 /**
@@ -249,16 +213,12 @@ struct ChildFailure {
 /**
  * Function Prototypes.
  */
-static std::vector<std::string> splitCommandLine(const std::string&);
-static std::string resolveExecutable(const std::string&);
-static std::vector<std::string> buildEnvironment(const std::string& workDirectory,
-                                                 const std::string& javaOptions);
+static std::vector<std::string> getStringValues(JNIEnv*, jobjectArray);
+static jintArray toResult(JNIEnv*, int cpuTimeMs, int peakMemoryKb, int exitCode, int stop);
 static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
-static rlim_t getDataLimit(int memoryLimitKb);
-static bool reachedOutputLimit(int status, int outputFd);
 static void awaitProcessGroupExit(pid_t);
 static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
@@ -271,117 +231,112 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
 
 /**
  * JNI call entry point.
- * Runs the given command in a sandboxed child process and measures its CPU time and peak memory
- * usage. Limits are enforced both by the kernel (setrlimit) and by a fine-grained watchdog;
- * isolation is layered: the seccomp syscall filters (an allowlist for a run of the submission, a
- * deny-list for a compilation, see buildSeccompPrograms), the Landlock rules that confine writes to
- * the work directory and (when running as root) the privilege drop are mandatory - the run is
- * refused if any of them cannot be applied - while the network namespace is best-effort, as the
- * filters already refuse every socket but AF_UNIX. Without the privilege drop (a judger that is not
- * root), the Landlock rules must also cover truncation, which needs Linux 6.2 (see runProgram).
+ * Selects the account a judger running as root runs programs as: it must exist and not be root. A
+ * judger that is not root runs them as itself, and needs none.
+ * @param  jniEnv    - a reference to the JNI runtime environment
+ * @param  jClass    - the calling Java class
+ * @param  jUsername - the name of the account
+ */
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandboxAccount(
+    JNIEnv* jniEnv, jclass jClass, jstring jUsername) {
+    (void) jClass;
+    if ( geteuid() != 0 ) {
+        return;
+    }
+    std::string    username = getStringValue(jniEnv, jUsername);
+    struct passwd* pw       = username.empty() ? nullptr : getpwnam(username.c_str());
+    if ( pw == nullptr || pw->pw_uid == 0 ) {
+        // Never run untrusted code as root.
+        throwStringException(jniEnv, "Judger: the sandbox user \"" + username +
+                                     (pw == nullptr ? "\" does not exist" : "\" is root") +
+                                     "; refusing to run");
+        return;
+    }
+    sandboxUid             = pw->pw_uid;
+    sandboxGid             = pw->pw_gid;
+    sandboxAccountSelected = true;
+}
+
+/**
+ * JNI call entry point.
+ * Runs a program in a sandboxed child process and measures its CPU time and peak memory. The
+ * command, environment and limits are the judger's (see SandboxPolicy.java); this only enforces
+ * them. Limits are enforced by the kernel (setrlimit) and by a watchdog; the seccomp filters (an
+ * allowlist for a run of the submission, a deny-list for a compilation, see buildSeccompPrograms),
+ * the Landlock rules that confine writes to the work directory and, as root, the privilege drop are
+ * mandatory - the program is not started if any of them cannot be applied - while the network
+ * namespace is best-effort, as the filters already refuse every socket but AF_UNIX.
  *
- * Every compilation and run is the same sandbox user, so whatever one of them could leave behind
- * outside its own work directory (a file in /tmp or /dev/shm, a System V shared memory segment, a
- * POSIX message queue, a key in the user's keyring, ...) would outlive it, unaccounted for, and
- * could be read by a later submission (e.g. a run copying its hidden input to /tmp, for a later
- * compilation to #include it into its compile log). Landlock (see confineFileSystemWrites) and the
- * filters (System V IPC, POSIX message queues and kernel keyrings) rule that out; they need no
- * privilege, so they hold in a default Docker container as well. The work directory is removed once
- * the submission has been judged. A compilation's work directory is the program directory, where
- * it writes the program; a run's is a fresh directory of its own (removed after it), so that it
- * cannot change the program, which the judger takes once compiled (see Preprocessor.java), nor
- * anything else a later run uses.
+ * Every compilation and run is the same sandbox user, so whatever one of them could leave outside
+ * its work directory (a file in /tmp or /dev/shm, System V IPC, a POSIX message queue, a key in the
+ * user's keyring) could be read by a later submission: Landlock and the filters rule that out, and
+ * need no privilege, so they hold in a default Docker container as well.
  *
- * The output file is created (or emptied) and opened here, by the judger, before the program
- * starts, and the program only gets the descriptor: it is never in the work directory, so the
- * program can neither replace it nor put anything at the path of a later run's output.
- *
- * A run of the submission is a single process: the filters let it create threads, but no other
- * process (see buildSeccompPrograms). A compilation runs a trusted compiler, which may run others;
- * they all stay in the compiler's process group, which is killed as a whole.
+ * The output file is created (or emptied) and opened by the judger before the program starts, in a
+ * directory the program may not write to: the program only gets the descriptor.
  *
  * @param  jniEnv          - a reference to the JNI runtime environment
  * @param  selfReference   - a reference to the calling Java object
- * @param  jCommandLine    - the command line to execute
- * @param  jUsername       - the unprivileged user to drop to (when running as root)
- * @param  jPassword       - unused on Unix (privilege drop is resolved from the username)
- * @param  jInputFilePath  - the file to read stdin from (may be NULL: /dev/null)
- * @param  jOutputFilePath - the file receiving stdout (may be NULL: /dev/null); for a compilation it
- *                           also receives stderr, otherwise stderr is discarded. Created by the
- *                           judger: it must be in a directory the program may not write to
- * @param  jWorkDirectory  - the directory the program runs in, its HOME and TMPDIR, and the only
- *                           one it may write to (may be NULL: it runs in / and may write nowhere)
- * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
- * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
- * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
- * @param  processLimit    - the maximum number of processes and threads of the sandbox user
- *                           (RLIMIT_NPROC, applied when privileges are dropped; 0 means the default)
- * @param  jJavaOptions    - the options of a JVM the program starts, given to it as JDK_JAVA_OPTIONS
- *                           (may be NULL or empty: not set); see JavaOptions.java
- * @return a Map<String, Object> with the CPU time ("usedTime", ms), the peak memory ("usedMemory",
- *         KB), the exit code ("exitCode", 128 + the signal if killed) and the limit the program
- *         exceeded ("limitExceeded", see LimitExceeded); throws a Java exception instead if the
+ * @param  jArguments      - the program (resolved by the judger) and its arguments
+ * @param  jEnvironment    - the whole environment of the program ("NAME=value")
+ * @param  jWorkDirectory  - the directory the program runs in, and the only one it may write to
+ * @param  jInputFile      - the file to read stdin from (may be NULL: /dev/null)
+ * @param  jOutputFile     - the file receiving stdout (may be NULL: /dev/null), and stderr for a
+ *                           compilation (a run's is discarded)
+ * @param  compilation     - whether a trusted compiler runs, rather than the submission
+ * @param  timeLimit       - the CPU time limit (ms, 0: none)
+ * @param  wallTimeLimit   - the wall-clock limit (ms, 0: none)
+ * @param  memoryLimit     - the limit of the peak resident set (KB, 0: none)
+ * @param  memoryBackstop  - RLIMIT_DATA (KB, 0: none)
+ * @param  outputLimit     - RLIMIT_FSIZE (KB)
+ * @param  processLimit    - RLIMIT_NPROC of the sandbox user (processes and threads), as root
+ * @return the CPU time (ms), the peak memory (KB), the exit code (128 + the signal if killed) and
+ *         the limit the program was stopped for (see Stop); throws a Java exception instead if the
  *         sandbox could not be set up
  */
-JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
-    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
-    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jstring jWorkDirectory,
-    jint timeLimit, jint memoryLimit, jboolean isCompilation, jint processLimit,
-    jstring jJavaOptions) {
+JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
+    JNIEnv* jniEnv, jobject selfReference, jobjectArray jArguments, jobjectArray jEnvironment,
+    jstring jWorkDirectory, jstring jInputFile, jstring jOutputFile, jboolean compilation,
+    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint outputLimit,
+    jint processLimit) {
     (void) selfReference;
-    (void) jPassword;
-    std::string commandLine = getStringValue(jniEnv, jCommandLine);
-    std::string username    = getStringValue(jniEnv, jUsername);
-
     // ----- Resolve everything the child needs before fork -----
-    std::vector<std::string> args = splitCommandLine(commandLine);
-    if ( args.empty() ) {
+    ChildPlan plan;
+    plan.arguments = getStringValues(jniEnv, jArguments);
+    if ( plan.arguments.empty() ) {
         throwStringException(jniEnv, "Judger: the command line is empty");
         return NULL;
     }
-
-    ChildPlan plan;
-    plan.executable     = resolveExecutable(args[0]);
-    plan.inputFilePath  = getStringValue(jniEnv, jInputFilePath);
+    std::string commandLine = plan.arguments[0];
+    plan.environment    = getStringValues(jniEnv, jEnvironment);
+    plan.inputFilePath  = getStringValue(jniEnv, jInputFile);
     plan.outputFd       = -1;
     plan.workDirectory  = getStringValue(jniEnv, jWorkDirectory);
-    // A compiler's diagnostics (stderr) are the compile log, but a submission's stderr must never
-    // reach the judged output.
-    plan.compileStep    = (isCompilation == JNI_TRUE);
+    plan.compileStep    = (compilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
-    plan.dataLimit      = getDataLimit(memoryLimit);
+    plan.dataLimit      = (rlim_t) memoryBackstop * 1024;
+    plan.outputLimit    = (rlim_t) outputLimit * 1024;
     long pageSize       = sysconf(_SC_PAGESIZE);
     plan.pageSize       = pageSize > 0 ? (unsigned long long) pageSize : 4096;
-    plan.processLimit   = (processLimit > 0) ? (rlim_t) processLimit : PROCESS_NUMBER_LIMIT;
+    plan.processLimit   = (rlim_t) processLimit;
     plan.fileLimit      = plan.compileStep ? COMPILE_FILE_LIMIT : RUN_FILE_LIMIT;
-    plan.dropPrivileges = false;
-    plan.dropUid        = 0;
-    plan.dropGid        = 0;
-    for ( std::string& arg : args ) {
-        plan.argv.push_back(const_cast<char*>(arg.c_str()));
+    plan.dropPrivileges = geteuid() == 0;
+    plan.dropUid        = sandboxUid;
+    plan.dropGid        = sandboxGid;
+    for ( std::string& argument : plan.arguments ) {
+        plan.argv.push_back(const_cast<char*>(argument.c_str()));
     }
     plan.argv.push_back(nullptr);
-
-    // When running as root, dropping privileges is mandatory and fails closed.
-    if ( geteuid() == 0 ) {
-        struct passwd* pw = username.empty() ? nullptr : getpwnam(username.c_str());
-        if ( pw == nullptr || pw->pw_uid == 0 ) {
-            // Never run untrusted code as root.
-            throwStringException(jniEnv, "Judger: the sandbox user \"" + username +
-                                         (pw == nullptr ? "\" does not exist" : "\" is root") +
-                                         "; refusing to run");
-            return NULL;
-        }
-        plan.dropPrivileges = true;
-        plan.dropUid        = pw->pw_uid;
-        plan.dropGid        = pw->pw_gid;
-    }
-
-    plan.environment = buildEnvironment(plan.workDirectory, getStringValue(jniEnv, jJavaOptions));
     for ( std::string& variable : plan.environment ) {
         plan.envp.push_back(const_cast<char*>(variable.c_str()));
     }
     plan.envp.push_back(nullptr);
+
+    // As root, dropping privileges is mandatory and fails closed.
+    if ( plan.dropPrivileges && !sandboxAccountSelected ) {
+        throwStringException(jniEnv, "Judger: no sandbox user is selected; refusing to run as root");
+        return NULL;
+    }
 
     // The filters are what keep a submission off the network when the judger has no CAP_SYS_ADMIN
     // (a default Docker container), and away from ptrace, namespaces, setsid and other processes
@@ -393,7 +348,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
 
     // The output file, created (or emptied) by the judger: the program gets its descriptor only.
-    std::string outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    std::string outputFilePath = getStringValue(jniEnv, jOutputFile);
     if ( !outputFilePath.empty() ) {
         plan.outputFd = openOutputFile(outputFilePath.c_str());
         if ( plan.outputFd < 0 ) {
@@ -451,12 +406,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         if ( syncBytes == (ssize_t) sizeof(childFailure) && childFailure.step == STEP_STATIC_DATA_LIMIT ) {
             // The program's static data alone exceeds the memory backstop: execve would have
             // failed past its point of no return, killing the program with SIGSEGV.
-            JHashMap result;
-            result.put("usedTime", 0);
-            result.put("usedMemory", memoryLimit);
-            result.put("exitCode", 128 + SIGSEGV);
-            result.put("limitExceeded", (jint) LIMIT_MEMORY);
-            return result.toJObject(jniEnv);
+            return toResult(jniEnv, 0, 0, 128 + SIGSEGV, STOP_MEMORY);
         }
         // The sandbox could not be set up, so the program never ran: a system error, never a
         // verdict on the submission.
@@ -473,35 +423,29 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // The program has been exec'd and is in its own session and process group (both pid), set up
     // before exec.
     std::atomic<bool> finished(false);
-    std::atomic<int>  limitExceeded(LIMIT_NONE); // the first limit the watchdog enforced
+    std::atomic<int>  stop(STOP_NONE); // the first limit the watchdog enforced
     std::atomic<int>  peakMemoryKb(0);
     long long startMillis = getMonotonicMillis();
     std::thread watchdog;
     try {
         watchdog = std::thread([&]() {
-            long long wallBackstopMs =
-                (timeLimit > 0) ? (long long) timeLimit * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS : 0;
             while ( !finished.load() ) {
-                if ( timeLimit > 0 ) {
-                    long long cpuMs  = readCpuTimeMillis(pid);
-                    long long wallMs = getMonotonicMillis() - startMillis;
-                    if ( cpuMs > timeLimit || (wallBackstopMs > 0 && wallMs > wallBackstopMs) ) {
-                        int none = LIMIT_NONE;
-                        limitExceeded.compare_exchange_strong(none, LIMIT_TIME);
-                        kill(-pid, SIGKILL);
-                    }
+                // The CPU time of the program and of the children it waited for (a compiler's).
+                if ( (timeLimit > 0 && readCpuTimeMillis(pid) > timeLimit) ||
+                     (wallTimeLimit > 0 && getMonotonicMillis() - startMillis > wallTimeLimit) ) {
+                    int none = STOP_NONE;
+                    stop.compare_exchange_strong(none, STOP_TIME);
+                    kill(-pid, SIGKILL);
                 }
-                // The peak RSS (VmHWM), which also catches a spike between two polls. The watchdog
-                // only starts once the program has been exec'd, so it never sees the JVM image the
-                // child shared before exec. For a compilation, this is the compiler's top-level
-                // process only; the others are each held to RLIMIT_DATA.
+                // The peak RSS (VmHWM) of the program, a compiler's top-level process only (the
+                // others are each held to RLIMIT_DATA): it also catches a spike between two polls.
                 int peakKb = readPeakMemoryKb(pid);
                 if ( peakKb > peakMemoryKb.load() ) {
                     peakMemoryKb.store(peakKb);
                 }
                 if ( memoryLimit > 0 && peakKb > memoryLimit ) {
-                    int none = LIMIT_NONE;
-                    limitExceeded.compare_exchange_strong(none, LIMIT_MEMORY);
+                    int none = STOP_NONE;
+                    stop.compare_exchange_strong(none, STOP_MEMORY);
                     kill(-pid, SIGKILL);
                 }
                 usleep(POLL_INTERVAL_US);
@@ -548,49 +492,59 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // (a compiler's; a run of the submission has none), every thread included.
     long long cpuMicros = (long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec +
                           (long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
-    int usedTime = (int) (cpuMicros / 1000);
-    // Peak memory sampled from /proc after exec. rusage's ru_maxrss is deliberately NOT used: for a
-    // child forked from the multi-threaded JVM it can include the parent's resident pages, briefly
-    // shared through the fork/exec window, hugely over-reporting memory on some architectures (e.g.
-    // a trivial program measured as the whole JVM heap).
-    int usedMemory = peakMemoryKb.load();
-    int exitCode   = 1;
+    // Peak memory sampled from /proc after exec, not ru_maxrss, which for a child forked from the
+    // JVM can include the JVM's pages it shared until exec.
+    int exitCode = 1;
     if ( WIFEXITED(status) ) {
         exitCode = WEXITSTATUS(status);
     } else if ( WIFSIGNALED(status) ) {
         exitCode = 128 + WTERMSIG(status);
     }
+    // The kernel stops a program at two limits: the output limit (SIGXFSZ) and, for a run, a
+    // single mapping beyond the backstop (SIGSYS, see buildSeccompPrograms).
+    int stoppedFor = stop.load();
+    if ( stoppedFor == STOP_NONE && WIFSIGNALED(status) && WTERMSIG(status) == SIGXFSZ ) {
+        stoppedFor = STOP_OUTPUT;
+    } else if ( stoppedFor == STOP_NONE && !plan.compileStep && plan.dataLimit > 0 &&
+                WIFSIGNALED(status) && WTERMSIG(status) == SIGSYS ) {
+        stoppedFor = STOP_MEMORY;
+    }
+    return toResult(jniEnv, (int) (cpuMicros / 1000), peakMemoryKb.load(), exitCode, stoppedFor);
+}
 
-    // What the watchdog did not stop still counts, whatever the exit code: CPU time it had not
-    // seen yet (it polls), a mapping beyond the memory backstop, which the seccomp filters stop, and
-    // the output limit, which the kernel enforces.
-    int limit = limitExceeded.load();
-    if ( limit == LIMIT_NONE && timeLimit > 0 && usedTime > timeLimit ) {
-        limit = LIMIT_TIME;
+/**
+ * Gets the values of a Java String[].
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @param  jArray - the array (may be NULL)
+ * @return its values
+ */
+static std::vector<std::string> getStringValues(JNIEnv* jniEnv, jobjectArray jArray) {
+    std::vector<std::string> values;
+    jsize length = jArray == nullptr ? 0 : jniEnv->GetArrayLength(jArray);
+    for ( jsize i = 0; i < length; ++ i ) {
+        jstring jValue = (jstring) jniEnv->GetObjectArrayElement(jArray, i);
+        values.push_back(getStringValue(jniEnv, jValue));
+        jniEnv->DeleteLocalRef(jValue);
     }
-    if ( limit == LIMIT_NONE && !plan.compileStep && plan.dataLimit > 0 && WIFSIGNALED(status) &&
-         WTERMSIG(status) == SIGSYS ) {
-        // A single mapping beyond RLIMIT_DATA (see buildSeccompPrograms), or a program that
-        // killed itself with SIGSYS, which gains it nothing.
-        limit = LIMIT_MEMORY;
-    }
-    if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFd) ) {
-        limit = LIMIT_OUTPUT;
-    }
-    // A program stopped at a limit is reported as having used at least that much.
-    if ( limit == LIMIT_TIME && usedTime < timeLimit ) {
-        usedTime = timeLimit;
-    }
-    if ( limit == LIMIT_MEMORY && memoryLimit > 0 && usedMemory < memoryLimit ) {
-        usedMemory = memoryLimit;
-    }
+    return values;
+}
 
-    JHashMap result;
-    result.put("usedTime", usedTime);
-    result.put("usedMemory", usedMemory);
-    result.put("exitCode", exitCode);
-    result.put("limitExceeded", limit);
-    return result.toJObject(jniEnv);
+/**
+ * Creates the result of a run: what Runner.java reads.
+ * @param  jniEnv       - a reference to the JNI runtime environment
+ * @param  cpuTimeMs    - the CPU time (ms)
+ * @param  peakMemoryKb - the peak memory (KB)
+ * @param  exitCode     - the exit code
+ * @param  stop         - the limit the program was stopped for (see Stop)
+ * @return the int[] of the four
+ */
+static jintArray toResult(JNIEnv* jniEnv, int cpuTimeMs, int peakMemoryKb, int exitCode, int stop) {
+    jint      values[] = { cpuTimeMs, peakMemoryKb, exitCode, stop };
+    jintArray result   = jniEnv->NewIntArray(4);
+    if ( result != nullptr ) {
+        jniEnv->SetIntArrayRegion(result, 0, 4, values);
+    }
+    return result;
 }
 
 /**
@@ -651,18 +605,11 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
             reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
         }
     }
-    if ( !setResourceLimit(RLIMIT_FSIZE, OUTPUT_FILE_SIZE_LIMIT, OUTPUT_FILE_SIZE_LIMIT) ) {
+    if ( !setResourceLimit(RLIMIT_FSIZE, plan.outputLimit, plan.outputLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
-    // The queued signals and POSIX timers of a run (timer_create, rt_sigqueueinfo and
-    // rt_tgsigqueueinfo allocate one each), which no memory limit sees. The kernel counts them per
-    // real user (the sandbox user's processes, or, for a judger that is not root, those of the
-    // judger's user), but holds the count against the rlimit of the process a signal is queued to
-    // (for a timer, the one that creates it): the run's own, inherited by its threads, which it
-    // cannot raise. So the limit binds the run alone, never the judger, whose own limit is
-    // unchanged: the run's timer_create and real-time sigqueue fail (EAGAIN) once its user has that
-    // many queued, its own included. Other signals sent to it past the limit are delivered all the
-    // same, without their details (a standard signal is never queued twice, so it holds no more).
+    // The kernel counts queued signals per user, but checks the count against the rlimit of the
+    // process that queues one (or creates a timer): this binds the run alone, never the judger.
     if ( !plan.compileStep &&
          !setResourceLimit(RLIMIT_SIGPENDING, RUN_SIGNAL_QUEUE_LIMIT, RUN_SIGNAL_QUEUE_LIMIT) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
@@ -722,14 +669,14 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // Like a single mapping beyond the backstop (see buildSeccompPrograms), it is Memory Limit
     // Exceeded. The file is read with the sandbox user's credentials, as execve would read it.
     if ( !plan.compileStep && plan.dataLimit > 0 &&
-         getWritableImageSize(plan.executable.c_str(), plan.pageSize) > (unsigned long long) plan.dataLimit ) {
+         getWritableImageSize(plan.argv[0], plan.pageSize) > (unsigned long long) plan.dataLimit ) {
         reportChildFailure(syncWriteFd, STEP_STATIC_DATA_LIMIT);
     }
 
     // Tier 1: a per-process kernel memory backstop, inherited by every child. RLIMIT_DATA (private
     // writable mappings, i.e. roughly committed memory) is used rather than RLIMIT_AS, because the
     // JVM, V8 (Node.js) and the Go runtime reserve far more address space than they ever commit and
-    // do not start under a tight RLIMIT_AS. It is generous on purpose (see getDataLimit), so the
+    // do not start under a tight RLIMIT_AS. It is generous on purpose (see Limits.java), so the
     // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
     // process can balloon between two polls (a run's single mapping beyond it is MLE as well, see
     // buildSeccompPrograms). Set last: the forked JVM image itself is far larger.
@@ -779,7 +726,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         }
     }
 
-    execve(plan.executable.c_str(), plan.argv.data(), plan.envp.data());
+    execve(plan.argv[0], plan.argv.data(), plan.envp.data());
 
     // execve only returns on failure.
     reportChildFailure(syncWriteFd, STEP_EXEC);
@@ -891,7 +838,7 @@ static long getLandlockAbi() {
  * the ABI, Landlock denies ptrace access, including to /proc/<pid>/fd and the like, to processes
  * outside the domain. Async-signal-safe.
  *
- * TMPDIR and HOME point into the work directory (see buildEnvironment), so the compilers' and
+ * TMPDIR and HOME point into the work directory (see SandboxPolicy.java), so the compilers' and
  * runtimes' temporary files and caches land there.
  * See https://docs.kernel.org/userspace-api/landlock.html
  *
@@ -1023,97 +970,6 @@ static int openOutputFile(const char* path) {
         return -1;
     }
     return fd;
-}
-
-/**
- * Splits a command line into a list of whitespace-separated arguments.
- * @param  commandLine - the command line
- * @return the list of arguments
- */
-static std::vector<std::string> splitCommandLine(const std::string& commandLine) {
-    std::istringstream iss(commandLine);
-    return std::vector<std::string>{
-        std::istream_iterator<std::string>{iss},
-        std::istream_iterator<std::string>{}
-    };
-}
-
-/**
- * Resolves a program name to an executable path. Names containing a slash are used verbatim;
- * otherwise PATH is searched, so the child can call execve (which does not search PATH and so does
- * not allocate) instead of execvp.
- * @param  file - the program name from the command line
- * @return the resolved path (or the original name if nothing matched)
- */
-static std::string resolveExecutable(const std::string& file) {
-    if ( file.find('/') != std::string::npos ) {
-        return file;
-    }
-    const char* path = getenv("PATH");
-    if ( path == nullptr ) {
-        path = DEFAULT_PATH;
-    }
-    std::string pathValue(path);
-    size_t start = 0;
-    while ( start <= pathValue.size() ) {
-        size_t colon = pathValue.find(':', start);
-        std::string dir =
-            (colon == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, colon - start);
-        if ( !dir.empty() ) {
-            std::string candidate = dir + "/" + file;
-            if ( access(candidate.c_str(), X_OK) == 0 ) {
-                return candidate;
-            }
-        }
-        if ( colon == std::string::npos ) {
-            break;
-        }
-        start = colon + 1;
-    }
-    return file;
-}
-
-
-/**
- * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
- * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, HOME and TMPDIR, and the options
- * of the JVM a run starts. The program can only write in its work directory (see
- * confineFileSystemWrites), so HOME (the judger's own, e.g. /root, would be useless anyway), TMPDIR
- * (compilers' temporary files: gcc, rustc, go build, ...), the Go build cache (GOCACHE) and GOPATH
- * all point there; the latter two would otherwise be shared between submissions.
- * @param  workDirectory - the work directory (empty for none: HOME is then /, and TMPDIR unset)
- * @param  javaOptions   - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing else)
- *                         reads: the heap and other settings that fit the JVM to the run's limits,
- *                         derived from them by JavaOptions.java (empty: not set)
- * @return the list of "NAME=value" strings
- */
-static std::vector<std::string> buildEnvironment(const std::string& workDirectory,
-                                                 const std::string& javaOptions) {
-    std::vector<std::string> environment;
-    if ( !javaOptions.empty() ) {
-        environment.push_back(std::string(JAVA_OPTIONS_VARIABLE) + "=" + javaOptions);
-    }
-    for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
-        const char* value = getenv(name);
-        if ( value != nullptr ) {
-            environment.push_back(std::string(name) + "=" + value);
-        }
-    }
-    if ( getenv("PATH") == nullptr ) {
-        environment.push_back(std::string("PATH=") + DEFAULT_PATH);
-    }
-    if ( getenv("LANG") == nullptr ) {
-        environment.push_back(std::string("LANG=") + DEFAULT_LANG);
-    }
-    if ( workDirectory.empty() ) {
-        environment.push_back("HOME=/");
-        return environment;
-    }
-    environment.push_back("HOME=" + workDirectory);
-    environment.push_back("TMPDIR=" + workDirectory);
-    environment.push_back("GOCACHE=" + workDirectory + GO_BUILD_CACHE_DIRECTORY);
-    environment.push_back("GOPATH=" + workDirectory + GO_PATH_DIRECTORY);
-    return environment;
 }
 
 /**
@@ -1358,7 +1214,7 @@ class SeccompFilter {
  *    judged language sets them on its own (a run has no network, and its standard streams are
  *    files);
  *  - is killed (SIGSYS) when it maps more private writable memory in one go than RLIMIT_DATA allows
- *    in all (see getDataLimit), e.g. std::vector<int>(1e9) under a 256 MB limit. The kernel would
+ *    in all (see Limits.java), e.g. std::vector<int>(1e9) under a 256 MB limit. The kernel would
  *    refuse that mapping anyway; the program would then fail in its own way (std::bad_alloc,
  *    MemoryError, a JVM or Go runtime abort, ...), which cannot be told apart from a runtime error,
  *    whereas this is the only rule of the filters that kills, so the judger reports a run killed by
@@ -1388,23 +1244,10 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         // sendto(fd, buf, len, flags, dest_addr, addrlen) only without an address (as the C
         // library's send calls it), i.e. on a connected socket: a socket pair.
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sendto), {SCMP_A4(SCMP_CMP_EQ, 0)});
-        // sched_setscheduler(pid, policy, param) only to SCHED_OTHER, the policy every process of
-        // the run has: the C library calls it on a new thread created with PTHREAD_EXPLICIT_SCHED,
-        // which Free Pascal's threads are, and pthread_create fails if it does. The policy is an
-        // int (the lower 32 bits, SCHED_RESET_ON_FORK included, so that flag is refused too). It
-        // cannot be confined to the run's own threads: the C library passes the new thread's id,
-        // not 0, and seccomp cannot tell a thread of the run from any other process. So a run may
-        // call it on any process of its user (the kernel refuses others): other runs and
-        // compilations of the sandbox user and, under a judger that is not root, the judger itself
-        // and every other process of the judger's user. On a process under SCHED_OTHER, as those
-        // of the judger and of every run are by default, it changes next to nothing: the policy
-        // stays, its priority must be 0 and the nice value is kept, but from Linux 6.12 on a time
-        // slice set with sched_setattr is reset to the default. A process under another policy is
-        // switched to SCHED_OTHER: SCHED_BATCH, or a real-time or deadline policy without
-        // SCHED_RESET_ON_FORK (which an unprivileged caller cannot clear), and SCHED_IDLE where the
-        // target's RLIMIT_NICE allows its nice value. That matters only for a judger that is not
-        // root and was given another policy (e.g. systemd's CPUSchedulingPolicy=batch), or for
-        // other processes of its user that were.
+        // sched_setscheduler(pid, policy, param) only to SCHED_OTHER (the lower 32 bits, so
+        // SCHED_RESET_ON_FORK is refused too): the C library calls it on a thread created with
+        // PTHREAD_EXPLICIT_SCHED, as Free Pascal's are. seccomp cannot confine it to the run's
+        // threads, so it may reset another process of its user to SCHED_OTHER (see deployment.md).
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sched_setscheduler),
                       {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) SCHED_OTHER)});
         allowlist.optimize();
@@ -1501,46 +1344,6 @@ static void awaitProcessGroupExit(pid_t pgid) {
 }
 
 /**
- * Computes the RLIMIT_DATA backstop for a memory limit: 2 x the limit plus a headroom of
- * max(DATA_LIMIT_MIN_HEADROOM_KB, physical RAM / DATA_LIMIT_RAM_DIVISOR).
- * @param  memoryLimitKb - the memory limit in KB (0 means no limit)
- * @return the limit in bytes, or 0 for none
- */
-static rlim_t getDataLimit(int memoryLimitKb) {
-    if ( memoryLimitKb <= 0 ) {
-        return 0;
-    }
-    unsigned long long headroomKb = DATA_LIMIT_MIN_HEADROOM_KB;
-    long pages    = sysconf(_SC_PHYS_PAGES);
-    long pageSize = sysconf(_SC_PAGESIZE);
-    if ( pages > 0 && pageSize > 0 ) {
-        unsigned long long ramKb = (unsigned long long) pages * (unsigned long long) pageSize / 1024;
-        if ( ramKb / DATA_LIMIT_RAM_DIVISOR > headroomKb ) {
-            headroomKb = ramKb / DATA_LIMIT_RAM_DIVISOR;
-        }
-    }
-    return (rlim_t) ((2ULL * (unsigned long long) memoryLimitKb + headroomKb) * 1024);
-}
-
-/**
- * Checks whether a program ran into the output limit (RLIMIT_FSIZE): either it was killed by the
- * SIGXFSZ the kernel sends, or - if it ignored the signal, so that the write failed with EFBIG
- * instead and the program went on to exit some way - its output file has reached the limit.
- * @param  status   - the program's wait status
- * @param  outputFd - the judger's descriptor of the file that received its standard output (-1
- *                    for none)
- * @return whether the output limit was reached
- */
-static bool reachedOutputLimit(int status, int outputFd) {
-    if ( WIFSIGNALED(status) && WTERMSIG(status) == SIGXFSZ ) {
-        return true;
-    }
-    struct stat st;
-    return outputFd >= 0 && fstat(outputFd, &st) == 0 && S_ISREG(st.st_mode) &&
-           (rlim_t) st.st_size >= OUTPUT_FILE_SIZE_LIMIT;
-}
-
-/**
  * Gets a monotonic timestamp in milliseconds (immune to wall-clock adjustments).
  * @return the current monotonic time in milliseconds
  */
@@ -1575,7 +1378,8 @@ static bool readProcessFile(pid_t pid, const char* name, char* buffer, size_t si
 }
 
 /**
- * Reads the consumed CPU time (user + system, every thread) of a process from /proc.
+ * Reads the consumed CPU time (user + system, every thread) of a process and of the children it
+ * waited for (a compiler's) from /proc, as wait4 reports it once the process is gone.
  * @param  pid - the process ID
  * @return the consumed CPU time in milliseconds, or -1 if it cannot be read
  */
@@ -1585,20 +1389,23 @@ static long long readCpuTimeMillis(pid_t pid) {
         return -1;
     }
     // The comm field (field 2) may contain spaces and parentheses, so parse after the last ')'.
-    // utime and stime are fields 14 and 15.
+    // utime, stime, cutime and cstime are fields 14 to 17.
     const char*        fields = strrchr(buffer, ')');
     unsigned long long utime  = 0;
     unsigned long long stime  = 0;
+    long long          cutime = 0;
+    long long          cstime = 0;
     if ( fields == nullptr ||
-         sscanf(fields + 1, " %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %llu %llu",
-                &utime, &stime) != 2 ) {
+         sscanf(fields + 1, " %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %llu %llu %lld %lld",
+                &utime, &stime, &cutime, &cstime) != 4 ) {
         return -1;
     }
     long hertz = sysconf(_SC_CLK_TCK);
     if ( hertz <= 0 ) {
         hertz = 100;
     }
-    return (long long) ((utime + stime) * 1000 / (unsigned long long) hertz);
+    return (long long) ((utime + stime + (unsigned long long) cutime + (unsigned long long) cstime) *
+                        1000 / (unsigned long long) hertz);
 }
 
 /**

@@ -16,19 +16,16 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
 
@@ -40,104 +37,43 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
 @Component
 public class Compiler {
   /**
-   * Gets the compilation result. The compiler runs in the program directory of the judging (see
-   * {@link Preprocessor}), the only directory it may write to, and its log goes to the directory
-   * of the judging, which it may not write to. Once the program is compiled, the judger takes the
-   * program directory, which the runs of the program may then only read (see {@link
+   * Compiles a submission. The compiler runs in the program directory of the judging (see {@link
+   * Preprocessor}), the only directory it may write to, and its log goes to the directory of the
+   * judging, which it may not write to. Once the program is compiled, the judger takes the program
+   * directory, which the runs of the program may then only read (see {@link
    * Preprocessor#sealProgramDirectory}).
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @return a Map<String, Object> object containing the compilation result
+   * @return the result of the compilation
    */
-  public Map<String, Object> getCompileResult(Submission submission, String workDirectory) {
-    String commandLine = getCompileCommandLine(submission, workDirectory);
+  public CompileResult getCompileResult(Submission submission, String workDirectory) {
     String compileLogPath = workDirectory + "/" + COMPILE_LOG_FILE;
-    int memoryLimit = getCompileMemoryLimit(submission.getLanguage());
-
-    Map<String, Object> result =
-        getCompileResult(
-            commandLine,
+    SandboxCommand command =
+        sandboxPolicy.compilation(
+            submission.getLanguage(),
             Preprocessor.getProgramDirectory(workDirectory),
-            compileLogPath,
-            memoryLimit);
-    if ((Boolean) result.get("isSuccessful")) {
+            compileLogPath);
+    LOGGER.info("Start compiling with command: " + String.join(" ", command.arguments()));
+    Verdict verdict;
+    try {
+      verdict = Verdict.of(command, sandboxRunner.run(command));
+    } catch (IOException ex) {
+      LOGGER.error("The sandbox failed to run the compiler", ex);
+      return new CompileResult(Verdict.INTERNAL_ERROR, "");
+    }
+    if (verdict == Verdict.NORMAL) {
       try {
         preprocessor.sealProgramDirectory(workDirectory);
-      } catch (Exception ex) {
+      } catch (IOException ex) {
         // The runs would otherwise be able to change the program for the runs after them.
         LOGGER.error("Failed to make the program directory of " + workDirectory + " read-only", ex);
-        result.put("verdict", Verdict.INTERNAL_ERROR);
-        result.put("isSuccessful", false);
+        return new CompileResult(Verdict.INTERNAL_ERROR, "");
       }
     }
-    return result;
-  }
-
-  /**
-   * Gets the memory limit of a compilation: judger.compileMemoryLimit scaled by the language's
-   * memory multiplier, like the memory limit of a run. Languages that run on a memory-hungry
-   * runtime have a memory-hungry compiler too: kotlinc is a JVM with a 512 MB heap of its own
-   * (its launcher's -Xmx512M) and peaks well above 512 MB in total, while C, C++, Go, Rust and
-   * Pascal (multiplier 1) keep the base limit, which bounds a "compiler bomb".
-   *
-   * @param language - the programming language object
-   * @return the memory limit (KB, 0 means no limit)
-   */
-  int getCompileMemoryLimit(Language language) {
-    double multiplier = language == null ? 1.0 : language.getMemoryMultiplier();
-    if (compileMemoryLimit <= 0 || multiplier <= 1.0) {
-      return compileMemoryLimit;
-    }
-    return (int) Math.min(Integer.MAX_VALUE, Math.ceil(compileMemoryLimit * multiplier));
-  }
-
-  /**
-   * Gets the compile command.
-   *
-   * @param submission - the submission object
-   * @param workDirectory - the directory of the judging
-   * @return the compile command
-   */
-  String getCompileCommandLine(Submission submission, String workDirectory) {
-    Language language = submission.getLanguage();
-    // Literally: a Windows path's backslashes are not escapes.
-    return language
-        .getCompileCommand()
-        .replace("{filename}", Preprocessor.getFilename(workDirectory, language));
-  }
-
-  /**
-   * Gets the compilation result.
-   *
-   * @param commandLine - the compile command
-   * @param programDirectory - the program directory, where the compiler runs
-   * @param compileLogPath - the path of the compilation log output
-   * @param memoryLimit - the memory limit (KB, 0 means no limit)
-   * @return a Map<String, Object> object containing the compilation result
-   */
-  private Map<String, Object> getCompileResult(
-      String commandLine, String programDirectory, String compileLogPath, int memoryLimit) {
-    String inputFilePath = null;
-
-    LOGGER.info("Start compiling with command: " + commandLine);
-    RunResult runResult =
-        sandboxRunner.run(
-            commandLine,
-            programDirectory,
-            programDirectory,
-            inputFilePath,
-            compileLogPath,
-            compileTimeLimit,
-            memoryLimit,
-            true);
-    Map<String, Object> result = new HashMap<>(4, 1);
-
-    Verdict verdict = runResult.getVerdict();
-    result.put("verdict", verdict);
-    result.put("isSuccessful", verdict == Verdict.NORMAL);
-    result.put("log", getCompileOutput(compileLogPath) + getLimitExceededMessage(verdict));
-    return result;
+    return new CompileResult(
+        verdict,
+        getCompileOutput(compileLogPath) + getLimitExceededMessage(verdict, command.limits()));
   }
 
   /**
@@ -145,13 +81,14 @@ public class Compiler {
    * cannot report (it was killed, often before printing anything).
    *
    * @param verdict - the verdict of the compilation
+   * @param limits - the limits of the compilation
    * @return the explanation, on a line of its own, or an empty string
    */
-  private String getLimitExceededMessage(Verdict verdict) {
+  private String getLimitExceededMessage(Verdict verdict, Limits limits) {
     switch (verdict) {
       case TIME_LIMIT_EXCEEDED:
         return String.format(
-            "\nCompilation exceeded the time limit (%d ms).\n", new Object[] {compileTimeLimit});
+            "\nCompilation exceeded the time limit (%d ms).\n", limits.timeLimitMs());
       case MEMORY_LIMIT_EXCEEDED:
         return "\nCompilation exceeded the memory limit.\n";
       case OUTPUT_LIMIT_EXCEEDED:
@@ -195,29 +132,14 @@ public class Compiler {
   /** The name of the compile log, in the directory of the judging. */
   static final String COMPILE_LOG_FILE = "compile.log";
 
+  /** The policy, which builds the compilation. */
+  @Autowired private SandboxPolicy sandboxPolicy;
+
   /** The configured sandbox runner, used to execute the compile command. */
   @Autowired private SandboxRunner sandboxRunner;
 
   /** The preprocessor, which hands the compiled program directory to the judger. */
   @Autowired private Preprocessor preprocessor;
-
-  /**
-   * The CPU time limit (milliseconds) for a compilation. Heavyweight toolchains such as the Go build
-   * driver and the JVM-based Kotlin compiler need far more than a few seconds, so this is generous
-   * and configurable rather than hardcoded.
-   */
-  @Value("${judger.compileTimeLimit:20000}")
-  private int compileTimeLimit;
-
-  /**
-   * The memory limit (kilobytes) for a compilation, before the language's memory multiplier. Without
-   * it, a small "compiler bomb" (e.g. C++ template recursion or a giant array initializer) can
-   * exhaust host memory and OOM the judger. It must stay generous enough for legitimate compilers
-   * (the Go linker, rustc), otherwise a real compile is killed and wrongly reported as a compile
-   * error; JVM-based compilers get more through their language's multiplier.
-   */
-  @Value("${judger.compileMemoryLimit:524288}")
-  private int compileMemoryLimit;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Compiler.class);

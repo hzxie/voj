@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,10 +53,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.core.CheckpointStore;
 import org.verwandlung.voj.judger.core.Comparator;
+import org.verwandlung.voj.judger.core.CompileResult;
 import org.verwandlung.voj.judger.core.Compiler;
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.core.Preprocessor;
 import org.verwandlung.voj.judger.core.ProgramRunner;
+import org.verwandlung.voj.judger.core.Verdict;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
@@ -260,8 +261,7 @@ public class JudgingQueueTest {
       throws Exception {
     long failing = insertPendingSubmission(FIRST_SUBMISSION_ID, 120);
     long other = insertPendingSubmission(FIRST_SUBMISSION_ID + 1, 60);
-    Map<String, Object> sandboxFailure = compileResult(false);
-    sandboxFailure.put("verdict", org.verwandlung.voj.judger.core.Verdict.INTERNAL_ERROR);
+    CompileResult sandboxFailure = new CompileResult(Verdict.INTERNAL_ERROR, "");
     when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation ->
@@ -492,11 +492,10 @@ public class JudgingQueueTest {
    * @param isSuccessful - whether the compilation succeeded
    * @return a compilation-result map
    */
-  private static Map<String, Object> compileResult(boolean isSuccessful) {
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", isSuccessful);
-    result.put("log", isSuccessful ? "" : "error");
-    return result;
+  private static CompileResult compileResult(boolean isSuccessful) {
+    return isSuccessful
+        ? new CompileResult(Verdict.NORMAL, "")
+        : new CompileResult(Verdict.RUNTIME_ERROR, "error");
   }
 
   /** The first identifier of the submissions the tests insert (test-data.sql uses none of them). */

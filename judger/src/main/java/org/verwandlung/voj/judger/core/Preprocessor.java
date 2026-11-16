@@ -136,8 +136,8 @@ public class Preprocessor {
   }
 
   /**
-   * Seeds the submission's own Go build cache ({@value #GO_BUILD_CACHE_DIRECTORY} in the work
-   * directory, where both the native sandbox and IsolateRunner point GOCACHE) from the read-only
+   * Seeds the submission's own Go build cache ({@link SandboxPolicy#GO_BUILD_CACHE_DIRECTORY} in
+   * the work directory, where the policy points GOCACHE) from the read-only
    * cache at {@code judger.goBuildCacheSeed}, so that the standard library does not have to be
    * rebuilt for every submission. A cache shared between submissions
    * would let one poison the Go builds of all later ones, so every submission gets its own: the
@@ -158,7 +158,7 @@ public class Preprocessor {
       return directories;
     }
     Path seed = Paths.get(goBuildCacheSeed);
-    Path cache = workDirectory.resolve(GO_BUILD_CACHE_DIRECTORY);
+    Path cache = workDirectory.resolve(SandboxPolicy.GO_BUILD_CACHE_DIRECTORY);
     try {
       PosixFileAttributes seedAttributes =
           Files.readAttributes(seed, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
@@ -335,22 +335,6 @@ public class Preprocessor {
   }
 
   /**
-   * Gets what {@code {filename}} stands for in a language's commands: the path of the source file
-   * in the program directory of a judging, without its extension (e.g. {@code .../program/Main}).
-   *
-   * @param workDirectory - the directory of the judging
-   * @param language - the programming language object
-   * @return the path of the source file without its extension
-   */
-  static String getFilename(String workDirectory, Language language) {
-    String sourceFile = language.getSourceFilename();
-    int extension = sourceFile.lastIndexOf('.');
-    return getProgramDirectory(workDirectory)
-        + "/"
-        + (extension > 0 ? sourceFile.substring(0, extension) : sourceFile);
-  }
-
-  /**
    * Gets the sandbox account (Windows).
    *
    * @return the account system.username names
@@ -447,12 +431,6 @@ public class Preprocessor {
    */
   @Value("${judger.goBuildCacheSeed:}")
   private String goBuildCacheSeed;
-
-  /**
-   * The submission's Go build cache, relative to its work directory. Must match GOCACHE as set by
-   * the native sandbox (GO_BUILD_CACHE_DIRECTORY in Judger.Core.Runner.cpp) and by IsolateRunner.
-   */
-  static final String GO_BUILD_CACHE_DIRECTORY = ".cache/go-build";
 
   /** The program directory of a judging, in its directory (see the class comment). */
   static final String PROGRAM_DIRECTORY = "program";

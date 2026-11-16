@@ -43,6 +43,8 @@ import org.mockito.quality.Strictness;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.judger.core.CompileResult;
+import org.verwandlung.voj.judger.core.Verdict;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
@@ -81,9 +83,7 @@ public class ApplicationDispatcherTest {
   @Test
   public void testOutcomeOfASupersededJudgingIsNotSent() {
     when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(0);
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", false);
-    result.put("log", "error");
+    CompileResult result = new CompileResult(Verdict.RUNTIME_ERROR, "error");
 
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
@@ -100,9 +100,7 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testMessagesCarryTheClaimTokenOfTheJudging() {
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", true);
-    result.put("log", "");
+    CompileResult result = new CompileResult(Verdict.NORMAL, "");
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
     applicationDispatcher.onOneTestPointFinished(submission(), 1, new HashMap<>());
@@ -296,9 +294,7 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnCompileFinishedSuccessful() {
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", true);
-    result.put("log", "");
+    CompileResult result = new CompileResult(Verdict.NORMAL, "");
 
     applicationDispatcher.onCompileFinished(submission(), result);
 
@@ -315,9 +311,7 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnCompileFinishedFailed() {
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", false);
-    result.put("log", "error: expected ';'");
+    CompileResult result = new CompileResult(Verdict.RUNTIME_ERROR, "error: expected ';'");
 
     applicationDispatcher.onCompileFinished(submission(), result);
 

@@ -35,7 +35,6 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -122,7 +121,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("AC"));
+        .thenReturn(runtimeResult(Verdict.NORMAL));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -164,7 +163,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("AC"));
+        .thenReturn(runtimeResult(Verdict.NORMAL));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("WA");
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -193,7 +192,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
-        .thenAnswer(invocation -> runtimeResult("AC"));
+        .thenAnswer(invocation -> runtimeResult(Verdict.NORMAL));
     when(comparator.getComparisonResult(anyString(), anyString(), eq(true))).thenReturn("PE");
     when(comparator.getComparisonResult(anyString(), anyString(), eq(false))).thenReturn("AC");
 
@@ -363,12 +362,10 @@ public class DispatcherTest {
   @Test
   public void testJudgeNextSubmissionSandboxFailureIsAFailedJudging() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    Map<String, Object> result = compileResult(false);
-    result.put("verdict", Verdict.INTERNAL_ERROR);
     when(compiler.getCompileResult(any(), anyString()))
-        .thenReturn(result, compileResult(true));
+        .thenReturn(new CompileResult(Verdict.INTERNAL_ERROR, ""), compileResult(true));
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("SE"));
+        .thenReturn(runtimeResult(Verdict.INTERNAL_ERROR));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
@@ -392,7 +389,7 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("AC"));
+        .thenReturn(runtimeResult(Verdict.NORMAL));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean()))
         .thenThrow(new java.io.IOException("No such file"));
 
@@ -414,8 +411,7 @@ public class DispatcherTest {
   @Test
   public void testFailedJudgingsInARowMakeTheJudgerNotReady() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    Map<String, Object> failure = compileResult(false);
-    failure.put("verdict", Verdict.INTERNAL_ERROR);
+    CompileResult failure = new CompileResult(Verdict.INTERNAL_ERROR, "");
     when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(failure, failure, failure, failure, compileResult(false));
 
@@ -621,7 +617,7 @@ public class DispatcherTest {
             invocation -> {
               isRejudged.set(true);
               Thread.sleep(LEASE_TIMEOUT);
-              return runtimeResult("AC");
+              return runtimeResult(Verdict.NORMAL);
             });
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
     org.mockito.Mockito.doAnswer(
@@ -922,27 +918,22 @@ public class DispatcherTest {
    * Builds a compilation result.
    *
    * @param isSuccessful - whether the compilation succeeded
-   * @return a compilation-result map
+   * @return a compilation result
    */
-  private Map<String, Object> compileResult(boolean isSuccessful) {
-    Map<String, Object> result = new HashMap<>();
-    result.put("isSuccessful", isSuccessful);
-    result.put("log", isSuccessful ? "" : "error");
-    return result;
+  private CompileResult compileResult(boolean isSuccessful) {
+    return isSuccessful
+        ? new CompileResult(Verdict.NORMAL, "")
+        : new CompileResult(Verdict.RUNTIME_ERROR, "error");
   }
 
   /**
-   * Builds a runtime result for a single checkpoint.
+   * Builds the outcome of a run on a single checkpoint.
    *
-   * @param slug - the unique English abbreviation of the judging result
-   * @return a runtime-result map
+   * @param verdict - how the run ended
+   * @return the outcome
    */
-  private Map<String, Object> runtimeResult(String slug) {
-    Map<String, Object> result = new HashMap<>();
-    result.put("runtimeResult", slug);
-    result.put("usedTime", 10);
-    result.put("usedMemory", 128);
-    return result;
+  private RunResult runtimeResult(Verdict verdict) {
+    return new RunResult(verdict, 10, 128);
   }
 
   /** The languages of the judger of the tests. */

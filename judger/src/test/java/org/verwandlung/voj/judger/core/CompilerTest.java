@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -49,8 +48,7 @@ public class CompilerTest {
     Submission submission = submissionMapper.getSubmission(1000);
     preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
-    Assertions.assertEquals(true, result.get("isSuccessful"));
+    Assertions.assertTrue(compiler.getCompileResult(submission, workDirectory).isSuccessful());
   }
 
   /**
@@ -63,8 +61,7 @@ public class CompilerTest {
     Submission submission = submissionMapper.getSubmission(1001);
     preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
-    Assertions.assertEquals(true, result.get("isSuccessful"));
+    Assertions.assertTrue(compiler.getCompileResult(submission, workDirectory).isSuccessful());
   }
 
   /**
@@ -77,8 +74,7 @@ public class CompilerTest {
     Submission submission = submissionMapper.getSubmission(1002);
     preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
-    Assertions.assertEquals(false, result.get("isSuccessful"));
+    Assertions.assertFalse(compiler.getCompileResult(submission, workDirectory).isSuccessful());
   }
 
   /** The Compiler object under test. */

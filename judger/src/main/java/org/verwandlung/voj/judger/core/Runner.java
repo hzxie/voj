@@ -16,7 +16,7 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.util.Map;
+import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,243 +26,144 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 
 /**
- * The legacy native {@link SandboxRunner}, backed by the JNI runner ({@code fork}/{@code exec}
- * under a seccomp filter on Linux, {@code CreateProcess} on Windows).
- *
- * <p>This implementation does not have first-class resource accounting, so it <em>infers</em> the
- * {@link Verdict} from the exit code and the measured time/memory. That inference is best-effort and
- * is superseded, on platforms that have proper isolation, by {@link IsolateRunner} (Linux) and the
- * future Job Object based runner (Windows).
- *
- * <p>This class is selected as the active {@code SandboxRunner} when {@code judger.sandbox=native}
- * (the default); see {@code SandboxConfiguration}. Note that the class name must stay
- * {@code Runner} because the JNI symbol of {@link #getRuntimeResult} is derived from it.
+ * The native {@link SandboxRunner} (JNI): on Linux, {@code fork}/{@code exec} under rlimits,
+ * Landlock and seccomp filters, as {@code system.username} when the judger is root; on Windows, a
+ * Job Object, a restricted Low-integrity token of {@code system.username}, a private desktop and a
+ * network filter. The backend on Windows, and on Linux for a judger that is not root (development)
+ * or where isolate is not available. The class name is part of the JNI symbols.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Runner implements SandboxRunner {
   /**
-   * Runs a command under the legacy native sandbox. A compilation captures standard output and
-   * standard error into {@code outputFilePath} (the compile log); a run of the submission captures
-   * only standard output, and its standard error is discarded so it never reaches the judged output.
-   * The program runs in {@code workDirectory}, the only directory it may write to; the native
-   * sandbox does not need the program directory, which a run may only read like any other.
+   * Runs a compilation or a run of a submission in the native sandbox.
    *
-   * @param commandLine - the command line to execute
-   * @param programDirectory - the directory of the program (unused)
-   * @param workDirectory - the directory the program runs in and may write to, or {@code null}
-   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture the output into, or {@code null} for none
-   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
-   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
-   * @param isCompilation - whether this is a compilation (as opposed to a run of the submission)
-   * @return the structured run result; never {@code null}
+   * @param command - what to run, and how
+   * @return what the sandbox measured
+   * @throws IOException if the sandbox could not be set up or failed
    */
   @Override
-  public RunResult run(
-      String commandLine,
-      String programDirectory,
-      String workDirectory,
-      String inputFilePath,
-      String outputFilePath,
-      int timeLimitMs,
-      int memoryLimitKb,
-      boolean isCompilation) {
+  public SandboxResult run(SandboxCommand command) throws IOException {
     if (LIBRARY_LOAD_FAILURE != null) {
-      LOGGER.error(
-          "The native sandbox library is not loaded, so {} cannot run: {}",
-          commandLine,
-          LIBRARY_LOAD_FAILURE.toString());
-      return RunResult.internalError();
+      throw new IOException("The native sandbox library is not loaded", LIBRARY_LOAD_FAILURE);
     }
+    Limits limits = command.limits();
     try {
-      Map<String, Object> nativeResult =
-          getRuntimeResult(
-              commandLine,
-              systemUsername,
-              systemPassword,
-              inputFilePath,
-              outputFilePath,
-              workDirectory,
-              timeLimitMs,
-              memoryLimitKb,
-              isCompilation,
-              isCompilation ? compileProcessLimit : processLimit,
-              isCompilation ? null : JavaOptions.forRun(memoryLimitKb));
-      return toRunResult(nativeResult, timeLimitMs, memoryLimitKb);
-    } catch (Exception ex) {
-      // The native runner throws when the sandbox cannot be set up (no sandbox user, a failed
-      // privilege drop or seccomp filter, an executable that cannot be run, ...). That is a failure
-      // of the judging, never a verdict on the submission. An Error (e.g. an OutOfMemoryError)
-      // escapes: it leaves the judger in no state to judge (see Dispatcher#onFatalError).
-      LOGGER.error("The native sandbox failed to run " + commandLine, ex);
-      return RunResult.internalError();
+      openSandboxAccount();
+      int[] result =
+          execute(
+              command.arguments().toArray(new String[0]),
+              command.environment().toArray(new String[0]),
+              command.workDirectory(),
+              command.inputFile(),
+              command.outputFile(),
+              command.compilation(),
+              limits.timeLimitMs(),
+              limits.wallTimeLimitMs(),
+              limits.memoryLimitKb(),
+              limits.memoryBackstopKb(),
+              limits.outputLimitKb(),
+              limits.processLimit());
+      return new SandboxResult(
+          result[0], result[1], result[2], SandboxResult.Stop.values()[result[3]]);
+    } catch (RuntimeException ex) {
+      // The native sandbox throws when it cannot be set up (no sandbox account, a failed privilege
+      // drop or filter, a program that cannot be started, ...).
+      throw new IOException("The native sandbox failed to run " + command.arguments(), ex);
     }
   }
 
   /**
-   * Converts the native runner's result map into a run result.
-   *
-   * @param nativeResult - the map returned by {@link #getRuntimeResult}
-   * @param timeLimitMs - the time limit (ms, 0 means no limit)
-   * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
-   * @return the run result ({@link Verdict#INTERNAL_ERROR} for a missing map)
+   * Opens the sandbox account once, before the first program runs as it: on Linux, the account a
+   * judger running as root drops to; on Windows, its logon session, which every program runs in.
    */
-  static RunResult toRunResult(
-      Map<String, Object> nativeResult, int timeLimitMs, int memoryLimitKb) {
-    if (nativeResult == null) {
-      return RunResult.internalError();
+  private synchronized void openSandboxAccount() {
+    if (sandboxAccountOpen) {
+      return;
     }
-    int exitCode = (Integer) nativeResult.get("exitCode");
-    int usedTime = (Integer) nativeResult.get("usedTime");
-    int usedMemory = (Integer) nativeResult.get("usedMemory");
-    // Absent from a native library that predates it.
-    Object limitExceeded = nativeResult.get("limitExceeded");
-    Verdict verdict =
-        inferVerdict(
-            limitExceeded == null ? LIMIT_NONE : (Integer) limitExceeded,
-            exitCode,
-            usedTime,
-            usedMemory,
-            timeLimitMs,
-            memoryLimitKb);
-    return new RunResult(verdict, usedTime, usedMemory, exitCode);
+    if (IS_WINDOWS) {
+      logOnSandboxAccount(sandboxUsername, sandboxPassword);
+    } else {
+      selectSandboxAccount(sandboxUsername);
+    }
+    sandboxAccountOpen = true;
   }
 
   /**
-   * Infers the verdict from the native runner's output. The limit the runner reports the program
-   * exceeded comes first. Then, whatever the exit code, a run that used more than a limit is never
-   * a normal one: the runners poll, so a program can finish just past a limit before it is
-   * stopped. Otherwise an exit code of 0 is a normal run, and a failed run is attributed to the
-   * limit it reached, falling back to a runtime error.
+   * Runs a program in the sandbox and measures it.
    *
-   * @param limitExceeded - the limit the native runner reports exceeded (LIMIT_*)
-   * @param exitCode - the raw exit code reported by the native runner
-   * @param usedTime - the measured time used (ms)
-   * @param usedMemory - the measured memory used (KB)
-   * @param timeLimitMs - the time limit (ms, 0 means no limit)
-   * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
-   * @return the inferred verdict
+   * @param arguments - the program and its arguments
+   * @param environment - the environment of the program ({@code NAME=value})
+   * @param workDirectory - the directory the program runs in and the only one it may write to
+   * @param inputFile - the file standard input is read from ({@code null}: none)
+   * @param outputFile - the file standard output goes to ({@code null}: none), created by the
+   *     sandbox; standard error goes there too for a compilation
+   * @param compilation - whether a trusted compiler runs, rather than the submission
+   * @param timeLimit - the CPU time limit (ms, 0: none)
+   * @param wallTimeLimit - the wall-clock limit (ms, 0: none)
+   * @param memoryLimit - the limit of the peak resident memory (KB, 0: none)
+   * @param memoryBackstop - the limit of the committed memory (KB, 0: none)
+   * @param outputLimit - the largest file the program may write (KB)
+   * @param processLimit - the processes (on Linux, and threads) the program may have at once
+   * @return the CPU time (ms), the peak memory (KB), the exit code and the limit the program was
+   *     stopped for (see {@link SandboxResult.Stop})
    */
-  private static Verdict inferVerdict(
-      int limitExceeded,
-      int exitCode,
-      int usedTime,
-      int usedMemory,
-      int timeLimitMs,
-      int memoryLimitKb) {
-    switch (limitExceeded) {
-      case LIMIT_TIME:
-        return Verdict.TIME_LIMIT_EXCEEDED;
-      case LIMIT_MEMORY:
-        return Verdict.MEMORY_LIMIT_EXCEEDED;
-      case LIMIT_OUTPUT:
-        return Verdict.OUTPUT_LIMIT_EXCEEDED;
-      default:
-        break;
-    }
-    if (timeLimitMs != 0 && usedTime > timeLimitMs) {
-      return Verdict.TIME_LIMIT_EXCEEDED;
-    }
-    if (memoryLimitKb != 0 && usedMemory > memoryLimitKb) {
-      return Verdict.MEMORY_LIMIT_EXCEEDED;
-    }
-    if (exitCode == 0) {
-      return Verdict.NORMAL;
-    }
-    if (timeLimitMs != 0 && usedTime >= timeLimitMs) {
-      return Verdict.TIME_LIMIT_EXCEEDED;
-    }
-    if (memoryLimitKb != 0 && usedMemory >= memoryLimitKb) {
-      return Verdict.MEMORY_LIMIT_EXCEEDED;
-    }
-    return Verdict.RUNTIME_ERROR;
-  }
-
-  /**
-   * Gets the program's runtime result via JNI.
-   *
-   * @param commandLine - the command line of the program to execute
-   * @param systemUsername - the username for logging into the operating system
-   * @param systemPassword - the password for logging into the operating system
-   * @param inputFilePath - the input file path (may be NULL)
-   * @param outputFilePath - the output file path (may be NULL), which the sandbox creates (or
-   *     empties) itself: it must not be in a directory the program may write to
-   * @param workDirectory - the directory the program runs in, its home and temporary directory
-   *     and the only one it may write to (may be NULL: it runs in the root directory, or on Windows
-   *     the sandbox account's profile, and may write nowhere)
-   * @param timeLimit - the time limit (in ms, 0 means no limit)
-   * @param memoryLimit - the memory limit (in KB, 0 means no limit)
-   * @param isCompilation - whether this is a compilation (stderr is then captured with stdout)
-   * @param processLimit - the maximum number of processes (Linux: processes and threads) the
-   *     sandbox may have at once (0 means the native default)
-   * @param javaOptions - the options of a JVM the program starts, passed to it as {@value
-   *     JavaOptions#ENVIRONMENT_VARIABLE} ({@code null} or empty for none); see {@link JavaOptions}
-   * @return a Map<String, Object> object containing the program's runtime result
-   */
-  public native Map<String, Object> getRuntimeResult(
-      String commandLine,
-      String systemUsername,
-      String systemPassword,
-      String inputFilePath,
-      String outputFilePath,
+  private native int[] execute(
+      String[] arguments,
+      String[] environment,
       String workDirectory,
+      String inputFile,
+      String outputFile,
+      boolean compilation,
       int timeLimit,
+      int wallTimeLimit,
       int memoryLimit,
-      boolean isCompilation,
-      int processLimit,
-      String javaOptions);
+      int memoryBackstop,
+      int outputLimit,
+      int processLimit);
 
   /**
-   * The username for logging into the operating system. For security, we recommend running the
-   * judging program as a low-privilege user.
+   * Selects the account programs run as when the judger runs as root (Linux), which must exist
+   * and not be root; a judger that is not root runs them as itself.
+   *
+   * @param username - the name of the account
    */
+  private static native void selectSandboxAccount(String username);
+
+  /**
+   * Logs the sandbox account on (Windows): the logon session every program runs in, with the
+   * account's profile, a private desktop and a network filter, kept until the judger exits. No
+   * other judger may use the account meanwhile.
+   *
+   * @param username - the name of the account
+   * @param password - its password
+   */
+  private static native void logOnSandboxAccount(String username, String password);
+
+  /** Logs the sandbox account off (Windows), as the judger exits. */
+  private static native void logOffSandboxAccount();
+
+  /** The account programs run as (see {@code system.username}). */
   @Value("${system.username}")
-  private String systemUsername;
+  private String sandboxUsername;
 
-  /**
-   * The password for logging into the operating system. For security, we recommend running the
-   * judging program as a low-privilege user.
-   */
+  /** The password of the account, which Windows logs it on with. */
   @Value("${system.password}")
-  private String systemPassword;
+  private String sandboxPassword;
 
-  /**
-   * The maximum number of processes a submission may have at once. On Linux, where a run of the
-   * submission cannot create processes, this is the sandbox user's RLIMIT_NPROC, which caps its
-   * threads.
-   */
-  @Value("${judger.processLimit:64}")
-  private int processLimit;
+  /** Whether the sandbox account is open. */
+  private boolean sandboxAccountOpen;
 
-  /**
-   * The maximum number of processes a compilation may have at once. Higher than {@link
-   * #processLimit}: the compilers are trusted programs, and the Go toolchain runs one compiler per
-   * CPU, each with up to a thread per CPU, which exhausts a small limit on a many-core host.
-   */
-  @Value("${judger.compileProcessLimit:1024}")
-  private int compileProcessLimit;
-
-  /** The "limitExceeded" values of the native result: no limit was exceeded. */
-  static final int LIMIT_NONE = 0;
-
-  /** The "limitExceeded" values of the native result: the time limit. */
-  static final int LIMIT_TIME = 1;
-
-  /** The "limitExceeded" values of the native result: the memory limit. */
-  static final int LIMIT_MEMORY = 2;
-
-  /** The "limitExceeded" values of the native result: the output limit. */
-  static final int LIMIT_OUTPUT = 3;
+  /** Whether the judger runs on Windows. */
+  private static final boolean IS_WINDOWS = System.getProperty("os.name").contains("Windows");
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Runner.class);
 
   /**
    * Why the native library could not be loaded, or {@code null} once it is. The judger still
-   * starts without it (e.g. with {@code judger.sandbox=isolate}), but every native run is then a
-   * system error.
+   * starts without it (e.g. with {@code judger.sandbox=isolate}).
    */
   private static final Throwable LIBRARY_LOAD_FAILURE = loadNativeLibrary();
 
@@ -274,9 +175,9 @@ public class Runner implements SandboxRunner {
   private static Throwable loadNativeLibrary() {
     try {
       NativeLibraryLoader.loadLibrary("JudgerCore");
-      if (System.getProperty("os.name").contains("Windows")) {
+      if (IS_WINDOWS) {
         Runtime.getRuntime()
-            .addShutdownHook(new Thread(Runner::closeSandboxSession, "voj-sandbox-session"));
+            .addShutdownHook(new Thread(Runner::logOffSandboxAccount, "voj-sandbox-logoff"));
       }
       return null;
     } catch (Throwable ex) {
@@ -284,12 +185,4 @@ public class Runner implements SandboxRunner {
       return ex;
     }
   }
-
-  /**
-   * Closes the sandbox account's logon session (Windows), which the native runner opens at the
-   * first compilation or run and keeps: unloads the account's profile, which Windows would
-   * otherwise keep loaded after the judger exits, and takes back the access to the judger's window
-   * station it gave the session. Called as the judger exits.
-   */
-  private static native void closeSandboxSession();
 }

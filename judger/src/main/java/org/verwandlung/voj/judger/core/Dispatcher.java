@@ -23,6 +23,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -501,7 +502,7 @@ public class Dispatcher implements DisposableBean {
    * <p>Between its steps (the download of the test data, the compilation, the run of each
    * checkpoint), and before reporting one, the judging stops once it was superseded (see {@link
    * Lease}). A step itself runs to its end: its time is bounded by the sandbox's limits (e.g. at
-   * most three times the time limit of a run, plus a second, of wall-clock time).
+   * most the wall-clock limit of a run, see {@link Limits#wallTimeLimitMs}).
    *
    * @param submission - the submission object
    * @param lease - the lease of the judging
@@ -583,13 +584,13 @@ public class Dispatcher implements DisposableBean {
    */
   private boolean compile(Submission submission, Lease lease, String workDirectory)
       throws FailedJudging, Superseded {
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
-    if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
+    CompileResult result = compiler.getCompileResult(submission, workDirectory);
+    if (result.verdict() == Verdict.INTERNAL_ERROR) {
       throw new FailedJudging("The sandbox of the judger failed to run the compiler.", null);
     }
     lease.check();
     applicationDispatcher.onCompileFinished(submission, result);
-    return (Boolean) result.get("isSuccessful");
+    return result.isSuccessful();
   }
 
   /**
@@ -647,8 +648,8 @@ public class Dispatcher implements DisposableBean {
    *
    * <p>The renewals stop too once the judging runs past its deadline, the longest a judging of the
    * submission can take: the download of its test data, its compilation and its runs, each bounded
-   * by its timeout or the sandbox's wall-clock limit (three times the time limit, plus a second),
-   * plus a lease timeout. A judging past it is stuck (e.g. on a connection that went silent): the
+   * by its timeout or the sandbox's wall-clock limit (see {@link Limits#wallTimeLimitMs}), plus a
+   * lease timeout. A judging past it is stuck (e.g. on a connection that went silent): the
    * submission is taken by another judger once its lease expired (which counts the judging as a
    * failed one), and this judger is not ready meanwhile (see {@link #isReady}).
    *
@@ -760,14 +761,13 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Gets the longest a step of a judging with a time limit may take: the sandbox stops it after
-   * three times its time limit, plus a second, of wall-clock time.
+   * Gets the longest a step of a judging with a time limit may take, its wall-clock limit.
    *
    * @param timeLimit - the time limit (ms) of the step
    * @return its wall-clock limit (ms)
    */
   private static long getWallTimeLimit(long timeLimit) {
-    return timeLimit * 3 + 1000;
+    return Limits.wallTimeLimitMs(timeLimit);
   }
 
   /**
@@ -793,7 +793,7 @@ public class Dispatcher implements DisposableBean {
   /**
    * Gets the program's runtime result (and the answer comparison result).
    *
-   * @param result - the Map object containing the program's runtime result
+   * @param result - the outcome of the run
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
    * @param exactlyMatch - whether the checkpoint requires an exact match
@@ -802,19 +802,16 @@ public class Dispatcher implements DisposableBean {
    *     be read
    */
   private Map<String, Object> getRuntimeResult(
-      Map<String, Object> result,
-      String standardOutputFilePath,
-      String outputFilePath,
-      boolean exactlyMatch)
+      RunResult result, String standardOutputFilePath, String outputFilePath, boolean exactlyMatch)
       throws FailedJudging {
-    String runtimeResultSlug = (String) result.get("runtimeResult");
-    int usedTime = (Integer) result.get("usedTime");
-    int usedMemory = (Integer) result.get("usedMemory");
+    String runtimeResultSlug = result.verdict().getSlug();
+    int usedTime = result.usedTime();
+    int usedMemory = result.usedMemory();
 
-    if ("SE".equals(runtimeResultSlug)) {
+    if (result.verdict() == Verdict.INTERNAL_ERROR) {
       throw new FailedJudging("The sandbox of the judger failed to run the program.", null);
     }
-    if (runtimeResultSlug.equals("AC")) {
+    if (result.verdict() == Verdict.NORMAL) {
       try {
         runtimeResultSlug =
             comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
@@ -824,14 +821,17 @@ public class Dispatcher implements DisposableBean {
         throw new FailedJudging(
             "The judger could not read its copy of the test data of the problem.", ex);
       }
-      result.put("runtimeResult", runtimeResultSlug);
     }
     LOGGER.info(
         String.format(
             "RuntimeResult: [%s, Time: %d ms, Memory: %d KB]",
             new Object[] {runtimeResultSlug, usedTime, usedMemory}));
 
-    return result;
+    Map<String, Object> runtimeResult = new HashMap<>();
+    runtimeResult.put("runtimeResult", runtimeResultSlug);
+    runtimeResult.put("usedTime", usedTime);
+    runtimeResult.put("usedMemory", usedMemory);
+    return runtimeResult;
   }
 
   /**

@@ -19,7 +19,6 @@ package org.verwandlung.voj.judger.core;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -62,10 +61,9 @@ public class ProgramRunnerTest {
     writeInput(inputFilePath, "18820 26832\r\n");
     compiler.getCompileResult(submission, workDirectory);
 
-    Map<String, Object> result =
-        programRunner.getRuntimeResult(
-            submission, workDirectory, inputFilePath, outputFilePath);
-    Assertions.assertEquals("AC", result.get("runtimeResult"));
+    RunResult result =
+        programRunner.getRuntimeResult(submission, workDirectory, inputFilePath, outputFilePath);
+    Assertions.assertEquals(Verdict.NORMAL, result.verdict());
   }
 
   /**
@@ -86,10 +84,9 @@ public class ProgramRunnerTest {
     writeInput(inputFilePath, "18820 26832\r\n");
     compiler.getCompileResult(submission, workDirectory);
 
-    Map<String, Object> result =
-        programRunner.getRuntimeResult(
-            submission, workDirectory, inputFilePath, outputFilePath);
-    Assertions.assertEquals("AC", result.get("runtimeResult"));
+    RunResult result =
+        programRunner.getRuntimeResult(submission, workDirectory, inputFilePath, outputFilePath);
+    Assertions.assertEquals(Verdict.NORMAL, result.verdict());
   }
 
   /**

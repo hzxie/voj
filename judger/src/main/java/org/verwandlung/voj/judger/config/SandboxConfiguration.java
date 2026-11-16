@@ -28,18 +28,15 @@ import org.verwandlung.voj.judger.core.Runner;
 import org.verwandlung.voj.judger.core.SandboxRunner;
 
 /**
- * Selects which {@link SandboxRunner} the judger uses, based on the {@code judger.sandbox} property:
+ * Selects the {@link SandboxRunner} by {@code judger.sandbox}. Both backends carry out the same
+ * commands and limits (see {@code SandboxPolicy}), and the judger judges what they measure alike:
  *
  * <ul>
- *   <li>{@code native} (default): the legacy JNI {@link Runner} ({@code posix_spawn} /
- *       {@code CreateProcess}). This is the only option on Windows and is also what the test suite
- *       and CI use, since isolate needs kernel privileges that CI containers do not grant.
- *   <li>{@code isolate}: the {@link IsolateRunner} (Linux, cgroups v2 + namespaces + seccomp),
- *       recommended for production Linux deployments.
+ *   <li>{@code isolate}: the {@link IsolateRunner} (namespaces and cgroups), recommended for
+ *       Linux in production; it needs isolate and a judger running as root.
+ *   <li>{@code native} (default): the JNI {@link Runner}, the backend on Windows, and on Linux for
+ *       a judger that is not root (development, the tests) or a host without isolate.
  * </ul>
- *
- * <p>The selection uses a {@code ${...}} placeholder (rather than a Spring Boot conditional) so that
- * it resolves identically under the Boot runtime and under the XML-based test context.
  *
  * @author Haozhe Xie
  */
@@ -49,7 +46,7 @@ public class SandboxConfiguration {
    * Chooses the active sandbox runner.
    *
    * @param sandbox - the configured sandbox ({@code native} or {@code isolate})
-   * @param nativeRunner - the legacy native runner
+   * @param nativeRunner - the native runner
    * @param isolateRunner - the isolate runner
    * @return the selected sandbox runner
    */
