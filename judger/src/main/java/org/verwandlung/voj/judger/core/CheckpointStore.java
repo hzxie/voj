@@ -28,14 +28,20 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryFlag;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
@@ -65,27 +71,24 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * <p>Every judger on a host claims a slot <i>n</i> of its own under the checkpoint root (its real
  * path, so that every spelling of it agrees): the first one whose lock file {@code
  * judger-<n>.lock} there no other process holds. It holds that lock until it exits, and a
- * restarted judger usually gets its old slot back. The slot is two directories:
+ * restarted judger usually gets its old slot back. The slot is two directories next to its lock
+ * file:
  *
  * <ul>
- *   <li>its cache, {@code judger.checkpointDir/judger-<n>/}, so that several judgers on one host
- *       never replace a problem's copy while another one reads it. Within a judger, judging is
- *       serialised (see {@code Dispatcher#createNewTask}), so a problem's copy is never replaced
- *       while it is read.
- *   <li>its work directory, {@code judger.workDir/voj-judger-<h>-<n>/}, which holds the work
- *       directory of each judging (see {@link #getWorkDirectory}). <i>h</i> is a short hash of the
- *       checkpoint root, so judgers that share {@code judger.workDir} but not {@code
- *       judger.checkpointDir} never use one name. A judger that died while judging (killed, out of
- *       memory) leaves the work directory of that judging behind, with a submission's source and
- *       binary in it: it is removed when the slot is claimed again. No other judger uses that
- *       directory, as the slot's lock is held; anything else at its path that is not the judger's
- *       (in a {@code /tmp} shared by every account) fails the startup.
+ *   <li>its cache, {@code judger-<n>/}, so that several judgers on one host never replace a
+ *       problem's copy while another one reads it. Within a judger, judging is serialised (see
+ *       {@code Dispatcher#createNewTask}), so a problem's copy is never replaced while it is read.
+ *   <li>its work directory, {@code work-<n>/}, which holds the work directory of each judging (see
+ *       {@link #getWorkDirectory}). A judger that died while judging (killed, out of memory) leaves
+ *       the work directory of that judging behind, with a submission's source and binary in it: it
+ *       is removed when the slot is claimed again.
  * </ul>
  *
  * <p>The checkpoint root belongs to the judger and only it may write to it (the judger refuses it
- * otherwise), so nobody else can remove or replace a lock file. A clean-up of old files in {@code
- * /tmp} may still remove one: before each use the judger checks that its lock file is still the
- * one it locked (and marks it as just used), and claims a slot again if not.
+ * otherwise), so nobody else can create, remove or replace anything in it. A clean-up of old files
+ * in {@code /tmp} may still remove a lock file or a directory: before each use the judger checks
+ * that its lock file is still the one it locked (and marks it as just used), claims a slot again if
+ * not, and creates its directories again if they are gone.
  *
  * @author Haozhe Xie
  */
@@ -118,46 +121,46 @@ public class CheckpointStore {
       slotLock = null;
     }
     if (slotLock == null) {
-      // Relative to the directory the judger was started in, as any relative path is; but the
-      // sandbox resolves the paths of a judging after entering its work directory.
-      Path workRoot = Paths.get(workRootDirectory).toAbsolutePath().normalize();
-      String workDirectoryName = "voj-judger-" + shortHashOf(root) + "-";
       slotLock =
           claimSlot(
               root,
               number -> {
                 cacheDirectory = root.resolve("judger-" + number);
-                judgerWorkDirectory = workRoot.resolve(workDirectoryName + number);
+                judgerWorkDirectory = root.resolve("work-" + number);
                 if (!Files.exists(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
-                  createPrivateDirectory(cacheDirectory);
+                  createDirectory(cacheDirectory, PRIVATE);
                 }
                 ensureOwnedByJudger(cacheDirectory, "judger.checkpointDir");
                 removeTemporaryDirectories(cacheDirectory);
-                resetWorkDirectory(judgerWorkDirectory);
+                FileSystemUtils.deleteRecursively(judgerWorkDirectory);
+                createWorkDirectory(judgerWorkDirectory);
               });
       LOGGER.info("Caching checkpoints in {}, judging in {}", cacheDirectory, judgerWorkDirectory);
+      if (!obsoleteWorkDirectory.isBlank()) {
+        LOGGER.warn(
+            "judger.workDir ({}) is no longer used: the judger judges in {}. Remove the setting.",
+            obsoleteWorkDirectory,
+            judgerWorkDirectory);
+      }
     } else {
-      // Removed behind the judger's back, e.g. by a clean-up of /tmp.
+      // Removed behind the judger's back, e.g. by a clean-up of old files in /tmp.
       if (!Files.isDirectory(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
-        createPrivateDirectory(cacheDirectory);
+        createDirectory(cacheDirectory, PRIVATE);
       }
       if (!Files.isDirectory(judgerWorkDirectory, LinkOption.NOFOLLOW_LINKS)) {
-        resetWorkDirectory(judgerWorkDirectory);
-      } else {
-        // And possibly created again by another account in a shared work root.
-        ensureOwnedByJudger(judgerWorkDirectory, "judger.workDir");
+        createWorkDirectory(judgerWorkDirectory);
       }
     }
     return cacheDirectory;
   }
 
   /**
-   * Gets this judger's directory under {@code judger.workDir} (absolute and normalized, whatever
-   * the setting looks like), in which a judging creates its work directory. It belongs to the
-   * judger and lets others through ({@code rwx--x--x}), so that the sandbox user reaches the work
-   * directory it is handed but cannot list or change anything else in it.
+   * Gets the work directory of this judger's slot, {@code work-<n>/} under the checkpoint root, in
+   * which a judging creates its work directory. Others may pass through it ({@code rwx--x--x}), as
+   * through the checkpoint root, so that the sandbox user reaches the work directory it is handed,
+   * but may neither list nor change anything else in either.
    *
-   * @return this judger's work directory
+   * @return this judger's work directory (an absolute path)
    * @throws IOException if the slot cannot be claimed or the directory cannot be created
    */
   public synchronized Path getWorkDirectory() throws IOException {
@@ -184,8 +187,7 @@ public class CheckpointStore {
 
     Path temporaryDirectory = cacheDirectory.resolve("." + problemId + "-" + UUID.randomUUID());
     try {
-      // Private from the start: the root may be readable by others if it existed already.
-      createPrivateDirectory(temporaryDirectory);
+      createDirectory(temporaryDirectory, PRIVATE);
       checkpointProvider.download(problemId, temporaryDirectory.toFile());
       replaceDirectory(problemDirectory, temporaryDirectory);
     } finally {
@@ -270,29 +272,6 @@ public class CheckpointStore {
   }
 
   /**
-   * Gets a short hash of a checkpoint root, which tells apart the work directories of judgers that
-   * share the work root but not the checkpoint root: the first 8 hexadecimal digits (32 bits) of
-   * the SHA-256 of its path. A host has a handful of checkpoint roots at most, so two of them
-   * share a hash by chance with a negligible probability (about 1 in 10^8 for ten). Anyone who
-   * could make two share one on purpose could as well create a directory at the (predictable) path
-   * of a work directory, which fails the startup of its judger rather than mixes judgers up.
-   *
-   * @param root - the real path of the checkpoint root
-   * @return the hash
-   */
-  static String shortHashOf(Path root) {
-    try {
-      byte[] digest =
-          MessageDigest.getInstance("SHA-256")
-              .digest(root.toString().getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(digest, 0, 4);
-    } catch (NoSuchAlgorithmException ex) {
-      // Every Java platform has SHA-256.
-      throw new IllegalStateException(ex);
-    }
-  }
-
-  /**
    * Removes the temporary directories (named {@code .<problemId>-<uuid>}) of downloads that never
    * completed because the judger died. Only this judger uses its cache directory, so none of them
    * is in use.
@@ -310,28 +289,43 @@ public class CheckpointStore {
   }
 
   /**
-   * Creates the work directory of this judger's slot afresh: whatever of the judger's is there (the
-   * work directories of judgings a judger with this slot never finished, or anything else) is
-   * removed first, without following links; anything of another account there (the work root may
-   * be a {@code /tmp} shared by every account) is refused instead. The directory is created
-   * restricted to the judger (the umask can only narrow that), then opened for others to pass
-   * through.
+   * Creates the work directory of this judger's slot. Others may pass through it ({@code
+   * rwx--x--x}). On Windows, where every account may pass through a directory it cannot read
+   * (Bypass traverse checking), the sandbox account is granted access to what is created in it
+   * instead (not to the directory itself), i.e. to the work directory of each judging and what is
+   * in it.
    *
    * @param directory - the work directory of this judger's slot
-   * @throws IOException if something of another account is in the way, or the directory cannot be
-   *     emptied or created
+   * @throws IOException if the directory cannot be created, or the access cannot be granted
    */
-  private static void resetWorkDirectory(Path directory) throws IOException {
-    if (Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
-      ensureOwnedByJudger(directory, "judger.workDir");
-      LOGGER.info("Removing what judgings that never completed left in {}", directory);
-      FileSystemUtils.deleteRecursively(directory);
-    }
-    Files.createDirectories(directory.getParent());
-    createPrivateDirectory(directory);
+  private void createWorkDirectory(Path directory) throws IOException {
+    createDirectory(directory, PASSABLE);
     if (isPosix()) {
-      Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwx--x--x"));
+      return;
     }
+    UserPrincipal account =
+        directory
+            .getFileSystem()
+            .getUserPrincipalLookupService()
+            .lookupPrincipalByName(sandboxUsername);
+    AclFileAttributeView view =
+        Files.getFileAttributeView(
+            directory, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+    List<AclEntry> acl = new ArrayList<>(view.getAcl());
+    acl.add(
+        0,
+        AclEntry.newBuilder()
+            .setType(AclEntryType.ALLOW)
+            .setPrincipal(account)
+            .setPermissions(
+                EnumSet.complementOf(
+                    EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)))
+            .setFlags(
+                AclEntryFlag.FILE_INHERIT,
+                AclEntryFlag.DIRECTORY_INHERIT,
+                AclEntryFlag.INHERIT_ONLY)
+            .build());
+    view.setAcl(acl);
   }
 
   /**
@@ -413,7 +407,7 @@ public class CheckpointStore {
     }
     Files.createDirectories(root.getParent());
     try {
-      createPrivateDirectory(root);
+      createDirectory(root, PASSABLE);
     } catch (FileAlreadyExistsException ex) {
       // Checked below, as any root the judger did not create.
     }
@@ -427,8 +421,9 @@ public class CheckpointStore {
           String.format(
               "Refusing to use the checkpoint directory %s: other users may write to it (mode"
                   + " %o), so they could replace the test data in it. Set judger.checkpointDir to"
-                  + " a directory of the judger's own (it creates a missing one for itself only),"
-                  + " or take their write permission away (chmod go-w) if nothing else needs it.",
+                  + " a directory of the judger's own (it creates a missing one others may only"
+                  + " pass through), or take their write permission away (chmod go-w) if nothing"
+                  + " else needs it.",
               root, mode & 07777));
     }
     return root.toRealPath();
@@ -466,22 +461,36 @@ public class CheckpointStore {
   private static final int OTHERS_WRITE = 0002;
 
   /**
-   * Creates a directory restricted to its owner (the judger), so that submitted programs running as
-   * the unprivileged sandbox user cannot read the reference answers in it, whatever the permissions
-   * of its parent. A plain directory on Windows.
+   * Creates a directory with the given permissions (on POSIX systems) from the start, whatever the
+   * permissions of its parent and the umask, so that submitted programs running as the
+   * unprivileged sandbox user cannot read the reference answers in a private one. A plain
+   * directory on Windows.
    *
    * @param directory - the directory to create
+   * @param permissions - its permissions, e.g. {@code rwx------}
    * @throws IOException if the directory cannot be created
    */
-  private static void createPrivateDirectory(Path directory) throws IOException {
-    if (isPosix()) {
-      Files.createDirectory(
-          directory,
-          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
-    } else {
+  private static void createDirectory(Path directory, String permissions) throws IOException {
+    if (!isPosix()) {
       Files.createDirectory(directory);
+      return;
     }
+    Set<PosixFilePermission> permissionSet = PosixFilePermissions.fromString(permissions);
+    Files.createDirectory(directory, PosixFilePermissions.asFileAttribute(permissionSet));
+    // The umask may have taken some of them away: set them again on the directory just created,
+    // never through a link put at its path meanwhile.
+    Files.getFileAttributeView(directory, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS)
+        .setPermissions(permissionSet);
   }
+
+  /** The permissions of a directory only the judger may enter: a cache. */
+  private static final String PRIVATE = "rwx------";
+
+  /**
+   * The permissions of a directory others may pass through, but neither list nor change: the
+   * checkpoint root and a work directory, on the way to the work directory of a judging.
+   */
+  private static final String PASSABLE = "rwx--x--x";
 
   /**
    * Checks whether the host file system supports POSIX permissions (i.e. is not Windows).
@@ -498,19 +507,23 @@ public class CheckpointStore {
   /** This judger's cache directory (of its slot, under the checkpoint root), once claimed. */
   private Path cacheDirectory;
 
-  /** This judger's work directory (of its slot, under the work root), once claimed. */
+  /** This judger's work directory (of its slot, under the checkpoint root), once claimed. */
   private Path judgerWorkDirectory;
 
   /** The autowired HttpCheckpointProvider, which performs the actual download. */
   @Autowired private HttpCheckpointProvider checkpointProvider;
 
-  /** The root of the checkpoint caches, which holds a directory per judger on this host. */
+  /** The checkpoint root, which holds the slots of the judgers on this host. */
   @Value("${judger.checkpointDir}")
   private String checkpointDirectory;
 
-  /** The root of the work directories, which holds a directory per judger on this host. */
-  @Value("${judger.workDir}")
-  private String workRootDirectory;
+  /** The account the sandbox runs submissions as on Windows. */
+  @Value("${system.username:}")
+  private String sandboxUsername;
+
+  /** What judger.workDir, which is no longer used, is set to, if anything. */
+  @Value("${judger.workDir:${VOJ_JUDGER_WORK_DIR:}}")
+  private String obsoleteWorkDirectory = "";
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(CheckpointStore.class);

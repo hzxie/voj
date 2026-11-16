@@ -192,7 +192,7 @@ public class IsolateRunnerTest {
     Assertions.assertEquals("/work", IsolateRunner.toBoxPath("/tmp/voj-1", "/tmp/voj-1"));
     Assertions.assertEquals("/tmp/voj-10/a", IsolateRunner.toBoxPath("/tmp/voj-10/a", "/tmp/voj-1"));
     Assertions.assertEquals("g++", IsolateRunner.toBoxPath("g++", "/tmp/voj-1"));
-    // Repeated separators, e.g. from a judger.workDir with a trailing slash.
+    // Repeated separators, e.g. from a directory setting with a trailing slash.
     Assertions.assertEquals(
         "/work/a.cpp", IsolateRunner.toBoxPath("/tmp//voj-1/a.cpp", "/tmp/voj-1"));
     Assertions.assertEquals(

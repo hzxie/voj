@@ -35,7 +35,6 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -58,19 +57,12 @@ import org.verwandlung.voj.judger.util.ExclusiveFileLock;
 @ExtendWith(MockitoExtension.class)
 @DisabledOnOs(OS.WINDOWS)
 public class CheckpointStoreUnitTest {
-  /** Points the judger's work directories into the temporary directory. */
-  @BeforeEach
-  public void setUp() {
-    ReflectionTestUtils.setField(
-        checkpointStore, "workRootDirectory", tempDir.resolve("work").toString());
-  }
-
   /**
-   * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it,
-   * restricted to its owner, and downloads the checkpoints into it.
+   * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it, so
+   * that others may only pass through it, and downloads the checkpoints into it.
    */
   @Test
-  public void testSyncCreatesPrivateRoot() throws Exception {
+  public void testSyncCreatesRootOthersMayOnlyPassThrough() throws Exception {
     Path root = tempDir.resolve("voj-testpoints");
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
     doAnswer(
@@ -87,7 +79,7 @@ public class CheckpointStoreUnitTest {
 
     Assertions.assertTrue(Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS));
     Assertions.assertEquals(
-        "rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(root)));
+        "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(root)));
     verify(checkpointProvider).download(anyLong(), any(File.class));
   }
 
@@ -221,10 +213,9 @@ public class CheckpointStoreUnitTest {
   @Test
   public void testJudgersSharingTheCheckpointRootGetSlotsOfTheirOwn() throws Exception {
     Path root = Files.createDirectory(tempDir.resolve("real")).resolve("voj-testpoints");
-    Path workRoot = tempDir.resolve("work");
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
     Path link = Files.createSymbolicLink(tempDir.resolve("link"), root.getParent());
-    CheckpointStore otherStore = newStore(link.resolve("voj-testpoints"), workRoot);
+    CheckpointStore otherStore = newStore(link.resolve("voj-testpoints"));
 
     Path first = checkpointStore.open();
     Path judging =
@@ -233,76 +224,10 @@ public class CheckpointStoreUnitTest {
 
     Assertions.assertEquals(root.resolve("judger-0"), first);
     Assertions.assertEquals(root.resolve("judger-1"), second);
-    Assertions.assertEquals(workDirectoryOf(root, workRoot, 0), judging.getParent());
-    Assertions.assertEquals(workDirectoryOf(root, workRoot, 1), otherStore.getWorkDirectory());
+    Assertions.assertEquals(root.resolve("work-0"), judging.getParent());
+    Assertions.assertEquals(root.resolve("work-1"), otherStore.getWorkDirectory());
     Assertions.assertEquals(first, checkpointStore.open());
     Assertions.assertTrue(Files.isDirectory(judging));
-  }
-
-  /**
-   * Test case: two judgers share the work root but not the checkpoint root (e.g. they run as
-   * different accounts), and one of them is judging. Expected result: both have the first slot of
-   * their checkpoint root, but different work directories, and the other one leaves the judging of
-   * the first one alone.
-   */
-  @Test
-  public void testJudgersSharingOnlyTheWorkRootGetSeparateWorkDirectories() throws Exception {
-    Path workRoot = tempDir.resolve("work");
-    ReflectionTestUtils.setField(
-        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints-a").toString());
-    CheckpointStore otherStore = newStore(tempDir.resolve("voj-testpoints-b"), workRoot);
-
-    Path judging =
-        Files.createDirectory(checkpointStore.getWorkDirectory().resolve("voj-1000-abc"));
-    Path otherWorkDirectory = otherStore.getWorkDirectory();
-
-    Assertions.assertEquals(
-        workDirectoryOf(tempDir.resolve("voj-testpoints-a"), workRoot, 0), judging.getParent());
-    Assertions.assertEquals(
-        workDirectoryOf(tempDir.resolve("voj-testpoints-b"), workRoot, 0), otherWorkDirectory);
-    Assertions.assertNotEquals(judging.getParent(), otherWorkDirectory);
-    Assertions.assertTrue(Files.isDirectory(judging));
-  }
-
-  /**
-   * Test case: a symbolic link to a directory of someone else's was planted at the path of the
-   * judger's work directory (in a work root shared by every account, as /tmp). Expected result:
-   * the link is removed, not followed, and the work directory is a real directory of the judger.
-   */
-  @Test
-  public void testOpenDoesNotFollowALinkPlantedAtTheWorkDirectory() throws Exception {
-    Path root = tempDir.resolve("voj-testpoints");
-    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
-    Path target = Files.createDirectory(tempDir.resolve("target"));
-    Path kept = Files.writeString(target.resolve("kept.txt"), "keep");
-    Path workDirectory =
-        Files.createSymbolicLink(workDirectoryOf(root, workRoot, 0), target);
-    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-
-    Assertions.assertEquals(workDirectory, checkpointStore.getWorkDirectory());
-
-    Assertions.assertTrue(Files.isDirectory(workDirectory, LinkOption.NOFOLLOW_LINKS));
-    Assertions.assertEquals("keep", Files.readString(kept));
-  }
-
-  /**
-   * Test case: another account (here nobody) created a directory at the path of the judger's work
-   * directory, in a work root shared by every account. Expected result: the judger refuses to
-   * start, rather than judge in a directory another account can change, and leaves it alone.
-   */
-  @Test
-  public void testOpenRefusesAWorkDirectoryOfAnotherAccount() throws Exception {
-    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "needs root to chown");
-    Path root = tempDir.resolve("voj-testpoints");
-    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
-    Path workDirectory = Files.createDirectory(workDirectoryOf(root, workRoot, 0));
-    Files.setAttribute(workDirectory, "unix:uid", 65534);
-    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-
-    IOException ex = Assertions.assertThrows(IOException.class, () -> checkpointStore.open());
-
-    Assertions.assertTrue(ex.getMessage().contains("judger.workDir"), ex.getMessage());
-    Assertions.assertEquals(65534, Files.getAttribute(workDirectory, "unix:uid"));
   }
 
   /**
@@ -347,25 +272,43 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
-   * Test case: judger.workDir is relative and ends with a slash. Expected result: the judger's work
-   * directory is absolute and normalized (the native sandbox resolves paths after entering the
-   * work directory, isolate binds it as java.io.File spells it), restricted so that others can
-   * only pass through it, and the judger's own.
+   * Test case: judger.checkpointDir is relative and ends with a slash. Expected result: the judger's
+   * work directory is in the checkpoint root, absolute and normalized (the native sandbox resolves
+   * paths after entering the work directory, isolate binds it as java.io.File spells it), and
+   * others may only pass through it.
    */
   @Test
-  public void testWorkDirectoryIsAbsoluteAndNormalized() throws Exception {
+  public void testWorkDirectoryIsInTheCheckpointRoot() throws Exception {
+    Path root = Path.of("").toAbsolutePath().relativize(tempDir);
     ReflectionTestUtils.setField(
-        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints").toString());
-    Path workRoot = Path.of("").toAbsolutePath().relativize(tempDir);
-    ReflectionTestUtils.setField(
-        checkpointStore, "workRootDirectory", workRoot + "//work/./");
+        checkpointStore, "checkpointDirectory", root + "//voj-testpoints/./");
 
     Path workDirectory = checkpointStore.getWorkDirectory();
 
+    Assertions.assertEquals(tempDir.resolve("voj-testpoints").resolve("work-0"), workDirectory);
     Assertions.assertEquals(
-        workDirectoryOf(tempDir.resolve("voj-testpoints"), tempDir.resolve("work"), 0),
-        workDirectory);
-    Assertions.assertTrue(workDirectory.isAbsolute());
+        "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(workDirectory)));
+  }
+
+  /**
+   * Test case: a clean-up of old files in /tmp removed the directories of the judger's slot while
+   * it ran, but not its lock file. Expected result: the judger creates them again before it uses
+   * them, with their permissions.
+   */
+  @Test
+  public void testOpenCreatesRemovedDirectoriesAgain() throws Exception {
+    Path root = tempDir.resolve("voj-testpoints");
+    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
+    Path cacheDirectory = checkpointStore.open();
+    Path workDirectory = checkpointStore.getWorkDirectory();
+
+    Files.delete(cacheDirectory);
+    Files.delete(workDirectory);
+
+    Assertions.assertEquals(cacheDirectory, checkpointStore.open());
+    Assertions.assertEquals(workDirectory, checkpointStore.getWorkDirectory());
+    Assertions.assertEquals(
+        "rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(cacheDirectory)));
     Assertions.assertEquals(
         "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(workDirectory)));
   }
@@ -378,17 +321,13 @@ public class CheckpointStoreUnitTest {
    */
   @Test
   public void testOpenRemovesLeftoversOfItsOwnSlotOnly() throws Exception {
-    Path root = tempDir.resolve("voj-testpoints");
-    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
-    Path leftover =
-        Files.createDirectories(workDirectoryOf(root, workRoot, 0).resolve("voj-1000-abc"));
+    Path root = createRoot();
+    Path leftover = Files.createDirectories(root.resolve("work-0/voj-1000-abc"));
     Files.writeString(leftover.resolve("a.cpp"), "int main() {}");
     Path outside = Files.writeString(tempDir.resolve("outside.txt"), "keep");
     Files.createSymbolicLink(leftover.resolve("link"), outside);
-    Path otherJudging =
-        Files.createDirectories(workDirectoryOf(root, workRoot, 1).resolve("voj-1001-def"));
+    Path otherJudging = Files.createDirectories(root.resolve("work-1/voj-1001-def"));
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-    ReflectionTestUtils.setField(checkpointStore, "workRootDirectory", workRoot.toString());
 
     checkpointStore.open();
 
@@ -408,14 +347,13 @@ public class CheckpointStoreUnitTest {
    */
   @Test
   public void testOpenRemovesLeftoversWithoutPermissions() throws Exception {
-    Path root = tempDir.resolve("voj-testpoints");
-    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
-    Path locked =
-        Files.createDirectories(workDirectoryOf(root, workRoot, 0).resolve("voj-1000-abc/locked"));
+    Assumptions.assumeFalse(
+        "root".equals(System.getProperty("user.name")), "root is never denied access");
+    Path root = createRoot();
+    Path locked = Files.createDirectories(root.resolve("work-0/voj-1000-abc/locked"));
     Files.writeString(locked.resolve("a.out"), "binary");
     Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
-    ReflectionTestUtils.setField(checkpointStore, "workRootDirectory", workRoot.toString());
 
     checkpointStore.open();
 
@@ -425,36 +363,25 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
-   * Gets the work directory of a slot, creating its checkpoint root (restricted to the judger) if
-   * needed.
+   * Creates a checkpoint root as the judger does.
    *
-   * @param checkpointRoot - the checkpoint root of the slot
-   * @param workRoot - the work root
-   * @param slot - the number of the slot
-   * @return the work directory of the slot
+   * @return the checkpoint root
    */
-  private static Path workDirectoryOf(Path checkpointRoot, Path workRoot, int slot)
-      throws IOException {
-    if (!Files.exists(checkpointRoot)) {
-      Files.createDirectories(
-          checkpointRoot,
-          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
-    }
-    String hash = CheckpointStore.shortHashOf(checkpointRoot.toRealPath());
-    return workRoot.resolve("voj-judger-" + hash + "-" + slot);
+  private Path createRoot() throws IOException {
+    return Files.createDirectory(
+        tempDir.resolve("voj-testpoints"),
+        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx--x--x")));
   }
 
   /**
    * Creates the store of another judger on the host.
    *
    * @param checkpointRoot - its checkpoint root
-   * @param workRoot - its work root
    * @return the store
    */
-  private static CheckpointStore newStore(Path checkpointRoot, Path workRoot) {
+  private static CheckpointStore newStore(Path checkpointRoot) {
     CheckpointStore store = new CheckpointStore();
     ReflectionTestUtils.setField(store, "checkpointDirectory", checkpointRoot.toString());
-    ReflectionTestUtils.setField(store, "workRootDirectory", workRoot.toString());
     return store;
   }
 

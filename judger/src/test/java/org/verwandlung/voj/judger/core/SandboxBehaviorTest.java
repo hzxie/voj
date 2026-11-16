@@ -1504,7 +1504,7 @@ public class SandboxBehaviorTest {
   @Value("${judger.sandbox:native}")
   private String sandbox;
 
-  /** The working directory of the judger, used to store compilation results and program output. */
-  @Value("${judger.workDir}")
+  /** Where the test judges: the compilation results and the program output go there. */
+  @Value("${test.workDir}")
   private String workBaseDirectory;
 }

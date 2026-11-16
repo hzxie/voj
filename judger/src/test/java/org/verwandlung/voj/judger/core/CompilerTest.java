@@ -93,7 +93,7 @@ public class CompilerTest {
   /** The autowired SubmissionMapper object, used to set up the test cases. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** The working directory of the judger, used to store compilation results and program output. */
-  @Value("${judger.workDir}")
+  /** Where the test judges: the compilation results and the program output go there. */
+  @Value("${test.workDir}")
   private String workBaseDirectory;
 }

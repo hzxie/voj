@@ -207,27 +207,34 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 
 ### Filesystem layout and permissions
 
-The judger manages two directories from `voj.properties`:
+The judger keeps everything it writes in one directory of its own,
+`judger.checkpointDir` (default `/tmp/voj-testpoints`), which must belong to the
+judger and not be writable by its group or others: the judger refuses to start
+otherwise, and creates a missing one with mode `0711`. Each judger on the host
+has a slot *n* there (see [`configuration.md`](configuration.md#directories)):
 
-| Property | Default | Purpose | Permissions |
-| --- | --- | --- | --- |
-| `judger.workDir` | `/tmp` | Parent of the per-submission work directories | The judger (root) must be able to create subdirectories here |
-| `judger.checkpointDir` | `/tmp/voj-testpoints` | Reference inputs and expected outputs, and the lock files of the judgers' slots | Must belong to the judger and not be writable by its group or others (the judger refuses to start otherwise, and creates a missing one with mode `0700`) |
+| Path | Mode | Contents |
+| --- | --- | --- |
+| `judger-<n>.lock` | `0600` | The lock of the slot, held while the judger runs; it holds the judger's pid |
+| `judger-<n>/` | `0700` | The reference inputs and expected outputs of the problems judged, one directory per problem |
+| `work-<n>/` | `0711` | The work directories of the judgings |
+
+`judger.workDir` is no longer used (a judger that finds it set logs a warning).
 
 How it behaves at runtime:
 
-- For each submission the judger creates a private work directory in its own
-  directory under `judger.workDir` (`voj-judger-<h>-<n>/`, see
-  [`configuration.md`](configuration.md#directories)), sets it to mode `0700`
-  and, when running as root, hands it to `system.username`. The compiler and the submitted program run with dropped
-  privileges and write their output here, so the work directory must be owned by
-  (or writable by) the sandbox user. The judger does this automatically; you only
-  need to ensure `judger.workDir` itself lets the judger create subdirectories.
-- The judger writes each problem's reference data into `judger.checkpointDir` and
-  sets the per-problem directory to mode `0700`. The submission never reads these
-  files (it receives its input on stdin, and the judge compares the expected
-  output itself), so the sandbox user is denied access and cannot read the
-  answers.
+- For each submission the judger creates a private work directory in
+  `work-<n>/`, with mode `0700`, and, when running as root, hands it to
+  `system.username`. The compiler and the submitted program run with dropped
+  privileges and write their output there. To reach it, the sandbox user passes
+  through `judger.checkpointDir` and `work-<n>/` (`0711`: it may pass, but
+  neither list nor read them), so `judger.checkpointDir` and every directory
+  above it must let others pass (`o+x`), as `/tmp` and a `judger.checkpointDir`
+  the judger creates do. The judger does the rest automatically.
+- The judger keeps each problem's reference data in `judger-<n>/`, which only the
+  judger may enter. The submission never reads these files (it receives its input
+  on stdin, and the judge compares the expected output itself), so the sandbox
+  user is denied access and cannot read the answers.
 
 Do not place secrets where the sandbox user can read them. The native backend
 confines what a submission writes, not what it reads, so a submission running as
@@ -303,12 +310,10 @@ Go, Kotlin, JavaScript and Rust).
 
 ## Several judgers on one host
 
-Judgers on one host may share `judger.checkpointDir` and `judger.workDir`, each
-or both: each judger claims a slot of its own under `judger.checkpointDir`, with
-a lock file there, which gives it a cache directory there and a work directory
-under `judger.workDir`, named after the slot and `judger.checkpointDir` (see
-[`configuration.md`](configuration.md#directories)). Their sandboxes, though,
-must be their own:
+Judgers on one host may share `judger.checkpointDir`: each judger claims a slot
+of its own there, with a lock file, which gives it a cache directory and a work
+directory there (see [`configuration.md`](configuration.md#directories)). Their
+sandboxes, though, must be their own:
 
 - **Native sandbox:** give each judger a sandbox account of its own
   (`system.username`). Runs of the same account could signal one another's
@@ -435,11 +440,11 @@ Requirements for that account:
   process with `LOGON_WITH_PROFILE`. Logging in once interactively, or letting
   the first batch logon create it, is enough.
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
-  read and write the submission's work directory under `judger.workDir` (each
-  compilation and run starts there; the compiler writes the program and, for Go,
-  its build cache there) and execute the compiled program. Make sure the ACL of
-  `judger.workDir` lets the work directories the judger creates inherit that
-  access for the account.
+  read and write the submission's work directory (each compilation and run
+  starts there; the compiler writes the program and, for Go, its build cache
+  there) and execute the compiled program. The judger grants it that access
+  itself, to what it creates in its `work-<n>\` directory under
+  `judger.checkpointDir`; the account needs no access to anything else there.
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
