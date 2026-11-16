@@ -41,7 +41,7 @@ Email (verification, password reset, notifications) is disabled when `mail.host`
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app publishes judging tasks to. |
-| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) for a judging task. If no capable judger claims it within this window the task is dead-lettered and the submission is marked as a System Error ("no available judger supports this submission's language") instead of staying Pending forever. Keep it generous. |
+| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) for a judging task. If no capable judger claims it within this window the task is dead-lettered and the submission is marked as a System Error ("no available judger supports this submission's language", or, when a judger had claimed it and handed the task back, that a judger took it but could not judge it before the task expired) instead of staying Pending forever. Keep it generous. |
 
 ### Checkpoint distribution
 

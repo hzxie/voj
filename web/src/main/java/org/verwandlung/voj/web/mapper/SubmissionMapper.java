@@ -346,14 +346,17 @@ public interface SubmissionMapper {
    *     while it still has this generation (a rejudge queued a newer task otherwise); null marks it
    *     whatever its generation (a task queued before generations existed)
    * @param judgeResultSlug - the terminal judge-result slug to set
-   * @param judgeLog - the judge log explaining the failure
+   * @param judgeLog - the judge log explaining the failure, for a submission no judging claimed
+   * @param claimedJudgeLog - the judge log explaining the failure, for a submission a judging
+   *     claimed (its execute time is set)
    * @return the number of rows updated (1 when the submission was still pending, 0 otherwise)
    */
   int markSubmissionUnjudgeable(
       @Param("submissionId") long submissionId,
       @Param("generation") Long generation,
       @Param("judgeResultSlug") String judgeResultSlug,
-      @Param("judgeLog") String judgeLog);
+      @Param("judgeLog") String judgeLog,
+      @Param("claimedJudgeLog") String claimedJudgeLog);
 
   /**
    * Resets a submission back to the pending state so it can be re-judged, clearing the previous

@@ -478,6 +478,35 @@ public class SubmissionServiceTest {
             1000, null, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
   }
 
+  /**
+   * Test case: tests markSubmissionUnjudgeable(long, Long, JudgingTaskFailure) with an expired
+   * task. Test data: a pending submission no judging claimed, and one a judging claimed and handed
+   * back. Expected: the first says no judger was available, the second that a judger took it but
+   * could not judge it before the task expired.
+   */
+  @Test
+  public void testExpiredTaskOfAClaimedSubmissionSaysAJudgerTookIt() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_execute_time = NULL"
+            + " WHERE submission_id IN (1000, 1001)");
+    jdbcTemplate.update(JUDGER_CLAIM, java.sql.Timestamp.valueOf("2026-01-01 10:00:00"), 1001);
+
+    for (long submissionId : new long[] {1000, 1001}) {
+      Assertions.assertTrue(
+          submissionService.markSubmissionUnjudgeable(
+              submissionId, null, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
+    }
+    String getJudgeLog = "SELECT submission_judge_log FROM voj_submissions WHERE submission_id = ?";
+    Assertions.assertEquals(
+        SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE.getJudgeLog(),
+        jdbcTemplate.queryForObject(getJudgeLog, String.class, 1000));
+    Assertions.assertEquals(
+        SubmissionService.JudgingTaskFailure.EXPIRED_AFTER_CLAIM.getJudgeLog(),
+        jdbcTemplate.queryForObject(getJudgeLog, String.class, 1001));
+  }
+
   /** Tests whether a list of submissions contains the submission with the given identifier. */
   private static boolean containsSubmission(List<Submission> submissions, long submissionId) {
     return submissions.stream().anyMatch(s -> s.getSubmissionId() == submissionId);

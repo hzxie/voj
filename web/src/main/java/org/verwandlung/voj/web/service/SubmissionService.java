@@ -660,7 +660,8 @@ public class SubmissionService {
       transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
       transactionTemplate.executeWithoutResult(
           status ->
-              submissionMapper.markSubmissionUnjudgeable(submissionId, generation, "SE", judgeLog));
+              submissionMapper.markSubmissionUnjudgeable(
+                  submissionId, generation, "SE", judgeLog, judgeLog));
     } catch (RuntimeException ex) {
       LOGGER.error(
           String.format("Failed to mark submission #%d as a system error.", submissionId), ex);
@@ -699,6 +700,15 @@ public class SubmissionService {
         "No available judger supports this submission's language, so the judging task expired"
             + " before it could be processed."),
 
+    /**
+     * The task expired after a judger had claimed the submission: the judger handed the task back
+     * (e.g. its test data could not be downloaded), and it expired before another delivery. The
+     * broker reports this as {@link #NO_JUDGER_AVAILABLE}; the claim tells them apart.
+     */
+    EXPIRED_AFTER_CLAIM(
+        "A judger took this submission but could not judge it before its judging task expired."
+            + " An administrator can rejudge this submission."),
+
     /** Judgers took the task, but judging it failed every time until the redelivery limit. */
     JUDGING_FAILED_REPEATEDLY(
         "Judging this submission failed repeatedly, so its judging task was given up."
@@ -733,6 +743,8 @@ public class SubmissionService {
    * verdict afterwards, as the judger only records a verdict over a pending submission. Nor does it
    * touch a submission rejudged since the task was queued (its judge generation moved on): the
    * dead-lettered task is then a stale one, and the pending submission belongs to a newer task.
+   * An expired task whose submission a judger had claimed (its execute time is set) is reported as
+   * {@link JudgingTaskFailure#EXPIRED_AFTER_CLAIM} rather than as no judger being available.
    *
    * @param submissionId - the unique identifier of the submission whose task was dead-lettered
    * @param generation - the judge generation the task carried, or null for a task queued before
@@ -743,8 +755,12 @@ public class SubmissionService {
    */
   public boolean markSubmissionUnjudgeable(
       long submissionId, Long generation, JudgingTaskFailure failure) {
+    JudgingTaskFailure failureOfClaim =
+        failure == JudgingTaskFailure.NO_JUDGER_AVAILABLE
+            ? JudgingTaskFailure.EXPIRED_AFTER_CLAIM
+            : failure;
     return submissionMapper.markSubmissionUnjudgeable(
-            submissionId, generation, "SE", failure.getJudgeLog())
+            submissionId, generation, "SE", failure.getJudgeLog(), failureOfClaim.getJudgeLog())
         > 0;
   }
 
