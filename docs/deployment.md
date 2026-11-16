@@ -363,10 +363,14 @@ without extra capabilities. It needs:
 
 With `judger.sandbox = isolate` the judger (running as root: it does not start
 otherwise) prepares an isolate box for every compilation and run. isolate runs box *n* as UID
-`first_uid + n` (its default `first_uid` is 60000), so the judger hands each
-submission's program directory, and the work directory of each run, to that
-UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
-`judger.isolate.boxId` to the box id.
+`first_uid + n`, so the judger hands each submission's program directory, and
+the work directory of each run, to that UID: set `judger.isolate.firstUid` to
+isolate's first UID and `judger.isolate.boxId` to the box id. isolate 2 takes
+its UIDs from the subordinate UIDs of its `isolate` user by default
+(`subid_user = isolate` in its configuration file): the first UID is then the
+start of that user's range in `/etc/subuid` (e.g. `100000` for
+`isolate:100000:65536`); a configuration with `first_uid` instead (isolate 1's
+default was 60000) sets it there.
 
 - **Filesystem.** The box sees isolate's default mounts (`/bin`, `/lib`, `/usr`,
   ...) plus `judger.isolate.extraDirs` (by default `/etc/alternatives` and
