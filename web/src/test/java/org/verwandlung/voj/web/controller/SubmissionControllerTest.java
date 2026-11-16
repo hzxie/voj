@@ -22,6 +22,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -126,50 +128,10 @@ public class SubmissionControllerTest {
     Assertions.assertSame(submissions, result.get("submissions"));
   }
 
-  /** Test case: tests getSubmissionsAction(...). Test data: an anonymous viewer. Expected: the source code is stripped from every listed submission. */
-  @Test
-  public void testGetSubmissionsActionStripsCodeForOtherViewer() {
-    Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100), any()))
-        .thenReturn(List.of(submission));
-
-    Map<String, Object> result =
-        controller.getSubmissionsAction(1000L, "zjhzxhz", 0L, new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    Assertions.assertNull(submission.getCode());
-  }
-
-  /** Test case: tests getSubmissionsAction(...). Test data: the owner browsing their own submissions. Expected: the source code is retained for the owner. */
-  @Test
-  public void testGetSubmissionsActionKeepsCodeForOwner() {
-    User owner = ownerUser();
-    Submission submission = submissionWithCode(owner, "my code");
-    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100), any()))
-        .thenReturn(List.of(submission));
-    authenticate(owner);
-
-    controller.getSubmissionsAction(0L, "", 0L, new MockHttpServletRequest());
-
-    Assertions.assertEquals("my code", submission.getCode());
-  }
-
-  /** Test case: tests getLatestSubmissionsAction(...). Test data: an anonymous viewer. Expected: the source code is stripped from every listed submission. */
-  @Test
-  public void testGetLatestSubmissionsActionStripsCodeForOtherViewer() {
-    Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100), any()))
-        .thenReturn(List.of(submission));
-
-    controller.getLatestSubmissionsAction(1000L, "", 5L, new MockHttpServletRequest());
-
-    Assertions.assertNull(submission.getCode());
-  }
-
   /** Test case: tests getSubmissionAction(...). Test data: a non-existent submission id. Expected: isSuccessful is false and the submission is null. */
   @Test
   public void testGetSubmissionActionNotFound() {
-    when(submissionService.getSubmission(0L)).thenReturn(null);
+    when(submissionService.getSubmissionWithoutCode(0L)).thenReturn(null);
 
     Map<String, Object> result = controller.getSubmissionAction(0L, new MockHttpServletRequest());
 
@@ -177,53 +139,19 @@ public class SubmissionControllerTest {
     Assertions.assertNull(result.get("submission"));
   }
 
-  /** Test case: tests getSubmissionAction(...). Test data: an anonymous viewer. Expected: the source code is stripped before returning. */
+  /** Test case: tests getSubmissionAction(...). Test data: the owner polling their submission. Expected: it is read without its code, which the poll does not show. */
   @Test
-  public void testGetSubmissionActionStripsCodeForAnonymousViewer() {
-    Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getSubmission(1000L)).thenReturn(submission);
-
-    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    Assertions.assertNull(((Submission) result.get("submission")).getCode());
-  }
-
-  /** Test case: tests getSubmissionAction(...). Test data: a logged-in user viewing another user's submission. Expected: the source code is stripped for the non-owner. */
-  @Test
-  public void testGetSubmissionActionStripsCodeForOtherLoggedInUser() {
-    Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getSubmission(1000L)).thenReturn(submission);
-    authenticate(otherUser());
-
-    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
-
-    Assertions.assertNull(((Submission) result.get("submission")).getCode());
-  }
-
-  /** Test case: tests getSubmissionAction(...). Test data: an administrator viewing another user's submission. Expected: the source code is retained for administrators. */
-  @Test
-  public void testGetSubmissionActionKeepsCodeForAdministrator() {
-    Submission submission = submissionWithCode(ownerUser(), "secret code");
-    when(submissionService.getSubmission(1000L)).thenReturn(submission);
-    authenticate(administratorUser());
-
-    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
-
-    Assertions.assertEquals("secret code", ((Submission) result.get("submission")).getCode());
-  }
-
-  /** Test case: tests getSubmissionAction(...). Test data: the owner viewing their own submission. Expected: the source code is retained for the owner. */
-  @Test
-  public void testGetSubmissionActionKeepsCodeForOwner() {
+  public void testGetSubmissionActionReadsTheSubmissionWithoutItsCode() {
     User owner = ownerUser();
-    Submission submission = submissionWithCode(owner, "my code");
-    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    Submission submission = new Submission();
+    submission.setUser(owner);
+    when(submissionService.getSubmissionWithoutCode(1000L)).thenReturn(submission);
     authenticate(owner);
 
     Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
 
-    Assertions.assertEquals("my code", ((Submission) result.get("submission")).getCode());
+    Assertions.assertSame(submission, result.get("submission"));
+    verify(submissionService, never()).getSubmission(anyLong());
   }
 
   /** Test case: tests getSubmissionAction(...). Test data: a submission ContestService says the viewer may not see (e.g. another contestant's during a contest). Expected: the submission is treated as not found. */
@@ -231,7 +159,7 @@ public class SubmissionControllerTest {
   public void testGetSubmissionActionHidesInvisibleSubmission() {
     User owner = ownerUser();
     Submission submission = submissionWithCode(owner, "my code");
-    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    when(submissionService.getSubmissionWithoutCode(1000L)).thenReturn(submission);
     when(contestService.isSubmissionVisible(submission, otherUser())).thenReturn(false);
     authenticate(otherUser());
 
@@ -297,7 +225,7 @@ public class SubmissionControllerTest {
     ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
     Submission pending = submissionWithCode(owner, "code");
     pending.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
-    when(submissionService.getSubmission(submissionId))
+    when(submissionService.getSubmissionWithoutCode(submissionId))
         .thenAnswer(
             invocation -> {
               listener.submissionEventHandler(
@@ -327,7 +255,7 @@ public class SubmissionControllerTest {
     ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
     Submission pending = submissionWithCode(owner, "code");
     pending.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
-    when(submissionService.getSubmission(submissionId)).thenReturn(pending);
+    when(submissionService.getSubmissionWithoutCode(submissionId)).thenReturn(pending);
 
     SseEmitter sseEmitter =
         controller.getRealTimeJudgeResultAction(
@@ -350,7 +278,7 @@ public class SubmissionControllerTest {
     ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
     Submission judged = submissionWithCode(owner, "code");
     judged.setJudgeResult(new JudgeResult(2, "AC", "Accepted"));
-    when(submissionService.getSubmission(submissionId)).thenReturn(judged);
+    when(submissionService.getSubmissionWithoutCode(submissionId)).thenReturn(judged);
 
     Assertions.assertThrows(
         ResourceNotFoundException.class,
@@ -371,7 +299,7 @@ public class SubmissionControllerTest {
     long submissionId = 987654323L;
     ApplicationEventListener listener = new ApplicationEventListener();
     ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
-    when(submissionService.getSubmission(submissionId))
+    when(submissionService.getSubmissionWithoutCode(submissionId))
         .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("down"));
 
     Assertions.assertThrows(

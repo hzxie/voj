@@ -187,12 +187,12 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean, long, Date) method. Test data: get 10
+   * Test case: tests the getSubmissions(long, String, String, Long, Long, long, int, boolean, long, Date) method. Test data: get 10
    * submissions with IDs starting from 1010 (ID From 1010 to 1000). Expected: the submission list.
    */
   @Test
   public void testGetSubmissionsFrom1010WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1010, 10, false, 0, new java.util.Date());
+    List<Submission> submissions = submissionMapper.getSubmissions(0, "", "", 1010L, null, 0, 10, false, 0, null);
     Assertions.assertEquals(5, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -201,12 +201,12 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean, long, Date) method. Test data: get 2
+   * Test case: tests the getSubmissions(long, String, String, Long, Long, long, int, boolean, long, Date) method. Test data: get 2
    * submissions with IDs starting from 1003. Expected: the submission list (2 submissions).
    */
   @Test
   public void testGetSubmissionsFrom1003WithLimit2() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1003, 2, false, 0, new java.util.Date());
+    List<Submission> submissions = submissionMapper.getSubmissions(0, "", "", 1003L, null, 0, 2, false, 0, null);
     Assertions.assertEquals(2, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -215,13 +215,50 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getSubmissionsUsingOffset(long, String, String, long, int, boolean, long, Date) method. Test data: get 10
+   * Test case: tests the getSubmissions(long, String, String, Long, Long, long, int, boolean, long, Date) method. Test data: get 10
    * submissions with IDs starting from 100 (ID From 100 to 90). Expected: an empty submission list.
    */
   @Test
   public void testGetSubmissionsFrom100WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 100, 10, false, 0, new java.util.Date());
+    List<Submission> submissions = submissionMapper.getSubmissions(0, "", "", 100L, null, 0, 10, false, 0, null);
     Assertions.assertEquals(0, submissions.size());
+  }
+
+  /**
+   * Test case: tests the getSubmissions(long, String, String, Long, Long, long, int, boolean, long,
+   * Date) method. Test data: the submissions of user zjhzxhz from #1001 on, and those that are
+   * Compile Errors, the second page of one. Expected: the first in ascending order, the second the
+   * older Compile Error; neither carries a judge log or code.
+   */
+  @Test
+  public void testGetSubmissionsUsingFilters() {
+    List<Submission> latest =
+        submissionMapper.getSubmissions(0, "zjhzxhz", "", null, 1001L, 0, 10, false, 0, null);
+    Assertions.assertEquals(List.of(1001L, 1003L), latest.stream().map(Submission::getSubmissionId).toList());
+
+    List<Submission> compileErrors =
+        submissionMapper.getSubmissions(0, "", "CE", null, null, 1, 1, false, 0, null);
+    Assertions.assertEquals(1, compileErrors.size());
+    Submission submission = compileErrors.get(0);
+    Assertions.assertEquals(1002, submission.getSubmissionId());
+    Assertions.assertEquals("CE", submission.getJudgeResult().getJudgeResultSlug());
+    Assertions.assertEquals(1001, submission.getUser().getUid());
+    Assertions.assertNull(submission.getJudgeLog());
+    Assertions.assertNull(submission.getCode());
+  }
+
+  /**
+   * Test case: tests the getSubmissionWithoutCode(long) method. Test data: submission #1000.
+   * Expected: the submission with its judge log but without its code.
+   */
+  @Test
+  public void testGetSubmissionWithoutCode() {
+    Submission submission = submissionMapper.getSubmissionWithoutCode(1000);
+    Assertions.assertEquals(1000, submission.getProblem().getProblemId());
+    Assertions.assertEquals("AC", submission.getJudgeResult().getJudgeResultSlug());
+    Assertions.assertNotNull(submission.getJudgeLog());
+    Assertions.assertNull(submission.getCode());
+    Assertions.assertNotNull(submissionMapper.getSubmission(1000).getCode());
   }
 
   /**

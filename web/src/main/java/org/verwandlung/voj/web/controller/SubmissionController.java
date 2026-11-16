@@ -75,7 +75,6 @@ public class SubmissionController {
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
-    redactSubmissions(submissions, currentUser);
     return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
 
@@ -102,7 +101,6 @@ public class SubmissionController {
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
-    redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -132,7 +130,6 @@ public class SubmissionController {
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
-    redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -166,29 +163,6 @@ public class SubmissionController {
     view.addObject("submission", submission);
     view.addObject("canViewCode", canViewCode);
     return view;
-  }
-
-  /**
-   * Strips the source code (and any source-echoing compiler-error log) from every submission in a
-   * list the current viewer is not allowed to see, applying the same per-submission visibility rule
-   * as the detail pages. The submission-list views never render the source, but the list records are
-   * serialised verbatim to JSON by the {@code getSubmissions}/{@code getLatestSubmissions} actions,
-   * so without this another user's code would leak through those endpoints.
-   *
-   * @param submissions - the submission records to redact in place, may be {@code null}
-   * @param currentUser - the currently logged-in user, or null
-   */
-  private void redactSubmissions(List<Submission> submissions, User currentUser) {
-    if (submissions == null) {
-      return;
-    }
-    for (Submission submission : submissions) {
-      boolean canViewCode = canViewSourceCode(submission, currentUser);
-      if (!canViewCode) {
-        submission.setCode(null);
-      }
-      redactCompilerErrorLog(submission, canViewCode);
-    }
   }
 
   /**
@@ -257,7 +231,7 @@ public class SubmissionController {
     // unregistered here, whatever the checks throw (e.g. the database is unreachable).
     boolean isReturned = false;
     try {
-      Submission submission = submissionService.getSubmission(submissionId);
+      Submission submission = submissionService.getSubmissionWithoutCode(submissionId);
 
       // Anyone allowed to see the source code may also follow the live judge log (which can echo
       // the source for compiler errors): the owner and administrators (see canViewSourceCode).
@@ -293,16 +267,12 @@ public class SubmissionController {
     Map<String, Object> result = new HashMap<>(3, 1);
 
     User currentUser = HttpSessionParser.getCurrentUser();
-    Submission submission = submissionService.getSubmission(submissionId);
+    Submission submission = submissionService.getSubmissionWithoutCode(submissionId);
     if (submission != null && !contestService.isSubmissionVisible(submission, currentUser)) {
       submission = null;
     }
     if (submission != null) {
-      boolean canViewCode = canViewSourceCode(submission, currentUser);
-      if (!canViewCode) {
-        submission.setCode(null);
-      }
-      redactCompilerErrorLog(submission, canViewCode);
+      redactCompilerErrorLog(submission, canViewSourceCode(submission, currentUser));
     }
     result.put("isSuccessful", submission != null);
     result.put("submission", submission);

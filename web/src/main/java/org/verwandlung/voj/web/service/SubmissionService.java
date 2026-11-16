@@ -213,6 +213,16 @@ public class SubmissionService {
   }
 
   /**
+   * Gets a submission object by its unique identifier, without its code.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the submission object, whose code is null
+   */
+  public Submission getSubmissionWithoutCode(long submissionId) {
+    return submissionMapper.getSubmissionWithoutCode(submissionId);
+  }
+
+  /**
    * Gets the list of submissions a viewer may see: an administrator sees every submission; anybody
    * else neither sees the submissions to unpublished problems nor, until the contest ends, the
    * submissions other users made in a contest (see {@link ContestService#isSubmissionVisible}).
@@ -225,13 +235,7 @@ public class SubmissionService {
    */
   public List<Submission> getSubmissions(
       long problemId, String username, int limit, User viewer) {
-    return submissionMapper.getSubmissions(
-        problemId,
-        username,
-        limit,
-        !PublicationStatus.isAdministrator(viewer),
-        getUid(viewer),
-        new Date());
+    return getVisibleSubmissions(problemId, username, null, null, limit, viewer);
   }
 
   /**
@@ -247,25 +251,40 @@ public class SubmissionService {
    */
   public List<Submission> getSubmissions(
       long problemId, String username, long offset, int limit, User viewer) {
-    return submissionMapper.getSubmissionsUsingOffset(
-        problemId,
-        username,
-        "",
-        offset,
-        limit,
-        !PublicationStatus.isAdministrator(viewer),
-        getUid(viewer),
-        new Date());
+    return getVisibleSubmissions(problemId, username, offset, null, limit, viewer);
   }
 
   /**
-   * Gets the unique identifier of a viewer.
+   * Gets the list of submissions a viewer may see (see {@link #getSubmissions(long, String, int,
+   * User)}), without their judge logs and codes.
    *
-   * @param viewer - the viewer (may be null)
-   * @return the unique identifier of the viewer, or 0 for an anonymous viewer
+   * @param problemId - the unique identifier of the problem (0 = no filter)
+   * @param username - the username of the user (empty = no filter)
+   * @param maxSubmissionId - the largest unique identifier of a submission to get, or null
+   * @param minSubmissionId - the smallest unique identifier of a submission to get, or null; the
+   *     submissions are then in ascending order
+   * @param limit - the number of submissions to get
+   * @param viewer - the user viewing the list (may be null)
+   * @return the submissions
    */
-  private static long getUid(User viewer) {
-    return viewer == null ? 0 : viewer.getUid();
+  private List<Submission> getVisibleSubmissions(
+      long problemId,
+      String username,
+      Long maxSubmissionId,
+      Long minSubmissionId,
+      int limit,
+      User viewer) {
+    return submissionMapper.getSubmissions(
+        problemId,
+        username,
+        "",
+        maxSubmissionId,
+        minSubmissionId,
+        0,
+        limit,
+        !PublicationStatus.isAdministrator(viewer),
+        viewer == null ? 0 : viewer.getUid(),
+        new Date());
   }
 
   /**
@@ -283,8 +302,8 @@ public class SubmissionService {
   public List<Submission> getSubmissionsByPage(
       long problemId, String username, String judgeResult, long pageNumber, int pageSize) {
     long offset = Pagination.getOffset(pageNumber, pageSize);
-    return submissionMapper.getSubmissionsUsingFilters(
-        problemId, username, judgeResult, offset, pageSize);
+    return submissionMapper.getSubmissions(
+        problemId, username, judgeResult, null, null, offset, pageSize, false, 0, null);
   }
 
   /**
@@ -309,14 +328,7 @@ public class SubmissionService {
    */
   public List<Submission> getLatestSubmissions(
       long problemId, String username, long offset, int limit, User viewer) {
-    return submissionMapper.getLatestSubmissionsUsingOffset(
-        problemId,
-        username,
-        offset,
-        limit,
-        !PublicationStatus.isAdministrator(viewer),
-        getUid(viewer),
-        new Date());
+    return getVisibleSubmissions(problemId, username, null, offset, limit, viewer);
   }
 
   /**

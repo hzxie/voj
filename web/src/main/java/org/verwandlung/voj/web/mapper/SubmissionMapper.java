@@ -118,6 +118,14 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
+   * Gets a submission object by its unique identifier, without its code.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return a submission object whose code is null
+   */
+  Submission getSubmissionWithoutCode(@Param("submissionId") long submissionId);
+
+  /**
    * Gets the claim token of a submission: the one of the judging that claimed it, if it is still
    * pending or that judging recorded its verdict.
    *
@@ -128,88 +136,31 @@ public interface SubmissionMapper {
   Long getClaimTokenOfSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Gets the submissions of a user for a problem.
+   * Gets the submissions matching some filters, without their judge logs and codes: newest first,
+   * or oldest first from {@code minSubmissionId} on.
    *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param limit - the number of submissions to load each time
+   * @param problemId - the unique identifier of the problem (0 = no filter)
+   * @param username - the username of the user (empty = no filter)
+   * @param judgeResult - the slug of the judge result (empty = no filter)
+   * @param maxSubmissionId - the largest unique identifier of a submission to get, or null
+   * @param minSubmissionId - the smallest unique identifier of a submission to get, or null; the
+   *     submissions are then in ascending order
+   * @param offset - the number of matching submissions to skip
+   * @param limit - the number of submissions to get
    * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
    *     unpublished problems are excluded, and so are the submissions made in a contest that has not
    *     ended at {@code now} unless they are the viewer's own
    * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
    * @param now - the current time
-   * @return all submissions within a range
+   * @return the submissions
    */
   List<Submission> getSubmissions(
       @Param("problemId") long problemId,
       @Param("username") String username,
-      @Param("limit") int limit,
-      @Param("isPublicOnly") boolean isPublicOnly,
-      @Param("viewerUid") long viewerUid,
-      @Param("now") Date now);
-
-  /**
-   * [For administrators only] Gets a page of the submissions matching the filters, newest first.
-   * Uses the same filters as {@link #getNumberOfSubmissionsUsingProblemIdAndUsername}, so a pager
-   * built on the two stays consistent.
-   *
-   * @param problemId - the unique identifier of the problem (0 = no filter)
-   * @param username - the username of the user (empty = no filter)
-   * @param judgeResult - the slug of the judge result to filter by, or empty for all
-   * @param offset - the number of matching submissions to skip (zero-based)
-   * @param limit - the number of submissions to fetch
-   * @return the submissions on the requested page
-   */
-  List<Submission> getSubmissionsUsingFilters(
-      @Param("problemId") long problemId,
-      @Param("username") String username,
       @Param("judgeResult") String judgeResult,
+      @Param("maxSubmissionId") Long maxSubmissionId,
+      @Param("minSubmissionId") Long minSubmissionId,
       @Param("offset") long offset,
-      @Param("limit") int limit);
-
-  /**
-   * Gets the submissions of a user for a problem.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param judgeResult - the slug of the judge result to filter by, or empty for all
-   * @param offset - the starting number of the submission identifier
-   * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
-   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
-   *     ended at {@code now} unless they are the viewer's own
-   * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
-   * @param now - the current time
-   * @return all submissions within a range
-   */
-  List<Submission> getSubmissionsUsingOffset(
-      @Param("problemId") long problemId,
-      @Param("username") String username,
-      @Param("judgeResult") String judgeResult,
-      @Param("submissionId") long offset,
-      @Param("limit") int limit,
-      @Param("isPublicOnly") boolean isPublicOnly,
-      @Param("viewerUid") long viewerUid,
-      @Param("now") Date now);
-
-  /**
-   * Gets the submissions of a user for a problem.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param offset - the starting number of the submission identifier
-   * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
-   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
-   *     ended at {@code now} unless they are the viewer's own
-   * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
-   * @param now - the current time
-   * @return all submissions within a range
-   */
-  List<Submission> getLatestSubmissionsUsingOffset(
-      @Param("problemId") long problemId,
-      @Param("username") String username,
-      @Param("submissionId") long offset,
       @Param("limit") int limit,
       @Param("isPublicOnly") boolean isPublicOnly,
       @Param("viewerUid") long viewerUid,
