@@ -320,18 +320,22 @@ public class SandboxBehaviorTest {
   /**
    * Test case: the working directory of a compilation. Expected result: the submission's work
    * directory, not the judger's own (which the sandbox user may not even be able to enter, e.g.
-   * /root in the judger's Docker image, where the Go toolchain then fails to run its compiler).
+   * /root in the judger's Docker image, where the Go toolchain then fails to run its compiler), nor
+   * the sandbox account's profile directory on Windows.
    */
   @Test
   public void testProgramRunsInItsWorkDirectory() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
-    Assumptions.assumeTrue(isLinux(), "This runs /bin/pwd.");
     String workDirectory = createWorkDirectory(900017L);
     String logFile = workDirectory + "/cwd.log";
-    RunResult result = sandboxRunner.run("/bin/pwd", null, logFile, 5000, 0, true);
+    String command = isLinux() ? "/bin/pwd" : "cmd /c cd";
+    RunResult result = sandboxRunner.run(command, null, logFile, 5000, 0, true);
     Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
-    Assertions.assertEquals(
-        Path.of(workDirectory).toRealPath().toString(), Files.readString(Path.of(logFile)).strip());
+    String expected = Path.of(workDirectory).toRealPath().toString();
+    String actual = Files.readString(Path.of(logFile)).strip();
+    Assertions.assertTrue(
+        isLinux() ? expected.equals(actual) : expected.equalsIgnoreCase(actual),
+        "Expected " + expected + ", got " + actual);
   }
 
   /**

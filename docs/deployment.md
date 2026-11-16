@@ -249,9 +249,10 @@ as soon as a limit is exceeded:
 
 The final CPU time, memory and output size are checked again after the program
 exits, so a program that exceeds a limit between two polls is never judged on
-its output. The output file is created anew for every run: whatever the sandbox
-account may have left at its path (such as a hard link to another file) is
-removed first, never written through.
+its output. Compilations and runs start in the submission's work directory. The
+output file is created anew for every run: whatever the sandbox account may have
+left at its path (such as a hard link to another file) is removed first, never
+written through.
 
 The submission's environment is the sandbox account's own (system variables,
 the account's variables and profile paths such as `TEMP` and `APPDATA`) plus
@@ -285,10 +286,12 @@ Requirements for that account:
 - It must have a **loadable user profile**; the judger creates each submission
   process with `LOGON_WITH_PROFILE`. Logging in once interactively, or letting
   the first batch logon create it, is enough.
-- Keep it a plain member of *Users* (no admin rights). It only needs to read and
-  write the submission's work directory under `judger.workDir` (the compiler
-  writes the program and, for Go, its build cache there) and execute the
-  compiled program.
+- Keep it a plain member of *Users* (no admin rights). It only needs to enter,
+  read and write the submission's work directory under `judger.workDir` (each
+  compilation and run starts there; the compiler writes the program and, for Go,
+  its build cache there) and execute the compiled program. Make sure the ACL of
+  `judger.workDir` lets the work directories the judger creates inherit that
+  access for the account.
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.

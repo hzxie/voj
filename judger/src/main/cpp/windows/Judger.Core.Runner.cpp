@@ -620,7 +620,8 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
  * @param  password      - the Windows password
- * @param  workDirectory - the submission's work directory (empty if unknown)
+ * @param  workDirectory - the submission's work directory, where the process starts (empty if
+ *                         unknown: the sandbox account's profile directory)
  * @param  hToken        - receives a token that represents the specified user
  * @param  startupInfo   - a STARTUPINFO structure
  * @param  processInfo   - receives identification information for the new process
@@ -644,13 +645,26 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
     if ( !buildEnvironmentBlock(hToken, workDirectory, environmentBlock) ) {
         return false;
     }
-    if ( !GetUserProfileDirectoryW(hToken, szUserProfile, &dwSize) ) {
-        return false;
+    // The program starts in the submission's own work directory, as on Linux, never in a directory
+    // that outlives the submission or that every submission shares. The sandbox account can always
+    // enter it: it reads the source and writes the program there when compiling, and runs the
+    // program from there.
+    std::wstring currentDirectory = workDirectory;
+    for ( wchar_t& c : currentDirectory ) {
+        if ( c == L'/' ) {
+            c = L'\\';
+        }
+    }
+    if ( currentDirectory.empty() ) {
+        if ( !GetUserProfileDirectoryW(hToken, szUserProfile, &dwSize) ) {
+            return false;
+        }
+        currentDirectory = szUserProfile;
     }
     if ( !CreateProcessWithLogonW(lpUsername, lpDomain, lpPassword,
             LOGON_WITH_PROFILE, NULL, lpCommandLine,
             CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
-            environmentBlock.data(), szUserProfile, &startupInfo, &processInfo) ) {
+            environmentBlock.data(), currentDirectory.c_str(), &startupInfo, &processInfo) ) {
         return false;
     }
     return true;
