@@ -639,20 +639,53 @@ public class SubmissionService {
     }
   }
 
+  /** Why a judging task ended on the dead-letter queue. */
+  public enum JudgingTaskFailure {
+    /** No judger took the task before it expired: none supports the submission's language. */
+    NO_JUDGER_AVAILABLE(
+        "No available judger supports this submission's language, so the judging task expired"
+            + " before it could be processed."),
+
+    /** Judgers took the task, but judging it failed every time until the redelivery limit. */
+    JUDGING_FAILED_REPEATEDLY(
+        "Judging this submission failed repeatedly, so its judging task was given up."
+            + " An administrator can rejudge this submission."),
+
+    /** The broker gave the task up for another (or an unrecorded) reason. */
+    UNKNOWN(
+        "The judging task could not be completed. An administrator can rejudge this submission.");
+
+    /** The explanation shown in the submission's judge log. */
+    private final String explanation;
+
+    JudgingTaskFailure(String explanation) {
+      this.explanation = explanation;
+    }
+
+    /**
+     * Gets the judge log of a submission whose judging task failed this way.
+     *
+     * @return the judge log
+     */
+    public String getJudgeLog() {
+      return "System Error.\n\n" + explanation + "\n";
+    }
+  }
+
   /**
-   * Marks a still-pending submission as a terminal failure because no judger was available to handle
-   * it before its judging task expired in the queue. Invoked from the dead-letter listener. The
+   * Marks a still-pending submission as a terminal failure because its judging task ended on the
+   * dead-letter queue, with a judge log that says why. Invoked from the dead-letter listener. The
    * update only touches submissions that are still pending, so it never overwrites a real verdict
-   * (and is safe to apply more than once).
+   * (and is safe to apply more than once); a judging that is still running cannot record its
+   * verdict afterwards, as the judger only records a verdict over a pending submission.
    *
-   * @param submissionId - the unique identifier of the submission whose task expired
+   * @param submissionId - the unique identifier of the submission whose task was dead-lettered
+   * @param failure - why the task was dead-lettered
    * @return whether the submission was marked (false when it was already judged or does not exist)
    */
-  public boolean markSubmissionUnjudgeable(long submissionId) {
-    String judgeLog =
-        "System Error.\n\nNo available judger supports this submission's language, so the judging "
-            + "task expired before it could be processed.\n";
-    return submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", judgeLog) > 0;
+  public boolean markSubmissionUnjudgeable(long submissionId, JudgingTaskFailure failure) {
+    return submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", failure.getJudgeLog())
+        > 0;
   }
 
   /**

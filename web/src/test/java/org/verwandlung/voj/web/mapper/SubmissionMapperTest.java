@@ -511,40 +511,6 @@ public class SubmissionMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** Test case: tests the updateSubmission(Submission) method. Test data: a valid data set, and a record with the corresponding ID exists in the table. Expected: the data update operation completes successfully. */
-  @Test
-  public void testUpdateSubmissionNormally() {
-    Submission submission = submissionMapper.getSubmission(1002);
-    Assertions.assertNotNull(submission);
-
-    submission.setJudgeScore(20);
-    int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
-    Assertions.assertEquals(1, numberOfRowsAffected);
-
-    /**
-     * The following Assert CANNOT passed in CI due to the bug of Spring Test Framework. But it
-     * really works.
-     */
-    /*
-     * Submission updatedSubmission = submissionMapper.getSubmission(1002);
-     * int judgeScore = updatedSubmission.getJudgeScore();
-     * Assertions.assertEquals(20, judgeScore);
-     */
-  }
-
-  /**
-   * Test case: tests the updateSubmission(Submission) method. Test data: a valid data set, but no record with the corresponding ID exists in the table. Expected: the method executes normally without affecting the data in the table.
-   */
-  @Test
-  public void testUpdateSubmissionNotExists() {
-    Submission submission = submissionMapper.getSubmission(1000);
-    Assertions.assertNotNull(submission);
-
-    submission.setSubmissionId(0);
-    int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
-    Assertions.assertEquals(0, numberOfRowsAffected);
-  }
-
   /** Test case: tests the deleteSubmission(long) method. Test data: the unique identifier of submission record #1004. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteSubmissionExists() {

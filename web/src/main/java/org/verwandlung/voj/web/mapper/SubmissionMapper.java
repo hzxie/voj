@@ -327,16 +327,11 @@ public interface SubmissionMapper {
   int createSubmission(Submission submission);
 
   /**
-   * Updates a submission.
-   *
-   * @param submission - the submission object to update
-   */
-  int updateSubmission(Submission submission);
-
-  /**
-   * Marks a still-pending submission as a terminal failure (used when a judging task expires with no
-   * available judger). Only rows whose result is still pending are updated, so a real verdict is
-   * never overwritten.
+   * Marks a still-pending submission as a terminal failure (used when its judging task was
+   * dead-lettered or could not be queued). Only rows whose result is still pending are updated, so
+   * a real verdict is never overwritten, and a judging still running can no longer record one (the
+   * judger records a verdict only over a pending submission). The execute time of a judging that
+   * claimed the submission is kept; otherwise it becomes the current time.
    *
    * @param submissionId - the unique identifier of the submission
    * @param judgeResultSlug - the terminal judge-result slug to set

@@ -302,12 +302,104 @@ public class SubmissionServiceTest {
     jdbcTemplate.update(insertAccepted, 1003);
     // The rows were inserted behind MyBatis's back: any MyBatis update (this one changes no row)
     // clears the query results it cached in this transaction.
-    submissionService.markSubmissionUnjudgeable(0);
+    submissionService.markSubmissionUnjudgeable(0, SubmissionService.JudgingTaskFailure.UNKNOWN);
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1002).get("rank"));
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1000).get("rank"));
     Assertions.assertEquals(
         submissionService.getSolvedProblemCountForAllUsers().get(1002L),
         submissionService.getSolvedCountAndRankOfUser(1002).get("solvedCount"));
+  }
+
+  /**
+   * The statement with which a judger claims a pending submission (judger SubmissionMapper).
+   */
+  private static final String JUDGER_CLAIM =
+      "UPDATE voj_submissions SET submission_execute_time = ?, judger_uid = 1001"
+          + " WHERE submission_id = ? AND submission_judge_result = 'PD'";
+
+  /**
+   * The statement with which a judger records the verdict of its judging (judger SubmissionMapper).
+   */
+  private static final String JUDGER_RECORD_VERDICT =
+      "UPDATE voj_submissions SET submission_used_time = 10, submission_used_memory = 64,"
+          + " submission_judge_score = 100, submission_judge_result = 'AC',"
+          + " submission_judge_log = 'Accepted.'"
+          + " WHERE submission_id = ? AND submission_judge_result = 'PD'"
+          + " AND submission_execute_time = ?";
+
+  /**
+   * Test case: tests a rejudge (createSubmissionTasks) together with the judger's claim and verdict
+   * statements. Test data: submission 1001 (judged WA, with an execute time), and a judging of it
+   * that claimed it before the rejudge and finishes after it. Expected: the rejudge resets the row
+   * to pending and clears the execute time and judger, so the stale judging's verdict is dropped
+   * and a new judging can claim the submission and record its verdict.
+   */
+  @Test
+  public void testRejudgeIsCompatibleWithTheJudgersClaim() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    java.sql.Timestamp staleJudging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, staleJudging, 1001));
+
+    submissionService.createSubmissionTasks(List.of(1001L));
+
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_execute_time, judger_uid,"
+                + " submission_judge_log, submission_judge_score FROM voj_submissions"
+                + " WHERE submission_id = 1001");
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertNull(row.get("submission_execute_time"));
+    Assertions.assertNull(row.get("judger_uid"));
+    Assertions.assertNull(row.get("submission_judge_log"));
+    Assertions.assertNull(row.get("submission_judge_score"));
+    // The judging that started before the rejudge may not record its verdict ...
+    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, staleJudging));
+    // ... and the judging of the new task claims the submission and records its own.
+    java.sql.Timestamp newJudging = java.sql.Timestamp.valueOf("2026-01-01 10:05:00");
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, newJudging, 1001));
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, newJudging));
+    Assertions.assertEquals(
+        "AC",
+        jdbcTemplate.queryForObject(
+            "SELECT submission_judge_result FROM voj_submissions WHERE submission_id = 1001",
+            String.class));
+  }
+
+  /**
+   * Test case: tests markSubmissionUnjudgeable(long, JudgingTaskFailure). Test data: a pending
+   * submission a judging claimed, which then failed repeatedly; a judged submission. Expected: the
+   * pending one becomes SE with the log of that failure and keeps the claim's execute time, and the
+   * judging can no longer record a verdict; the judged one is left alone.
+   */
+  @Test
+  public void testMarkSubmissionUnjudgeable() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    java.sql.Timestamp judging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
+    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
+
+    Assertions.assertTrue(
+        submissionService.markSubmissionUnjudgeable(
+            1001, SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY));
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_log, submission_execute_time"
+                + " FROM voj_submissions WHERE submission_id = 1001");
+    Assertions.assertEquals("SE", row.get("submission_judge_result"));
+    Assertions.assertEquals(
+        SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY.getJudgeLog(),
+        row.get("submission_judge_log"));
+    Assertions.assertEquals(judging, row.get("submission_execute_time"));
+    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, judging));
+
+    Assertions.assertFalse(
+        submissionService.markSubmissionUnjudgeable(
+            1000, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
   }
 
   /** Tests whether a list of submissions contains the submission with the given identifier. */

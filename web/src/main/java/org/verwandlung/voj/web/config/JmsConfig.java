@@ -30,7 +30,7 @@ import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 
-import org.verwandlung.voj.web.messenger.ExpiredSubmissionTaskReceiver;
+import org.verwandlung.voj.web.messenger.DeadLetterSubmissionTaskReceiver;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
@@ -49,7 +49,10 @@ public class JmsConfig {
   /** The name of the judge result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
-  /** The ActiveMQ dead-letter queue that expired, undeliverable messages land on by default. */
+  /**
+   * The ActiveMQ dead-letter queue on which, by default, the messages land that expired or reached
+   * the redelivery limit.
+   */
   private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
 
   /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
@@ -141,19 +144,20 @@ public class JmsConfig {
   }
 
   /**
-   * The message listener container that watches the dead-letter queue for submission tasks that
-   * expired before any judger could handle them. The selector keeps this consumer from touching
-   * unrelated dead-lettered messages (only our submission tasks carry the {@code event} property).
+   * The message listener container that watches the dead-letter queue for judging tasks that
+   * expired before any judger could handle them, or that judgers failed to judge until the
+   * redelivery limit. The selector keeps this consumer from touching unrelated dead-lettered
+   * messages (only our submission tasks carry the {@code event} property).
    */
   @Bean
   public SimpleMessageListenerContainer deadLetterListenerContainer(
       ConnectionFactory connectionFactory,
-      ExpiredSubmissionTaskReceiver expiredSubmissionTaskReceiver) {
+      DeadLetterSubmissionTaskReceiver deadLetterSubmissionTaskReceiver) {
     SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
     listenerContainer.setConnectionFactory(connectionFactory);
     listenerContainer.setDestinationName(DEAD_LETTER_QUEUE);
     listenerContainer.setMessageSelector("event = 'SubmissionCreated'");
-    listenerContainer.setMessageListener(expiredSubmissionTaskReceiver);
+    listenerContainer.setMessageListener(deadLetterSubmissionTaskReceiver);
     return listenerContainer;
   }
 }
