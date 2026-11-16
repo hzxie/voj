@@ -215,22 +215,6 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * Test case: tests the updateContestContestant(ContestContestant) method. Test data: a valid data
-   * set. Expected: the ContestContestant is updated successfully.
-   */
-  @Test
-  public void testUpdateContestContestantNormally() {
-    ContestContestant cc = contestContestantMapper.getContestantOfContest(1, 1001);
-    Assertions.assertNotNull(cc);
-    cc.setCodeSnippet("Test Code Snippet");
-
-    contestContestantMapper.updateContestContestant(cc);
-    cc = contestContestantMapper.getContestantOfContest(1, 1001);
-    String codeSnippet = cc.getCodeSnippet();
-    Assertions.assertEquals("Test Code Snippet", codeSnippet);
-  }
-
-  /**
    * Test case: tests the deleteContestContestant(long, long) method. Test data: ContestID = 2, UserID
    * = 1000. Expected: the ContestContestant is deleted successfully.
    */

@@ -109,14 +109,6 @@ public interface ContestContestantMapper {
   int createContestContestant(ContestContestant contestContestant);
 
   /**
-   * Updates a participation record. Used to update the submitted source code when participating in
-   * an OI contest.
-   *
-   * @param contestContestant - the participation record to update
-   */
-  int updateContestContestant(ContestContestant contestContestant);
-
-  /**
    * Deletes a participation record.
    *
    * @param contestId - the unique identifier of the contest

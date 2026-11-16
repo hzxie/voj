@@ -112,24 +112,6 @@ public class ContestContestant implements Comparable {
     return rank;
   }
 
-  /**
-   * Gets the code snippet.
-   *
-   * @return the code snippet
-   */
-  public String getCodeSnippet() {
-    return codeSnippet;
-  }
-
-  /**
-   * Sets the code snippet.
-   *
-   * @param codeSnippet - the code snippet
-   */
-  public void setCodeSnippet(String codeSnippet) {
-    this.codeSnippet = codeSnippet;
-  }
-
   /* (non-Javadoc)
    * @see java.lang.Object#compareTo(Object)
    */
@@ -175,7 +157,4 @@ public class ContestContestant implements Comparable {
 
   /** The rank in the contest. */
   private long rank;
-
-  /** The code snippet (in JSON format), used to temporarily save the contestant's code in the OI mode. */
-  private String codeSnippet;
 }

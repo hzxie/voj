@@ -288,8 +288,6 @@ public class ContestsController {
 
     Problem problem = problemService.getProblem(problemId);
     List<Language> languages = languageService.getEnabledLanguages();
-    Map<String, String> codeSnippet =
-        contestService.getCodeSnippetOfContestProblem(contest, problemId, currentUser);
     List<Submission> submissions =
         contestService.getSubmissionsOfContestantOfContestProblem(contest, problemId, currentUser);
     ModelAndView view = new ModelAndView("pages/problems/problem");
@@ -298,7 +296,6 @@ public class ContestsController {
     view.addObject("contest", contest);
     view.addObject("problem", problem);
     view.addObject("languages", languages);
-    view.addObject("codeSnippet", codeSnippet);
     view.addObject("submissions", submissions);
     view.addObject("currentTime", currentTime);
     view.addObject("isContest", true);

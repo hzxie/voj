@@ -147,17 +147,6 @@ public class ContestServiceTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** Test case: tests the getCodeSnippetOfContestProblem(...) method. Test data: the contest is null or is not an ongoing OI contest. Expected: returns null. */
-  @Test
-  public void testGetCodeSnippetOfContestProblemReturnsNull() {
-    Assertions.assertNull(
-        contestService.getCodeSnippetOfContestProblem(null, 1000, userWithUid(1000)));
-    // Contest #2 uses the ACM mode, so no code snapshot is returned.
-    Assertions.assertNull(
-        contestService.getCodeSnippetOfContestProblem(
-            contestService.getContest(2), 1001, userWithUid(1000)));
-  }
-
   /**
    * Test case: tests the getNumberOfContestantsOfContests(List) method. Test data: the three
    * fixture contests. Expected: one count per contest, the same as the per-contest count, and 0 for

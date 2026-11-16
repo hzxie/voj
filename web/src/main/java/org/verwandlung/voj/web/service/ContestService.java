@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -273,40 +272,6 @@ public class ContestService {
       }
     }
     return submissions;
-  }
-
-  /**
-   * Gets the code a user temporarily saved during a contest (generally used to save code in the OI
-   * mode).
-   *
-   * @param contest - the contest object
-   * @param problemId - the unique identifier of the problem
-   * @param contestant - the contestant object
-   * @return the code for the corresponding problem
-   */
-  public Map<String, String> getCodeSnippetOfContestProblem(
-      Contest contest, long problemId, User contestant) {
-    if (contest == null || contestant == null) {
-      return null;
-    }
-    if (contest.getContestMode().equals("OI")
-        && getContestStatus(contest) == Contest.CONTEST_STATUS.LIVE) {
-      ContestContestant cc =
-          contestContestantMapper.getContestantOfContest(
-              contest.getContestId(), contestant.getUid());
-      // An administrator may view the problem without having attended the contest.
-      if (cc == null) {
-        return null;
-      }
-      Map<Long, Map<String, String>> codeSnippet =
-          JsonUtils.toObject(
-              cc.getCodeSnippet(), new TypeReference<Map<Long, Map<String, String>>>() {});
-
-      if (codeSnippet != null && codeSnippet.containsKey(problemId)) {
-        return codeSnippet.get(problemId);
-      }
-    }
-    return null;
   }
 
   /**

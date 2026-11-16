@@ -8,7 +8,6 @@
 		<result property="score" column="contestant_score" />
 		<result property="time" column="contestant_time" />
 		<result property="rank" column="contestant_rank" />
-		<result property="codeSnippet" column="code_snippet" />
 		<association property="contest" 
 			javaType="org.verwandlung.voj.web.model.Contest" 
 			column="contest_id"
@@ -139,13 +138,6 @@
 		INSERT INTO voj_contest_contestants (contest_id, contestant_uid)
 		VALUES (#{contest.contestId}, #{contestant.uid})
 	</insert>
-	<update id="updateContestContestant" 
-		parameterType="org.verwandlung.voj.web.model.ContestContestant">
-		UPDATE voj_contest_contestants 
-		SET code_snippet = #{codeSnippet}
-		WHERE contest_id = #{contest.contestId}
-		AND contestant_uid = #{contestant.uid}
-	</update>
 	<delete id="deleteContestContestant"
 		parameterType="map">
 		DELETE FROM voj_contest_contestants 

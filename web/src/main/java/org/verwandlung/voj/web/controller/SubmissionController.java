@@ -248,9 +248,9 @@ public class SubmissionController {
     Submission submission = submissionService.getSubmission(submissionId);
 
     // Anyone allowed to see the source code may also follow the live judge log (which can echo the
-    // source for compiler errors): this covers the owner, administrators and, when public
-    // submissions are enabled, everyone else. Without this, the administration console's
-    // edit-submission page could never subscribe to another user's pending submission.
+    // source for compiler errors): the owner and administrators (see canViewSourceCode). Without
+    // the administrators, the administration console's edit-submission page could never subscribe
+    // to another user's pending submission.
     if (submission == null
         || !contestService.isSubmissionVisible(submission, currentUser)
         || !canViewSourceCode(submission, currentUser)
@@ -307,7 +307,7 @@ public class SubmissionController {
    */
   @Autowired private ContestService contestService;
 
-  /** The autowired OptionService object. Used to resolve the public-submissions visibility option. */
+  /** The autowired OptionService object. Used to read the number of submissions per page. */
   @Autowired private OptionService optionService;
 
   /** The autowired ApplicationEventListener object. Used for registering the sseEmitter. */

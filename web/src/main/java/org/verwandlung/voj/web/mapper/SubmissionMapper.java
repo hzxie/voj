@@ -62,21 +62,6 @@ public interface SubmissionMapper {
   long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
 
   /**
-   * Gets the number of submissions within a specified time period, grouped by month.
-   *
-   * @param startTime - the start time of the statistics
-   * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
-   * @param isAcceptedOnly - whether to count only accepted submissions
-   * @return a Map of key-value pairs containing the month and the number of submissions
-   */
-  List<Map<String, Object>> getNumberOfSubmissionsGroupByMonth(
-      @Param("startTime") String startTime,
-      @Param("endTime") String endTime,
-      @Param("uid") long uid,
-      @Param("isAcceptedOnly") boolean isAcceptedOnly);
-
-  /**
    * Gets the number of submissions within a specified time period, grouped by quarter of an hour
    * (which SubmissionService adds up into the days of its time zone: the database session's time
    * zone is UTC, and the offset of every time zone is a multiple of 15 minutes).
