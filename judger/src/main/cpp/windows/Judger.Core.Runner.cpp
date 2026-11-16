@@ -27,6 +27,8 @@
 
 #include <windows.h>
 #include <aclapi.h>
+#include <fwpmu.h>
+#include <rpc.h>
 #include <sddl.h>
 #include <userenv.h>
 #include <psapi.h>
@@ -102,10 +104,38 @@ static const DWORD DESKTOP_ACCESS        = READ_CONTROL | DESKTOP_READOBJECTS | 
 static const wchar_t* const PRIVATE_DESKTOP_LABEL = L"S:(ML;;NW;;;LW)";
 
 /**
+ * The network filter of the sandbox account (see blockNetwork): the layers it blocks, for IPv4 and
+ * IPv6, every socket of the account's processes being bound (implicitly too), listening,
+ * connecting or accepting, loopback included; and the condition that matches the account. The
+ * keys and flags are those of the SDK's fwpmu.h, which MinGW's lacks.
+ * See https://learn.microsoft.com/windows/win32/fwp/management-filtering-layer-identifiers-
+ */
+static const GUID BLOCKED_LAYERS[] = {
+    // FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4 and _V6
+    { 0x1247d66d, 0x0b60, 0x4a15, { 0x8d, 0x44, 0x71, 0x55, 0xd0, 0xf5, 0x3a, 0x0c } },
+    { 0x55a650e1, 0x5f0a, 0x4eca, { 0xa6, 0x53, 0x88, 0xf5, 0x3b, 0x26, 0xaa, 0x8c } },
+    // FWPM_LAYER_ALE_AUTH_LISTEN_V4 and _V6
+    { 0x88bb5dad, 0x76d7, 0x4227, { 0x9c, 0x71, 0xdf, 0x0a, 0x3e, 0xd7, 0xbe, 0x7e } },
+    { 0x7ac9de24, 0x17dd, 0x4814, { 0xb4, 0xbd, 0xa9, 0xfb, 0xc9, 0x5a, 0x32, 0x1b } },
+    // FWPM_LAYER_ALE_AUTH_CONNECT_V4 and _V6
+    { 0xc38d57d1, 0x05a7, 0x4c33, { 0x90, 0x4f, 0x7f, 0xbc, 0xee, 0xe6, 0x0e, 0x82 } },
+    { 0x4a72393b, 0x319f, 0x44bc, { 0x84, 0xc3, 0xba, 0x54, 0xdc, 0xb3, 0xb6, 0xb4 } },
+    // FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4 and _V6
+    { 0xe1cd9fe7, 0xf4b5, 0x4273, { 0x96, 0xc0, 0x59, 0x2e, 0x48, 0x7b, 0x86, 0x50 } },
+    { 0xa3b42c97, 0x9f04, 0x4672, { 0xb8, 0x7e, 0xce, 0xe9, 0xc4, 0x83, 0x25, 0x7f } },
+};
+/** FWPM_CONDITION_ALE_USER_ID. */
+static const GUID  ALE_USER_ID_CONDITION      = { 0xaf043a0a, 0xb34d, 0x4f86,
+                                                  { 0x97, 0x9c, 0xc9, 0x03, 0x71, 0xaf, 0x6e, 0x66 } };
+static const UINT32 SESSION_FLAG_DYNAMIC      = 0x00000001; // FWPM_SESSION_FLAG_DYNAMIC
+static const UINT32 FILTER_FLAG_CLEAR_ACTION_RIGHT = 0x00000008; // FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT
+
+/**
  * The sandbox account's logon session, which every compilation and run uses, from
  * logOnSandboxAccount to logOffSandboxAccount. Guarded by sandboxSessionLock.
  */
 struct SandboxSession {
+    HANDLE       hEngine;   // the dynamic WFP session that holds the network filter
     HANDLE       hToken;    // the account's logon token
     HANDLE       hProfile;  // its loaded profile (registry hive), unloaded with the session
     HANDLE       hRunToken; // the token every program runs with (see createLowIntegrityToken)
@@ -113,7 +143,7 @@ struct SandboxSession {
     std::wstring desktop;   // "<window station>\<desktop>", the programs' lpDesktop
     PSID         logonSid;  // the SID of the logon session, granted access to the window station
 };
-static SandboxSession sandboxSession     = { NULL, NULL, NULL, NULL, L"", NULL };
+static SandboxSession sandboxSession     = { NULL, NULL, NULL, NULL, NULL, L"", NULL };
 static SRWLOCK        sandboxSessionLock = SRWLOCK_INIT;
 
 /**
@@ -129,6 +159,7 @@ bool disableErrorDialogs(HANDLE);
 bool createProcess(const std::vector<std::wstring>&, const std::vector<std::wstring>&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
 std::wstring quoteArguments(const std::vector<std::wstring>&);
 void closeSandboxSession();
+bool blockNetwork(HANDLE, HANDLE&);
 HANDLE createLowIntegrityToken(HANDLE);
 bool labelLowIntegrity(const std::wstring&);
 bool hasLabel(PACL, PSID, BYTE);
@@ -405,10 +436,10 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 /**
  * JNI call entry point.
  * Logs the sandbox account on: the logon session every compilation and run uses, until
- * logOffSandboxAccount. It loads the account's profile (programs expect HKCU; the JVM finds
- * user.home there) with the logon token, as the run token cannot create the profile of an account
- * that has none yet, and creates the token and the desktop every program gets. The password is
- * not kept.
+ * logOffSandboxAccount. It keeps the account's processes off the network (see blockNetwork), loads
+ * the account's profile (programs expect HKCU; the JVM finds user.home there) with the logon token,
+ * as the run token cannot create the profile of an account that has none yet, and creates the
+ * token and the desktop every program gets. The password is not kept.
  * @param  jniEnv    - a reference to the JNI runtime environment
  * @param  jClass    - the calling Java class
  * @param  jUsername - the name of the account
@@ -430,6 +461,8 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_logOnSandboxA
             LOGON32_PROVIDER_DEFAULT, &session.hToken) ) {
         session.hToken = NULL;
         failedApi      = "LogonUser";
+    } else if ( !blockNetwork(session.hToken, session.hEngine) ) {
+        failedApi = "BlockNetwork";
     } else if ( !LoadUserProfileW(session.hToken, &profileInfo) ) {
         failedApi = "LoadUserProfile";
     } else {
@@ -851,9 +884,80 @@ std::wstring quoteArguments(const std::vector<std::wstring>& arguments) {
 }
 
 /**
+ * Keeps every process of the sandbox account off the network, loopback included, the counterpart
+ * of the seccomp filters on Linux: block filters, at every ALE layer (BLOCKED_LAYERS), of a dynamic
+ * WFP session, which Windows removes with the session when the judger exits, however it exits.
+ * The filters match the account's SID (FWPM_CONDITION_ALE_USER_ID), and are hard: no permit of the
+ * firewall overrides them. A service that acts on a program's behalf, such as the DNS client, is
+ * not the account, and not blocked (see docs/deployment.md).
+ * See https://learn.microsoft.com/windows/win32/fwp/filter-arbitration
+ * @param  hToken  - the logon token of the sandbox account
+ * @param  hEngine - receives the WFP session, held until the session is closed
+ * @return whether every filter is in place (GetLastError() tells why not)
+ */
+bool blockNetwork(HANDLE hToken, HANDLE& hEngine) {
+    std::wstring sid;
+    if ( !getTokenUserSid(hToken, sid) ) {
+        return false;
+    }
+    // Matches a token of the account: the descriptor grants it FWP_ACTRL_MATCH_FILTER (CC).
+    std::wstring         sddl = L"O:SYG:SYD:(A;;CC;;;" + sid + L")";
+    PSECURITY_DESCRIPTOR pSd  = NULL;
+    ULONG                size = 0;
+    if ( !ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl.c_str(), SDDL_REVISION_1, &pSd,
+            &size) ) {
+        return false;
+    }
+    FWPM_SESSION0 session = {};
+    session.flags = SESSION_FLAG_DYNAMIC;
+    DWORD error = FwpmEngineOpen0(NULL, RPC_C_AUTHN_WINNT, NULL, &session, &hEngine);
+    if ( error != ERROR_SUCCESS ) {
+        hEngine = NULL;
+    }
+    FWPM_SUBLAYER0 sublayer = {};
+    if ( error == ERROR_SUCCESS ) {
+        error = UuidCreate(&sublayer.subLayerKey) == RPC_S_OK ? ERROR_SUCCESS : ERROR_GEN_FAILURE;
+    }
+    if ( error == ERROR_SUCCESS ) {
+        sublayer.displayData.name = const_cast<wchar_t*>(L"voj-judger sandbox");
+        sublayer.weight           = 0xFFFF;
+        error = FwpmSubLayerAdd0(hEngine, &sublayer, NULL);
+    }
+    FWP_BYTE_BLOB          blob      = { size, (UINT8*) pSd };
+    FWPM_FILTER_CONDITION0 condition = {};
+    condition.fieldKey                = ALE_USER_ID_CONDITION;
+    condition.matchType               = FWP_MATCH_EQUAL;
+    condition.conditionValue.type     = FWP_SECURITY_DESCRIPTOR_TYPE;
+    condition.conditionValue.sd       = &blob;
+    for ( const GUID& layer : BLOCKED_LAYERS ) {
+        if ( error != ERROR_SUCCESS ) {
+            break;
+        }
+        FWPM_FILTER0 filter = {};
+        filter.displayData.name    = const_cast<wchar_t*>(L"voj-judger: no network for the sandbox account");
+        filter.flags               = FILTER_FLAG_CLEAR_ACTION_RIGHT;
+        filter.layerKey            = layer;
+        filter.subLayerKey         = sublayer.subLayerKey;
+        filter.weight.type         = FWP_UINT8;
+        filter.weight.uint8        = 15;
+        filter.numFilterConditions = 1;
+        filter.filterCondition     = &condition;
+        filter.action.type         = FWP_ACTION_BLOCK;
+        error = FwpmFilterAdd0(hEngine, &filter, NULL, NULL);
+    }
+    LocalFree(pSd);
+    if ( error != ERROR_SUCCESS && hEngine != NULL ) {
+        FwpmEngineClose0(hEngine);
+        hEngine = NULL;
+    }
+    SetLastError(error);
+    return error == ERROR_SUCCESS;
+}
+
+/**
  * Closes the sandbox account's logon session, if it is open: unloads its profile, closes its tokens
- * and desktop and revokes the access to the window station. Called with sandboxSessionLock held
- * exclusively, when no program of the session runs.
+ * and desktop, revokes the access to the window station and removes the network filter. Called
+ * with sandboxSessionLock held exclusively, when no program of the session runs.
  */
 void closeSandboxSession() {
     SandboxSession& session = sandboxSession;
@@ -874,6 +978,10 @@ void closeSandboxSession() {
     if ( session.hProfile != NULL ) {
         UnloadUserProfile(session.hToken, session.hProfile);
         session.hProfile = NULL;
+    }
+    if ( session.hEngine != NULL ) {
+        FwpmEngineClose0(session.hEngine);
+        session.hEngine = NULL;
     }
     if ( session.hToken != NULL ) {
         CloseHandle(session.hToken);

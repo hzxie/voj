@@ -13,7 +13,7 @@ ifeq ($(OS), Windows_NT)
 	# Link the MinGW runtime (libstdc++, libgcc, winpthread) into the DLL, so that the JVM can load
 	# it without MinGW's bin directory on PATH. System libraries are still imported from their DLLs.
 	LDFLAGS+=-static
-	EXTFLAGS=-luserenv -lpsapi
+	EXTFLAGS=-luserenv -lpsapi -lfwpuclnt -lrpcrt4
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Linux)
