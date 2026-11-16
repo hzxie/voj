@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Contains helper methods for loading native libraries, particularly JNI.
@@ -34,12 +36,27 @@ public class NativeLibraryLoader {
   /**
    * Loads a native shared library. It tries the standard System.loadLibrary method first and if it
    * fails, it looks for the library in the current class path. It will handle libraries packed
-   * within jar files, too.
+   * within jar files, too. A library is loaded once, however many classes ask for it: one taken
+   * from the class path would be extracted, and loaded, once more every time otherwise.
    *
    * @param libraryName - name of the library to load
    * @throws IOException if the library cannot be extracted from a jar file into a temporary file
    */
-  public static void loadLibrary(String libraryName) throws IOException {
+  public static synchronized void loadLibrary(String libraryName) throws IOException {
+    if (LOADED_LIBRARIES.contains(libraryName)) {
+      return;
+    }
+    load(libraryName);
+    LOADED_LIBRARIES.add(libraryName);
+  }
+
+  /**
+   * Loads a native shared library, from the java.library.path or the class path.
+   *
+   * @param libraryName - name of the library to load
+   * @throws IOException if the library cannot be extracted from a jar file into a temporary file
+   */
+  private static void load(String libraryName) throws IOException {
     try {
       System.loadLibrary(libraryName);
     } catch (UnsatisfiedLinkError e) {
@@ -66,4 +83,7 @@ public class NativeLibraryLoader {
       }
     }
   }
+
+  /** The names of the libraries loaded so far. */
+  private static final Set<String> LOADED_LIBRARIES = new HashSet<>();
 }

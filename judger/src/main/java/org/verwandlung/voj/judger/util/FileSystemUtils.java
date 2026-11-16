@@ -22,6 +22,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -322,16 +323,12 @@ public class FileSystemUtils {
     if (IS_WINDOWS) {
       boolean granted = false;
       try {
-        UserPrincipal judger =
-            file.getFileSystem()
-                .getUserPrincipalLookupService()
-                .lookupPrincipalByName(System.getProperty("user.name"));
         Files.getFileAttributeView(file, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS)
             .setAcl(
                 List.of(
                     AclEntry.newBuilder()
                         .setType(AclEntryType.ALLOW)
-                        .setPrincipal(judger)
+                        .setPrincipal(getJudgerAccount())
                         .setPermissions(AclEntryPermission.values())
                         .build()));
         granted = true;
@@ -421,6 +418,44 @@ public class FileSystemUtils {
      */
     T perform() throws IOException;
   }
+
+  /**
+   * Gets the account the judger runs as, on Windows: the user of its process's token, looked up by
+   * its name qualified with its domain. Java's {@code user.name} is the bare name of the account,
+   * which a domain account and a local one may share, and not even an account's for some (that of
+   * SYSTEM is the computer's).
+   *
+   * @return the judger's account
+   * @throws IOException if the native library cannot be loaded, or the account cannot be looked up
+   */
+  public static synchronized UserPrincipal getJudgerAccount() throws IOException {
+    if (judgerAccount == null) {
+      NativeLibraryLoader.loadLibrary(NATIVE_LIBRARY);
+      String name;
+      try {
+        name = getProcessAccountName();
+      } catch (RuntimeException | UnsatisfiedLinkError ex) {
+        throw new IOException("Cannot tell which account the judger runs as.", ex);
+      }
+      judgerAccount =
+          FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName(name);
+    }
+    return judgerAccount;
+  }
+
+  /**
+   * Gets the name of the account the judger's process runs as, qualified with its domain
+   * (Windows), such as {@code HOST\judger} or {@code NT AUTHORITY\SYSTEM}.
+   *
+   * @return the name of the account
+   */
+  private static native String getProcessAccountName();
+
+  /** The native library that holds the native methods. */
+  private static final String NATIVE_LIBRARY = "JudgerCore";
+
+  /** The account the judger runs as (Windows), once looked up. */
+  private static UserPrincipal judgerAccount;
 
   /** Whether the judger runs on Windows. */
   private static final boolean IS_WINDOWS = System.getProperty("os.name").contains("Windows");

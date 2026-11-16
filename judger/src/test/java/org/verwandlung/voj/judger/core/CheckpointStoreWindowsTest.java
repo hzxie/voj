@@ -40,6 +40,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.util.ExclusiveFileLock;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 import org.verwandlung.voj.judger.util.FileSystemUtilsTest;
 
 /**
@@ -53,18 +54,19 @@ public class CheckpointStoreWindowsTest {
   /**
    * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it and
    * the directories of its slot with an ACL of their own, not the one they would inherit: only the
-   * judger may access the root and its cache; in its work directory, what is created is the
-   * sandbox account's too, but for changing its ACL or owner, and its owner may read its ACL only.
+   * judger (the account of its process) may access the root and its cache; in its work directory,
+   * what is created is the sandbox account's too, but for changing its ACL or owner, and its owner
+   * may read its ACL only.
    */
   @Test
   public void testOpenCreatesDirectoriesOnlyTheJudgerMayAccess() throws Exception {
     Path root = tempDir.resolve("voj-judger");
-    CheckpointStore store = newStore(root, JUDGER);
+    UserPrincipal judger = FileSystemUtils.getJudgerAccount();
+    CheckpointStore store = newStore(root, judger.getName());
 
     Path cache = store.open();
     Path work = store.getWorkDirectory();
 
-    UserPrincipal judger = lookup(JUDGER);
     Set<AclEntryFlag> inherited =
         EnumSet.of(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT);
     Set<AclEntryFlag> inheritedOnly =
@@ -128,7 +130,7 @@ public class CheckpointStoreWindowsTest {
     Files.setAttribute(readOnly, "dos:readonly", true);
     Path denied = Files.createDirectory(leftover.resolve("denied"));
     Files.getFileAttributeView(denied, AclFileAttributeView.class).setAcl(List.of());
-    CheckpointStore store = newStore(root, JUDGER);
+    CheckpointStore store = newStore(root, FileSystemUtils.getJudgerAccount().getName());
 
     store.open();
 
@@ -211,9 +213,6 @@ public class CheckpointStoreWindowsTest {
 
   /** The stores of the test. */
   private final List<CheckpointStore> stores = new ArrayList<>();
-
-  /** The judger's account, which is the sandbox account here too: one that exists on any host. */
-  private static final String JUDGER = System.getProperty("user.name");
 
   /** A temporary directory managed by JUnit. */
   @TempDir Path tempDir;

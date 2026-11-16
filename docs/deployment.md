@@ -672,9 +672,10 @@ read `%ProgramData%` and create files in it, and so they could in anything
 created there with the ACL it inherits: the judger therefore creates the
 directory, its `judger-<n>\` cache and its `work-<n>\` directory each with an ACL
 of its own, which gives only the judger's account access (any account may still
-pass through a directory to one below it, by *Bypass traverse checking*). In
-`work-<n>\`, what is created (the work directory of each judging and what is in
-it) is also the sandbox account's, but for changing its ACL or its owner, and an
+pass through a directory to one below it, by *Bypass traverse checking*). The
+judger's account is the user of its process's token, not a name looked up
+(which a local and a domain account may share). In `work-<n>\`, what is created
+(the work directory of each judging and what is in it) is also the sandbox account's, but for changing its ACL or its owner, and an
 `OWNER RIGHTS` entry keeps the sandbox account from changing the ACL of what it
 creates there either (Windows lets the owner of a file change its ACL
 otherwise). A directory whose ACL cannot be set is removed again, so it is

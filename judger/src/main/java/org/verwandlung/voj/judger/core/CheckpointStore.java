@@ -378,10 +378,11 @@ public class CheckpointStore {
 
   /**
    * Creates a directory on Windows with an ACL of its own instead of the one it would inherit
-   * (from {@code %ProgramData%}, every user may read and create files): it gives the judger full
-   * control of the directory and of what is created in it, and nobody else any access but the
-   * entries given. The accounts are looked up first, and a directory whose ACL cannot be set is
-   * removed again, so that it never stays with the ACL it inherited.
+   * (from {@code %ProgramData%}, every user may read and create files): it gives the judger's
+   * account (see {@link FileSystemUtils#getJudgerAccount}) full control of the directory and of
+   * what is created in it, and nobody else any access but the entries given. The accounts are
+   * looked up first, and a directory whose ACL cannot be set is removed again, so that it never
+   * stays with the ACL it inherited.
    *
    * @param directory - the directory to create
    * @param entries - the entries of its ACL besides the judger's
@@ -393,11 +394,7 @@ public class CheckpointStore {
     acl.add(
         AclEntry.newBuilder()
             .setType(AclEntryType.ALLOW)
-            .setPrincipal(
-                directory
-                    .getFileSystem()
-                    .getUserPrincipalLookupService()
-                    .lookupPrincipalByName(System.getProperty("user.name")))
+            .setPrincipal(FileSystemUtils.getJudgerAccount())
             .setPermissions(AclEntryPermission.values())
             .setFlags(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT)
             .build());
