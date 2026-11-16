@@ -507,6 +507,19 @@ public class UserService {
     return new String[] {username, password};
   }
 
+  /**
+   * Tells whether the administrator of the sample data (sql/demo.sql) is left with its known
+   * password: {@code root}, whose password is {@code root}.
+   *
+   * @return whether the administrator root has the password root
+   */
+  public boolean isDemoAdministratorLeft() {
+    User user = userMapper.getUserUsingUsername("root");
+    return user != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug())
+        && isPasswordCorrect("root", user.getPassword());
+  }
+
   /** What {@link #provisionJudgerAccount} did. */
   public enum JudgerAccountProvision {
     /** The account was created. */

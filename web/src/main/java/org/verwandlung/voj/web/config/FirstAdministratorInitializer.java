@@ -31,6 +31,9 @@ import org.verwandlung.voj.web.service.UserService;
  * guess. The password goes to the standard output only (the container log of the Docker image),
  * never to the log files, which are kept and may be read by others.
  *
+ * <p>It warns on every start while the administrator of the sample data is left with its known
+ * password, which the Docker image of 1.0.2 and earlier loaded into every installation.
+ *
  * @author Haozhe Xie
  */
 @Component
@@ -52,6 +55,12 @@ public class FirstAdministratorInitializer implements ApplicationRunner {
           credentials[0],
           credentials[1]);
       System.out.flush();
+    }
+    if (userService.isDemoAdministratorLeft()) {
+      LOGGER.warn(
+          "The administrator root has the password root of the sample data (sql/demo.sql), which"
+              + " every Docker installation of VOJ 1.0.2 and earlier loaded: unless this site is"
+              + " only for trying VOJ out, change it, and delete the other sample accounts.");
     }
   }
 

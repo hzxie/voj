@@ -367,6 +367,28 @@ public class UserServiceTest {
         userService.provisionJudgerAccount("judger", "short"));
   }
 
+  /**
+   * Test case: tests isDemoAdministratorLeft(). Test data: no root, then an administrator root
+   * whose password is root (stored as the sample data stores it), then another password. Expected:
+   * true only while the password is root.
+   */
+  @Test
+  public void testIsDemoAdministratorLeft() {
+    Assertions.assertFalse(userService.isDemoAdministratorLeft());
+    User root =
+        new User(
+            "root",
+            "63a9f0ea7bb98050796b649e85481845",
+            "admin@voj.local",
+            userService.getUserGroupUsingSlug("administrators"),
+            userService.getUserUsingUid(1000).getPreferLanguage());
+    userMapper.createUser(root);
+    Assertions.assertTrue(userService.isDemoAdministratorLeft());
+
+    userMapper.updatePassword(root.getUid(), passwordEncoder.encode("another-password"));
+    Assertions.assertFalse(userService.isDemoAdministratorLeft());
+  }
+
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an empty username. Expected: login fails. */
   @Test
   public void testIsAllowedToLoginWithEmptyUsername() {

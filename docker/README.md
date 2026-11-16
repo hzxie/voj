@@ -126,6 +126,11 @@ their usernames (`root` / `root` is an administrator): for trying VOJ out only.
 `docker-compose.yml` publishes the web port on `127.0.0.1` for a reverse proxy
 on the same host; set `VOJ_HTTP_BIND=0.0.0.0` in `.env` to expose it directly.
 
+Upgrading a Docker installation of 1.0.2? Its database still has the sample
+accounts with known passwords, and its judgers' token (`verwandlung`) is now
+refused: see
+[Docker installations of 1.0.2](../docs/deployment.md#docker-installations-of-102).
+
 The only build-time setting that remains is the **bundled demo MariaDB** password,
 which initialises the in-image database and defaults to `voj`.
 
