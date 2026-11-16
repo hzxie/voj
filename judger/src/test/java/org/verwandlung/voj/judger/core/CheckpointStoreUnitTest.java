@@ -84,6 +84,28 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
+   * Test case: judger.checkpointDir is empty, and the judger, which is not root, may not create
+   * the default checkpoint root, nor a root it is set to. Expected result: the default is a
+   * directory for the state of a service, not in the temporary directory, and the judger does not
+   * start, saying to set judger.checkpointDir.
+   */
+  @Test
+  public void testOpenTellsToSetTheCheckpointDirectoryItCannotCreate() throws Exception {
+    Assumptions.assumeFalse("root".equals(System.getProperty("user.name")), "root may create it");
+    Assertions.assertEquals("/var/lib/voj-judger", CheckpointStore.defaultCheckpointDirectory());
+    Path readOnly =
+        Files.createDirectory(
+            tempDir.resolve("read-only"),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("r-x------")));
+
+    for (String directory : new String[] {"", readOnly.resolve("voj-judger").toString()}) {
+      CheckpointStore store = newStore(Path.of(directory));
+      IOException ex = Assertions.assertThrows(IOException.class, store::open);
+      Assertions.assertTrue(ex.getMessage().contains("judger.checkpointDir"), ex.getMessage());
+    }
+  }
+
+  /**
    * Test case: the checkpoint root is a symbolic link planted by someone else. Expected result: the
    * sync is refused and nothing is downloaded through the link.
    */

@@ -133,10 +133,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   it (see [Java and Kotlin runs](#java-and-kotlin-runs)). Files a run writes in its work directory hold data outside its
   memory limit, though: `RLIMIT_FSIZE` bounds each file (see below), not their
   number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
-  file's size. The work directories are under `judger.checkpointDir`; on tmpfs
-  (as `/tmp`, its default parent, is on many distributions), that space is RAM:
-  put `judger.checkpointDir` on a disk-backed file system, or on a tmpfs whose
-  `size=` bounds what the runs on the host can hold there.
+  file's size. The work directories are under `judger.checkpointDir`; on tmpfs,
+  that space is RAM: keep `judger.checkpointDir` on a disk-backed file system
+  (as its default, `/var/lib/voj-judger`, is), or on a tmpfs whose `size=`
+  bounds what the runs on the host can hold there.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
@@ -211,9 +211,16 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 ### Filesystem layout and permissions
 
 The judger keeps everything it writes in one directory of its own,
-`judger.checkpointDir` (default `/tmp/voj-testpoints`), which must belong to the
-judger and not be writable by its group or others: the judger refuses to start
-otherwise, and creates a missing one with mode `0711`. Each judger on the host
+`judger.checkpointDir` (default `/var/lib/voj-judger`, the place of a service's
+state, which no clean-up of old files touches), which must belong to the judger
+and not be writable by its group or others: the judger refuses to start
+otherwise, and creates a missing one with mode `0711`. A judger that is not root
+may not create the default: create it for the judger's account
+(`sudo install -d -m 0711 -o <judger> /var/lib/voj-judger`), or set
+`judger.checkpointDir` (`VOJ_JUDGER_CHECKPOINT_DIR`) to a directory the judger
+may create; the judger does not start without it. Do not put it in `/tmp` or
+`/var/tmp`, whose clean-up of old files would remove the test data and the lock
+files of judgers still running. Each judger on the host
 has a slot *n* there (see [`configuration.md`](configuration.md#directories)):
 
 | Path | Mode | Contents |

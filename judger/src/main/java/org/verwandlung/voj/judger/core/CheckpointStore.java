@@ -399,13 +399,11 @@ public class CheckpointStore {
 
   /**
    * Opens the checkpoint root, making sure it belongs to the judger before anything in it is
-   * trusted. The default root ({@code /tmp/voj-testpoints}) lives in the world-writable {@code
-   * /tmp}, so the sandbox user (or any local account) could create it first, or plant a symbolic
-   * link there. The owner of the root can rename and replace the per-problem directories inside
-   * it, which would let a submission swap in answers of its choosing. The root is therefore
-   * created by the judger, with its permissions from the start (never changed afterwards, through
-   * a path someone else may have put a link at meanwhile), and refused when it is a link or owned
-   * by someone else. Other users must not be able to write to it either: they could rename the
+   * trusted. The owner of the root can rename and replace the per-problem directories inside it,
+   * which would let a submission swap in answers of its choosing. The root is therefore created by
+   * the judger, with its permissions from the start (never changed afterwards, through a path
+   * someone else may have put a link at meanwhile), and refused when it is a link or owned by
+   * someone else. Other users must not be able to write to it either: they could rename the
    * judger's directories in it and put their own in place (a sticky bit would prevent that, but not
    * creating the directory of a slot before the judger does). Such a root is refused too, rather
    * than its permissions changed: a root the judger did not create may be a directory others rely
@@ -416,15 +414,25 @@ public class CheckpointStore {
    *     write to it
    */
   private Path openCheckpointRoot() throws IOException {
-    Path root = Paths.get(checkpointDirectory).toAbsolutePath().normalize();
-    if (!isPosix()) {
-      return Files.createDirectories(root).toRealPath();
-    }
-    Files.createDirectories(root.getParent());
+    String directory =
+        checkpointDirectory.isBlank() ? defaultCheckpointDirectory() : checkpointDirectory;
+    Path root = Paths.get(directory).toAbsolutePath().normalize();
     try {
+      Files.createDirectories(root.getParent());
       createDirectory(root, PASSABLE);
     } catch (FileAlreadyExistsException ex) {
       // Checked below, as any root the judger did not create.
+    } catch (IOException ex) {
+      throw new IOException(
+          String.format(
+              "Cannot create the checkpoint directory %s (%s). Create it for the judger's account,"
+                  + " or set judger.checkpointDir (VOJ_JUDGER_CHECKPOINT_DIR) to a directory the"
+                  + " judger may create.",
+              root, ex),
+          ex);
+    }
+    if (!isPosix()) {
+      return root.toRealPath();
     }
     if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
       throw new IOException("The checkpoint directory is not a real directory: " + root);
@@ -442,6 +450,22 @@ public class CheckpointStore {
               root, mode & 07777));
     }
     return root.toRealPath();
+  }
+
+  /**
+   * Gets the default checkpoint root: a directory for the state of a service, which no clean-up of
+   * old files touches, unlike the temporary directory.
+   *
+   * @return {@code /var/lib/voj-judger}, or {@code %ProgramData%\voj-judger} on Windows
+   */
+  static String defaultCheckpointDirectory() {
+    if (isPosix()) {
+      return "/var/lib/voj-judger";
+    }
+    String programData = System.getenv("ProgramData");
+    return Paths.get(programData != null ? programData : "C:\\ProgramData")
+        .resolve("voj-judger")
+        .toString();
   }
 
   /**
@@ -528,9 +552,12 @@ public class CheckpointStore {
   /** The autowired HttpCheckpointProvider, which performs the actual download. */
   @Autowired private HttpCheckpointProvider checkpointProvider;
 
-  /** The checkpoint root, which holds the slots of the judgers on this host. */
-  @Value("${judger.checkpointDir}")
-  private String checkpointDirectory;
+  /**
+   * The checkpoint root, which holds the slots of the judgers on this host; empty for the default
+   * (see {@link #defaultCheckpointDirectory}).
+   */
+  @Value("${judger.checkpointDir:}")
+  private String checkpointDirectory = "";
 
   /** The account the sandbox runs submissions as on Windows. */
   @Value("${system.username:}")

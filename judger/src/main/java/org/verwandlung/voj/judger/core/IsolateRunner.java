@@ -259,8 +259,8 @@ public class IsolateRunner implements SandboxRunner {
     // regardless of whether the first command-line token is a path (e.g. "java", "python") or the
     // binary itself. The checkpoint directory (inputs AND expected outputs) is never bound. It
     // cannot be bound at its own path: isolate mounts the box's private /tmp over every mount point
-    // below /tmp (where the default judger.checkpointDir is), so the command line's paths are
-    // rewritten instead.
+    // below /tmp (where judger.checkpointDir may be), so the command line's paths are rewritten
+    // instead.
     String workDirectory = directoryOf(outputFilePath);
     if (workDirectory != null) {
       command.add(
