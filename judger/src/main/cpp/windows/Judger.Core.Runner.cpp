@@ -135,6 +135,7 @@ static const UINT32 FILTER_FLAG_CLEAR_ACTION_RIGHT = 0x00000008; // FWPM_FILTER_
  * logOnSandboxAccount to logOffSandboxAccount. Guarded by sandboxSessionLock.
  */
 struct SandboxSession {
+    HANDLE       hMutex;    // Global\voj-sandbox-<SID>: no other judger uses the account
     HANDLE       hEngine;   // the dynamic WFP session that holds the network filter
     HANDLE       hToken;    // the account's logon token
     HANDLE       hProfile;  // its loaded profile (registry hive), unloaded with the session
@@ -143,7 +144,7 @@ struct SandboxSession {
     std::wstring desktop;   // "<window station>\<desktop>", the programs' lpDesktop
     PSID         logonSid;  // the SID of the logon session, granted access to the window station
 };
-static SandboxSession sandboxSession     = { NULL, NULL, NULL, NULL, NULL, L"", NULL };
+static SandboxSession sandboxSession     = { NULL, NULL, NULL, NULL, NULL, NULL, L"", NULL };
 static SRWLOCK        sandboxSessionLock = SRWLOCK_INIT;
 
 /**
@@ -159,6 +160,7 @@ bool disableErrorDialogs(HANDLE);
 bool createProcess(const std::vector<std::wstring>&, const std::vector<std::wstring>&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
 std::wstring quoteArguments(const std::vector<std::wstring>&);
 void closeSandboxSession();
+bool claimSandboxAccount(HANDLE, HANDLE&);
 bool blockNetwork(HANDLE, HANDLE&);
 HANDLE createLowIntegrityToken(HANDLE);
 bool labelLowIntegrity(const std::wstring&);
@@ -436,10 +438,11 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 /**
  * JNI call entry point.
  * Logs the sandbox account on: the logon session every compilation and run uses, until
- * logOffSandboxAccount. It keeps the account's processes off the network (see blockNetwork), loads
- * the account's profile (programs expect HKCU; the JVM finds user.home there) with the logon token,
- * as the run token cannot create the profile of an account that has none yet, and creates the
- * token and the desktop every program gets. The password is not kept.
+ * logOffSandboxAccount. It claims the account for this judger (see claimSandboxAccount), keeps the
+ * account's processes off the network (see blockNetwork), loads the account's profile (programs
+ * expect HKCU; the JVM finds user.home there) with the logon token, as the run token cannot create
+ * the profile of an account that has none yet, and creates the token and the desktop every program
+ * gets. The password is not kept.
  * @param  jniEnv    - a reference to the JNI runtime environment
  * @param  jClass    - the calling Java class
  * @param  jUsername - the name of the account
@@ -461,6 +464,9 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_logOnSandboxA
             LOGON32_PROVIDER_DEFAULT, &session.hToken) ) {
         session.hToken = NULL;
         failedApi      = "LogonUser";
+    } else if ( !claimSandboxAccount(session.hToken, session.hMutex) ) {
+        failedApi = "ClaimSandboxAccount (another judger on this host runs its programs as " +
+                    std::string("the account: give each judger an account of its own)");
     } else if ( !blockNetwork(session.hToken, session.hEngine) ) {
         failedApi = "BlockNetwork";
     } else if ( !LoadUserProfileW(session.hToken, &profileInfo) ) {
@@ -884,6 +890,29 @@ std::wstring quoteArguments(const std::vector<std::wstring>& arguments) {
 }
 
 /**
+ * Claims the sandbox account for this judger with a named mutex keyed by its SID, which every
+ * judger on the host sees: two judgers whose programs ran as one account could open, kill or
+ * inject into each other's programs.
+ * @param  hToken - the logon token of the sandbox account
+ * @param  hMutex - receives the mutex, held until the session is closed
+ * @return whether the account is this judger's (GetLastError() is ERROR_ALREADY_EXISTS if another
+ *         judger holds it)
+ */
+bool claimSandboxAccount(HANDLE hToken, HANDLE& hMutex) {
+    std::wstring sid;
+    if ( !getTokenUserSid(hToken, sid) ) {
+        return false;
+    }
+    hMutex = CreateMutexW(NULL, FALSE, (L"Global\\voj-sandbox-" + sid).c_str());
+    if ( hMutex != NULL && GetLastError() == ERROR_ALREADY_EXISTS ) {
+        CloseHandle(hMutex);
+        hMutex = NULL;
+        SetLastError(ERROR_ALREADY_EXISTS);
+    }
+    return hMutex != NULL;
+}
+
+/**
  * Keeps every process of the sandbox account off the network, loopback included, the counterpart
  * of the seccomp filters on Linux: block filters, at every ALE layer (BLOCKED_LAYERS), of a dynamic
  * WFP session, which Windows removes with the session when the judger exits, however it exits.
@@ -956,8 +985,8 @@ bool blockNetwork(HANDLE hToken, HANDLE& hEngine) {
 
 /**
  * Closes the sandbox account's logon session, if it is open: unloads its profile, closes its tokens
- * and desktop, revokes the access to the window station and removes the network filter. Called
- * with sandboxSessionLock held exclusively, when no program of the session runs.
+ * and desktop, revokes the access to the window station, removes the network filter and gives the
+ * account up. Called with sandboxSessionLock held exclusively, when no program of the session runs.
  */
 void closeSandboxSession() {
     SandboxSession& session = sandboxSession;
@@ -982,6 +1011,10 @@ void closeSandboxSession() {
     if ( session.hEngine != NULL ) {
         FwpmEngineClose0(session.hEngine);
         session.hEngine = NULL;
+    }
+    if ( session.hMutex != NULL ) {
+        CloseHandle(session.hMutex);
+        session.hMutex = NULL;
     }
     if ( session.hToken != NULL ) {
         CloseHandle(session.hToken);
