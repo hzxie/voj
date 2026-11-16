@@ -79,11 +79,12 @@ public class SubmissionController {
   }
 
   /**
-   * Gets the list of historical submissions.
+   * Gets the older submissions of the list, newest first.
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
-   * @param startIndex - the submission unique identifier of the last currently-loaded record
+   * @param maxSubmissionId - the largest unique identifier of a submission to get (one less than
+   *     the oldest the list shows)
    * @param request - the HttpRequest object
    * @return a HashMap object containing the list of submission records
    */
@@ -91,7 +92,7 @@ public class SubmissionController {
   public @ResponseBody Map<String, Object> getSubmissionsAction(
       @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
       @RequestParam(value = "username", required = false, defaultValue = "") String username,
-      @RequestParam(value = "startIndex") long startIndex,
+      @RequestParam(value = "maxSubmissionId") long maxSubmissionId,
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
@@ -100,7 +101,7 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser();
     List<Submission> submissions =
         submissionService.getSubmissions(
-            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
+            problemId, username, maxSubmissionId, null, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -108,11 +109,12 @@ public class SubmissionController {
   }
 
   /**
-   * Gets the list of the latest submissions.
+   * Gets the submissions newer than the list shows, oldest first.
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
-   * @param startIndex - the submission unique identifier of the latest currently-loaded record
+   * @param minSubmissionId - the smallest unique identifier of a submission to get (one more than
+   *     the newest the list shows)
    * @param request - the HttpRequest object
    * @return a HashMap object containing the list of submission records
    */
@@ -120,7 +122,7 @@ public class SubmissionController {
   public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
       @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
       @RequestParam(value = "username", required = false, defaultValue = "") String username,
-      @RequestParam(value = "startIndex") long startIndex,
+      @RequestParam(value = "minSubmissionId") long minSubmissionId,
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
@@ -128,8 +130,8 @@ public class SubmissionController {
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
     User currentUser = HttpSessionParser.getCurrentUser();
     List<Submission> submissions =
-        submissionService.getLatestSubmissions(
-            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
+        submissionService.getSubmissions(
+            problemId, username, null, minSubmissionId, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 

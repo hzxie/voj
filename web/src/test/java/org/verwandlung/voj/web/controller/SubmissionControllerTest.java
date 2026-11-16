@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -92,7 +93,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetSubmissionsActionNonEmpty() {
     List<Submission> submissions = List.of(new Submission());
-    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100), any()))
+    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), isNull(), eq(100), any()))
         .thenReturn(submissions);
 
     Map<String, Object> result =
@@ -105,7 +106,7 @@ public class SubmissionControllerTest {
   /** Test case: tests getSubmissionsAction(...). Test data: an empty submission list. Expected: isSuccessful is false. */
   @Test
   public void testGetSubmissionsActionEmpty() {
-    when(submissionService.getSubmissions(anyLong(), anyString(), anyLong(), anyInt(), any()))
+    when(submissionService.getSubmissions(anyLong(), anyString(), anyLong(), isNull(), anyInt(), any()))
         .thenReturn(List.of());
 
     Map<String, Object> result =
@@ -118,7 +119,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetLatestSubmissionsActionNonEmpty() {
     List<Submission> submissions = List.of(new Submission());
-    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100), any()))
+    when(submissionService.getSubmissions(eq(1000L), eq(""), isNull(), eq(5L), eq(100), any()))
         .thenReturn(submissions);
 
     Map<String, Object> result =
@@ -173,7 +174,7 @@ public class SubmissionControllerTest {
   @Test
   public void testGetSubmissionsActionIncludesUnpublishedProblemsForAdministrator() {
     List<Submission> submissions = List.of(new Submission());
-    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100), any()))
+    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), isNull(), eq(100), any()))
         .thenReturn(submissions);
     authenticate(administratorUser());
 

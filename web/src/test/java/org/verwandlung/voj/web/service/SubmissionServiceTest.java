@@ -248,7 +248,7 @@ public class SubmissionServiceTest {
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
   }
 
-  /** Test case: tests the getSubmissions / getLatestSubmissions methods. Test data: a submission to the hidden problem 1002. Expected: it is listed only when unpublished problems are included. */
+  /** Test case: tests the getSubmissions methods. Test data: a submission to the hidden problem 1002. Expected: it is listed only when unpublished problems are included. */
   @Test
   public void testGetSubmissionsExcludesUnpublishedProblems() {
     long submissionId =
@@ -264,17 +264,17 @@ public class SubmissionServiceTest {
             submissionService.getSubmissions(0, "", 100, administrator()), submissionId));
     Assertions.assertFalse(
         containsSubmission(
-            submissionService.getSubmissions(0, "", submissionId, 100, null), submissionId));
+            submissionService.getSubmissions(0, "", submissionId, null, 100, null), submissionId));
     Assertions.assertTrue(
         containsSubmission(
-            submissionService.getSubmissions(0, "", submissionId, 100, administrator()),
+            submissionService.getSubmissions(0, "", submissionId, null, 100, administrator()),
             submissionId));
     Assertions.assertFalse(
         containsSubmission(
-            submissionService.getLatestSubmissions(0, "", 0, 100, null), submissionId));
+            submissionService.getSubmissions(0, "", null, 0L, 100, null), submissionId));
     Assertions.assertTrue(
         containsSubmission(
-            submissionService.getLatestSubmissions(0, "", 0, 100, administrator()), submissionId));
+            submissionService.getSubmissions(0, "", null, 0L, 100, administrator()), submissionId));
   }
 
   /**

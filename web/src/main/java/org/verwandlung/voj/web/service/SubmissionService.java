@@ -222,51 +222,37 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the list of submissions a viewer may see: an administrator sees every submission; anybody
-   * else neither sees the submissions to unpublished problems nor, until the contest ends, the
-   * submissions other users made in a contest (see {@link ContestService#isSubmissionVisible}).
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param limit - the number of submissions to load each time
-   * @param viewer - the user viewing the list (may be null)
-   * @return the list of submissions (a List<Submission> object)
-   */
-  public List<Submission> getSubmissions(
-      long problemId, String username, int limit, User viewer) {
-    return getVisibleSubmissions(problemId, username, null, null, limit, viewer);
-  }
-
-  /**
-   * Gets the list of submissions a viewer may see (see {@link #getSubmissions(long, String, int,
-   * User)}). Used to load submissions asynchronously.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param offset - the starting number of the submission identifier
-   * @param limit - the number of submissions to load each time
-   * @param viewer - the user viewing the list (may be null)
-   * @return the list of submissions (a List<Submission> object)
-   */
-  public List<Submission> getSubmissions(
-      long problemId, String username, long offset, int limit, User viewer) {
-    return getVisibleSubmissions(problemId, username, offset, null, limit, viewer);
-  }
-
-  /**
-   * Gets the list of submissions a viewer may see (see {@link #getSubmissions(long, String, int,
-   * User)}), without their judge logs and codes.
+   * Gets the newest submissions a viewer may see (see {@link #getSubmissions(long, String, Long,
+   * Long, int, User)}).
    *
    * @param problemId - the unique identifier of the problem (0 = no filter)
    * @param username - the username of the user (empty = no filter)
-   * @param maxSubmissionId - the largest unique identifier of a submission to get, or null
-   * @param minSubmissionId - the smallest unique identifier of a submission to get, or null; the
-   *     submissions are then in ascending order
    * @param limit - the number of submissions to get
    * @param viewer - the user viewing the list (may be null)
-   * @return the submissions
+   * @return the submissions, newest first
    */
-  private List<Submission> getVisibleSubmissions(
+  public List<Submission> getSubmissions(
+      long problemId, String username, int limit, User viewer) {
+    return getSubmissions(problemId, username, null, null, limit, viewer);
+  }
+
+  /**
+   * Gets the submissions a viewer may see, without their judge logs and codes: an administrator
+   * sees every submission; anybody else neither sees the submissions to unpublished problems nor,
+   * until the contest ends, the submissions other users made in a contest (see {@link
+   * ContestService#isSubmissionVisible}).
+   *
+   * @param problemId - the unique identifier of the problem (0 = no filter)
+   * @param username - the username of the user (empty = no filter)
+   * @param maxSubmissionId - the largest unique identifier of a submission to get (the older ones
+   *     a list loads), or null
+   * @param minSubmissionId - the smallest unique identifier of a submission to get (the newer ones
+   *     a list loads), or null; the submissions are then oldest first
+   * @param limit - the number of submissions to get
+   * @param viewer - the user viewing the list (may be null)
+   * @return the submissions, newest first unless {@code minSubmissionId} is given
+   */
+  public List<Submission> getSubmissions(
       long problemId,
       String username,
       Long maxSubmissionId,
@@ -312,22 +298,6 @@ public class SubmissionService {
    */
   public List<JudgeResult> getJudgeResults() {
     return judgeResultMapper.getJudgeResults();
-  }
-
-  /**
-   * Gets the list of latest submissions a viewer may see (see {@link #getSubmissions(long, String,
-   * int, User)}). Used to periodically fetch the latest submissions.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
-   * @param offset - the starting number of the submission identifier
-   * @param limit - the number of submissions to load each time
-   * @param viewer - the user viewing the list (may be null)
-   * @return the list of submissions (a List<Submission> object)
-   */
-  public List<Submission> getLatestSubmissions(
-      long problemId, String username, long offset, int limit, User viewer) {
-    return getVisibleSubmissions(problemId, username, null, offset, limit, viewer);
   }
 
   /**

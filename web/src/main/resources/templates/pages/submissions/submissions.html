@@ -81,14 +81,14 @@
             if ( !isNaN(firstId) ) { getLatestSubmissions(firstId + 1); }
         }, 10000);
 
-        function getLatestSubmissions(startIndex) {
+        function getLatestSubmissions(minSubmissionId) {
             $.ajax({
                 type: 'GET',
                 url: [[@{/submission/getLatestSubmissions.action}]],
                 data: {
                     'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
                     'username': [[${param.username != null ? param.username[0] : ''}]],
-                    'startIndex': startIndex
+                    'minSubmissionId': minSubmissionId
                 },
                 dataType: 'JSON',
                 success: function(result){
@@ -105,7 +105,7 @@
                 return {
                     'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
                     'username': [[${param.username != null ? param.username[0] : ''}]],
-                    'startIndex': lastId - 1
+                    'maxSubmissionId': lastId - 1
                 };
             },
             render: function(result) { return displayRecords(result['submissions'], false); }

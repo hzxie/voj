@@ -822,13 +822,13 @@ public class ContestServiceTest {
             .toList();
     Assertions.assertEquals(
         listed,
-        submissionService.getSubmissions(0, "", Long.MAX_VALUE, 1000, viewer).stream()
+        submissionService.getSubmissions(0, "", Long.MAX_VALUE, null, 1000, viewer).stream()
             .map(Submission::getSubmissionId)
             .sorted()
             .toList());
     Assertions.assertEquals(
         listed,
-        submissionService.getLatestSubmissions(0, "", 0, 1000, viewer).stream()
+        submissionService.getSubmissions(0, "", null, 0L, 1000, viewer).stream()
             .map(Submission::getSubmissionId)
             .sorted()
             .toList());
