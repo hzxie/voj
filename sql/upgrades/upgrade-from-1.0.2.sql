@@ -301,7 +301,9 @@ DEALLOCATE PREPARE voj_stmt;
 -- 12. The problems of the contests, in a table of their own. The copy runs only
 --     while contest_problems exists, and skips the rows an interrupted run
 --     copied already. An id is matched as text: a malformed value is never
---     converted to a number (which fails in strict mode).
+--     converted to a number (which fails in strict mode). The problem id is
+--     made text of the column's collation, as MySQL 8 gives CAST the
+--     connection's (utf8mb4_0900_ai_ci), which it does not compare with another.
 CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
   `contest_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
@@ -336,7 +338,7 @@ SET @voj_sql = IF(@voj_has_column > 0,
        UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
        UNION ALL SELECT 8 UNION ALL SELECT 9) hundreds
    ) n ON n.`position` <= LENGTH(c.`ids`) - LENGTH(REPLACE(c.`ids`, '','', ''''))
-   JOIN `voj_problems` p ON CAST(p.`problem_id` AS CHAR)
+   JOIN `voj_problems` p ON CAST(p.`problem_id` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci
      = SUBSTRING_INDEX(SUBSTRING_INDEX(c.`ids`, '','', n.`position` + 1), '','', -1)
    GROUP BY c.`contest_id`, p.`problem_id`', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
@@ -357,7 +359,8 @@ WHERE `language_compile_command` = 'javac {filename}.java'
 
 -- 14. A source file name for the languages without one, from the extensions their
 --    commands give (in a temporary table, as an UPDATE may not read the table
---    it changes in a subquery).
+--    it changes in a subquery). CHAR(92), a backslash, is a binary string, which
+--    is compared byte by byte with any collation.
 DROP TEMPORARY TABLE IF EXISTS `voj_source_extensions`;
 CREATE TEMPORARY TABLE `voj_source_extensions` AS
 SELECT `language_id`,
@@ -371,11 +374,11 @@ UPDATE `voj_languages` l
 JOIN `voj_source_extensions` e ON e.`language_id` = l.`language_id`
 SET l.`language_source_filename` = CONCAT('Main.', IF(
   e.`compile_extension` REGEXP '^[^./]{1,27}$'
-    AND LOCATE(CHAR(92 USING utf8mb4), e.`compile_extension`) = 0,
+    AND LOCATE(CHAR(92), e.`compile_extension`) = 0,
   e.`compile_extension`, e.`run_extension`))
 WHERE l.`language_source_filename` = ''
   AND ((e.`compile_extension` REGEXP '^[^./]{1,27}$'
-      AND LOCATE(CHAR(92 USING utf8mb4), e.`compile_extension`) = 0)
+      AND LOCATE(CHAR(92), e.`compile_extension`) = 0)
     OR (e.`run_extension` REGEXP '^[^./]{1,27}$'
-      AND LOCATE(CHAR(92 USING utf8mb4), e.`run_extension`) = 0));
+      AND LOCATE(CHAR(92), e.`run_extension`) = 0));
 DROP TEMPORARY TABLE `voj_source_extensions`;
