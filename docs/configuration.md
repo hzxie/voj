@@ -130,7 +130,11 @@ broker.
 The judger takes the pending submissions from the database, in the languages
 whose compilers it found at startup, the one queued first (when it was
 submitted, rejudged, or released after a failed judging) first, and judges one
-at a time. Any number of judgers can share the database.
+at a time. Any number of judgers can share the database. A language's compiler
+(the first word of its compile command) is found when it prints its version
+and exits with 0 within 30 seconds: `javac -version`, `kotlinc -version`,
+`go version`, `fpc -iV`, otherwise `<compiler> --version`. The judger looks
+once, when it starts: restart it after installing a compiler.
 The policy of the queue is the same on every judger, so it has no settings:
 
 - A judger claims a submission with a statement that only one judger can

@@ -16,13 +16,18 @@
  */
 package org.verwandlung.voj.judger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mybatis.spring.annotation.MapperScan;
@@ -157,9 +162,10 @@ public class VojJudgerApplication {
   }
 
   /**
-   * Probes the toolchain for every language known to the system and returns those this host can
-   * actually compile. A language counts as supported when its compiler can be launched; the
-   * compiler version is logged along the way to make bug reproduction easier.
+   * Probes the compiler of every language and returns those this host can compile, once, at
+   * startup: a compiler installed later is found at the next start. A language counts as supported
+   * when its compiler prints its version and exits with 0 (see {@link #getVersionCommand}), which
+   * is logged to make bug reproduction easier.
    *
    * @param languageMapper - the data access object for programming languages
    * @return the unique identifiers of the languages this judger supports
@@ -167,15 +173,15 @@ public class VojJudgerApplication {
   private List<Integer> detectSupportedLanguages(LanguageMapper languageMapper) {
     LOGGER.info("Compiler Information: ");
     List<Integer> supportedLanguageIds = new ArrayList<>();
-    List<Language> languages = languageMapper.getAllLanguages();
-    for (Language language : languages) {
-      String languageName = language.getLanguageName();
-      String compileProgram = getCompileProgram(language.getCompileCommand());
-      String compilerVersion =
-          compileProgram == null ? null : getCompilerVersion(languageName, compileProgram);
+    for (Language language : languageMapper.getAllLanguages()) {
+      List<String> versionCommand = getVersionCommand(language.getCompileCommand());
+      String version =
+          versionCommand == null ? null : getCommandOutput(versionCommand, PROBE_TIMEOUT_MS);
       LOGGER.info(
-          "\t" + languageName + ": " + (compilerVersion == null ? "Not Found" : compilerVersion));
-      if (compilerVersion != null) {
+          "\t{}: {}",
+          language.getLanguageName(),
+          version == null ? "Not Found" : version.lines().findFirst().orElse(""));
+      if (version != null) {
         supportedLanguageIds.add(language.getLanguageId());
       }
     }
@@ -183,61 +189,75 @@ public class VojJudgerApplication {
   }
 
   /**
-   * Gets the compiler program from the compile command line: its first word (the whole command when
-   * it has no arguments).
+   * Gets the command that prints the version of the compiler that a compile command runs (its
+   * first word): {@code -version} for javac and kotlinc, {@code version} for go, {@code -iV} for
+   * Free Pascal, {@code --version} for any other.
    *
    * @param compileCommand - the command line of the compile command
-   * @return the compiler program, or {@code null} if the command is empty
+   * @return the command, or {@code null} if the compile command is empty
    */
-  static String getCompileProgram(String compileCommand) {
+  static List<String> getVersionCommand(String compileCommand) {
     if (compileCommand == null || compileCommand.isBlank()) {
       return null;
     }
-    String compileProgram = compileCommand.trim().split("\\s+")[0];
-
-    if ("javac".equalsIgnoreCase(compileProgram)) {
-      return "java";
+    String compiler = compileCommand.trim().split("\\s+")[0];
+    String name =
+        compiler
+            .substring(Math.max(compiler.lastIndexOf('/'), compiler.lastIndexOf('\\')) + 1)
+            .toLowerCase(Locale.ROOT)
+            .replaceFirst("\\.exe$", "");
+    switch (name) {
+      case "javac":
+      case "kotlinc":
+        return List.of(compiler, "-version");
+      case "go":
+        return List.of(compiler, "version");
+      case "fpc":
+        return List.of(compiler, "-iV");
+      default:
+        return List.of(compiler, "--version");
     }
-    return compileProgram;
   }
 
   /**
-   * Gets the compiler's version information.
+   * Runs a command and gets what it prints (its standard output and error, read as it runs, so it
+   * never blocks on a full pipe). A command that does not exit in time is killed.
    *
-   * @param languageName - the name of the programming language
-   * @param compileProgram - the command used for compilation
-   * @return the compiler's version information, or null when the compiler cannot be launched
-   *     (i.e. this host does not support the language)
+   * @param command - the command
+   * @param timeoutMs - how long (ms) it may run
+   * @return what it printed, or {@code null} if it cannot be started, does not exit with 0, or
+   *     does not exit in time
    */
-  private String getCompilerVersion(String languageName, String compileProgram) {
-    String versionCommand = getVersionCommand(languageName);
-    StringBuilder compilerVersion = new StringBuilder();
-
+  static String getCommandOutput(List<String> command, long timeoutMs) {
+    Process process;
     try {
-      String command = compileProgram + versionCommand;
-      Process process = Runtime.getRuntime().exec(command);
-
-      compilerVersion.append("Command Line: " + command + "\n");
-      compilerVersion.append(IOUtils.toString(process.getInputStream()));
-      compilerVersion.append(IOUtils.toString(process.getErrorStream()));
-    } catch (Exception ex) {
+      process = new ProcessBuilder(command).redirectErrorStream(true).start();
+    } catch (IOException ex) {
       return null;
     }
-    return compilerVersion.toString();
+    try {
+      process.getOutputStream().close();
+      FutureTask<byte[]> output = new FutureTask<>(process.getInputStream()::readAllBytes);
+      Thread reader = new Thread(output, "voj-compiler-probe");
+      reader.setDaemon(true);
+      reader.start();
+      if (!process.waitFor(timeoutMs, TimeUnit.MILLISECONDS) || process.exitValue() != 0) {
+        return null;
+      }
+      return new String(output.get(timeoutMs, TimeUnit.MILLISECONDS), StandardCharsets.UTF_8)
+          .trim();
+    } catch (IOException | ExecutionException | TimeoutException ex) {
+      return null;
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+      return null;
+    } finally {
+      process.destroyForcibly();
+    }
   }
 
-  /**
-   * Gets the command-line argument used to obtain the compiler version.
-   *
-   * @param languageName - the name of the programming language
-   * @return the command-line argument used to obtain the compiler version
-   */
-  private String getVersionCommand(String languageName) {
-    if ("Java".equalsIgnoreCase(languageName)) {
-      return " -version";
-    }
-    return " --version";
-  }
+  /** How long (ms) the compiler of a language may take to print its version. */
+  static final long PROBE_TIMEOUT_MS = 30000;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(VojJudgerApplication.class);
