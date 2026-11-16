@@ -64,6 +64,13 @@
 			r.discussion_reply_id ASC
 		LIMIT #{offset}, #{limit}
 	</select>
+	<select id="getFirstDiscussionReplyIdOfThread"
+		parameterType="long"
+		resultType="java.lang.Long">
+		SELECT MIN(discussion_reply_id)
+		FROM voj_discussion_replies
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</select>
 	<insert id="createDiscussionReply" 
 		parameterType="org.verwandlung.voj.web.model.DiscussionReply"
 		keyProperty="discussionReplyId" 

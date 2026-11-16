@@ -914,8 +914,8 @@ public class DiscussionService {
   }
 
   /**
-   * Edits a discussion thread. Editing condition: the current user is an administrator or the thread
-   * was created by the user themselves.
+   * Edits a discussion thread. Editing condition: the current user is an administrator, or the
+   * thread was created by the user themselves and is not locked.
    *
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param currentEditor - the current editor
@@ -948,8 +948,12 @@ public class DiscussionService {
     // The edit only succeeds when the request is both valid and made by someone allowed to modify
     // the thread (its author or an administrator); reporting success to anyone else would be
     // misleading, since no change is persisted.
+    boolean isLocked = dt != null && isLockedFor(dt, currentEditor);
+    result.put("isDiscussionThreadLocked", isLocked);
     boolean isSuccessful =
-        isValid && canModify(dt != null ? dt.getDiscussionThreadCreator() : null, currentEditor);
+        isValid
+            && !isLocked
+            && canModify(dt != null ? dt.getDiscussionThreadCreator() : null, currentEditor);
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
       dt.setDiscussionTopic(discussionTopic);
@@ -1035,54 +1039,98 @@ public class DiscussionService {
   }
 
   /**
-   * Edits a discussion reply. Editing condition: the current user is an administrator or the reply
-   * was created by the user themselves.
+   * Edits a discussion reply. Editing condition: the current user is an administrator, or the reply
+   * was created by the user themselves and its thread is not locked.
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
    * @param discussionReplyContent - the updated content of the discussion reply
-   * @return a Map object containing the discussion reply editing result
+   * @return a Map object containing the discussion reply editing result ({@code
+   *     isDiscussionThreadLocked} and {@code isSuccessful})
    */
   public Map<String, Boolean> editDiscussionReply(
       long discussionReplyId, User currentEditor, String discussionReplyContent) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
+    Map<String, Boolean> result = new HashMap<>(4, 1);
     boolean isSuccessful = false;
+    boolean isLocked = false;
     DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
     String filteredContent = HtmlTextFilter.filter(discussionReplyContent);
 
     if (dr != null && !isBlank(filteredContent)) {
-      if (canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
+      isLocked = isThreadOfReplyLockedFor(dr, currentEditor);
+      if (!isLocked && canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
         dr.setDiscussionReplyContent(filteredContent);
         discussionReplyMapper.updateDiscussionReply(dr);
         isSuccessful = true;
       }
     }
+    result.put("isDiscussionThreadLocked", isLocked);
     result.put("isSuccessful", isSuccessful);
     return result;
   }
 
   /**
-   * Deletes a discussion reply. Deletion condition: the current user is an administrator or the
-   * reply was created by the user themselves.
+   * Deletes a discussion reply. Deletion condition: the current user is an administrator, or the
+   * reply was created by the user themselves and its thread is not locked. The opening post (the
+   * first reply) of a thread is never deleted on its own, since the next reply would then take its
+   * place: whoever may do so deletes the whole thread instead.
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
-   * @return a Map object containing the discussion reply deletion result
+   * @return a Map object containing the discussion reply deletion result ({@code isFirstReply},
+   *     {@code isDiscussionThreadLocked} and {@code isSuccessful})
    */
   public Map<String, Boolean> deleteDiscussionReply(long discussionReplyId, User currentEditor) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
+    Map<String, Boolean> result = new HashMap<>(4, 1);
     boolean isSuccessful = false;
+    boolean isFirstReply = false;
+    boolean isLocked = false;
     DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
     if (dr != null) {
-      if (canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
+      isFirstReply =
+          Long.valueOf(discussionReplyId)
+              .equals(
+                  discussionReplyMapper.getFirstDiscussionReplyIdOfThread(
+                      dr.getDiscussionThreadId()));
+      isLocked = isThreadOfReplyLockedFor(dr, currentEditor);
+      if (!isFirstReply && !isLocked && canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
         discussionReplyMapper.deleteDiscussionReplyUsingReplyId(discussionReplyId);
         isSuccessful = true;
       }
     }
+    result.put("isFirstReply", isFirstReply);
+    result.put("isDiscussionThreadLocked", isLocked);
     result.put("isSuccessful", isSuccessful);
     return result;
+  }
+
+  /**
+   * Checks whether the thread of a reply is locked for a user: a locked thread can no longer be
+   * changed by its participants, only by administrators.
+   *
+   * @param discussionReply - the discussion reply
+   * @param user - the acting user (may be null)
+   * @return whether the reply's thread is locked for the user
+   */
+  private boolean isThreadOfReplyLockedFor(DiscussionReply discussionReply, User user) {
+    DiscussionThread discussionThread =
+        discussionThreadMapper.getDiscussionThreadUsingThreadId(
+            discussionReply.getDiscussionThreadId());
+    return discussionThread != null && isLockedFor(discussionThread, user);
+  }
+
+  /**
+   * Checks whether a thread is locked for a user: a locked thread can no longer be changed by its
+   * participants, only by administrators.
+   *
+   * @param discussionThread - the discussion thread
+   * @param user - the acting user (may be null)
+   * @return whether the thread is locked for the user
+   */
+  private static boolean isLockedFor(DiscussionThread discussionThread, User user) {
+    return discussionThread.isLocked() && !PublicationStatus.isAdministrator(user);
   }
 
   /** The autowired DiscussionTopicMapper object, used to obtain discussion topics. */

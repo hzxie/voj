@@ -69,6 +69,14 @@ public interface DiscussionReplyMapper {
   int createDiscussionReply(DiscussionReply discussionReply);
 
   /**
+   * Gets the unique identifier of the opening post of a discussion thread, i.e. its first reply.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the unique identifier of the thread's first reply, or null if it has no reply
+   */
+  Long getFirstDiscussionReplyIdOfThread(@Param("discussionThreadId") long discussionThreadId);
+
+  /**
    * Updates a discussion reply.
    *
    * @param discussionReply - the DiscussionReply object to update

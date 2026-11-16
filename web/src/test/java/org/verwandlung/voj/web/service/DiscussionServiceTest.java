@@ -554,6 +554,75 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /**
+   * Test case: tests the deleteDiscussionReply(...) method. Test data: the opening post (first
+   * reply) of thread #2, deleted by its author and by an administrator. Expected: both are refused
+   * with isFirstReply, so the next reply never becomes the opening post; the thread itself is
+   * deleted instead.
+   */
+  @Test
+  public void testDeleteOpeningPostIsRefused() {
+    for (User editor : List.of(userMapper.getUserUsingUid(1002), adminUser())) {
+      Map<String, Boolean> result = discussionService.deleteDiscussionReply(2, editor);
+      Assertions.assertTrue(result.get("isFirstReply"));
+      Assertions.assertFalse(result.get("isSuccessful"));
+      Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(2));
+    }
+    Assertions.assertFalse(
+        discussionService.deleteDiscussionReply(3, adminUser()).get("isFirstReply"));
+  }
+
+  /**
+   * Test case: tests the editDiscussionReply(...) and deleteDiscussionReply(...) methods. Test
+   * data: reply #3 by user 1001 in thread #2, which an administrator locked. Expected: its author
+   * may neither edit nor delete it (isDiscussionThreadLocked); an administrator still may.
+   */
+  @Test
+  public void testRepliesOfLockedThreadAreReadOnlyForAuthors() {
+    Assertions.assertTrue(discussionService.saveThread(2, "Thread #2", 2, true, false, true));
+    User author = userMapper.getUserUsingUid(1001);
+
+    Map<String, Boolean> result = discussionService.editDiscussionReply(3, author, "Changed.");
+    Assertions.assertTrue(result.get("isDiscussionThreadLocked"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    result = discussionService.deleteDiscussionReply(3, author);
+    Assertions.assertTrue(result.get("isDiscussionThreadLocked"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(3));
+
+    Assertions.assertTrue(
+        discussionService.editDiscussionReply(3, adminUser(), "Moderated.").get("isSuccessful"));
+
+    Assertions.assertTrue(discussionService.saveThread(2, "Thread #2", 2, true, false, false));
+    Assertions.assertTrue(
+        discussionService.editDiscussionReply(3, author, "Changed.").get("isSuccessful"));
+  }
+
+  /**
+   * Test case: tests the editDiscussionThread(...) method. Test data: a thread created by user
+   * 1002, then locked. Expected: its creator may no longer rename it; an administrator may.
+   */
+  @Test
+  public void testLockedThreadIsReadOnlyForItsCreator() {
+    User creator = userMapper.getUserUsingUid(1002);
+    long threadId =
+        (Long)
+            discussionService
+                .createDiscussionThread(creator, "general", 0, "Original title", "Content")
+                .get("discussionThreadId");
+    Assertions.assertTrue(
+        discussionService.saveThread(threadId, "Original title", 3, true, false, true));
+
+    Map<String, Boolean> result =
+        discussionService.editDiscussionThread(threadId, creator, "general", "Renamed");
+    Assertions.assertTrue(result.get("isDiscussionThreadLocked"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertTrue(
+        discussionService
+            .editDiscussionThread(threadId, adminUser(), "general", "Renamed")
+            .get("isSuccessful"));
+  }
+
   /** Test case: tests the editDiscussionThread(...) method. Test data: an anonymous (null) editor. Expected: editing is denied cleanly, without a NullPointerException. */
   @Test
   public void testEditDiscussionThreadByAnonymousUser() {
