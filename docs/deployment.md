@@ -164,8 +164,15 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   with `CLONE_THREAD` but without `CLONE_FILES` fails with `EPERM`), so the
   limit is the run's, not each thread's. Compilations and runs start in the
   submission's work directory, in a session of their own without a
-  controlling terminal, so they cannot open the terminal the judger was started
-  from (to push input into its shell with `TIOCSTI`, say).
+  controlling terminal: `/dev/tty` cannot be opened (`ENXIO`), and `TIOCSTI`,
+  which pushes input into a terminal, works only on the caller's controlling
+  terminal (without `CAP_SYS_ADMIN`), so a submission cannot type into the
+  shell the judger was started from. That does not hide the terminal device
+  itself: a run of a judger that is not root runs as the judger's user, and can
+  still open any terminal that user owns, such as the `/dev/pts/N` the judger
+  was started from, for reading (Landlock refuses writing), to read what is
+  typed there. Run such a judger under an account no one works in, or as root
+  with a sandbox user, which owns no terminal.
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
   its secrets, with `HOME` and `TMPDIR` set to the submission's work directory,
