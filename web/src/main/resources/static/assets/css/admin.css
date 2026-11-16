@@ -22,11 +22,12 @@
 }
 .adm-drawer-close:hover { color:var(--accent); border-color:var(--accent); }
 
-/* The two modes split at 860px with complementary range queries (also used by
-   js/admin.js): a min-width:861px / max-width:860px pair leaves fractional widths
-   such as 860.5px (zoomed pages) in neither mode.
+/* The two modes split at 861px. Narrow is the negation of the wide query (also
+   used by js/admin.js), so every width is in exactly one mode: a min-width:861px /
+   max-width:860px pair leaves fractional widths such as 860.5px (zoomed pages) in
+   neither, and the range syntax (width > 860px) needs Safari 16.4.
    Wide: the <dialog> is never opened; show it as an ordinary sticky sidebar. */
-@media (width > 860px) {
+@media (min-width:861px) {
   .adm-drawer {
     display:block; position:sticky; top:0; inset:auto; width:238px; height:100vh; flex-shrink:0;
     max-width:none; max-height:none; margin:0; padding:0; border:0; background:none; color:inherit; overflow:visible;
@@ -35,7 +36,7 @@
 }
 
 /* Narrow: a modal drawer along the inline-start edge (showModal() in js/admin.js). */
-@media (width <= 860px) {
+@media not all and (min-width:861px) {
   .adm-drawer:modal {
     inset-block:0; inset-inline:0 auto; width:min(238px, 80dvw, 100dvw - 24px); height:100dvh;
     max-width:none; max-height:none; margin:0; padding:0; border:0; background:none; color:inherit; overflow:visible;

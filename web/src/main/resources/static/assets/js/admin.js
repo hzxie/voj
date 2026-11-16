@@ -80,7 +80,8 @@
     var burger = document.querySelector('[data-adm="burger"]');
     if (!drawer || !burger) return;
     var closeBtn = drawer.querySelector('[data-adm="drawer-close"]');
-    var narrow = window.matchMedia('(width <= 860px)');
+    // The wide-mode query of css/admin.css; narrow is everything else.
+    var wide = window.matchMedia('(min-width:861px)');
 
     burger.addEventListener('click', function () {
       if (drawer.open) return;
@@ -96,8 +97,8 @@
     });
     if (closeBtn) closeBtn.addEventListener('click', function () { drawer.close(); });
     // The wide layout has no drawer: close one that is open when the window widens.
-    narrow.addEventListener('change', function () {
-      if (!narrow.matches && drawer.open) drawer.close();
+    wide.addEventListener('change', function () {
+      if (wide.matches && drawer.open) drawer.close();
     });
   }
 
