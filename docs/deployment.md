@@ -406,6 +406,12 @@ is *L*:
   program cannot catch an `OutOfMemoryError` then, which a judged program
   rarely does. (The report is never compared with the expected output: only an
   accepted run's output is.)
+- `-XX:-UsePerfData`: the JVM keeps no performance counters for tools such as
+  `jstat`, which nothing reads from a run. With them, it maps a file of them
+  (`hsperfdata_<user>/<pid>`) in the system's temporary directory, which on
+  Linux is `/tmp` whatever `TMPDIR` says: the native sandbox refuses to let a
+  run create it there, and the JVM, after trying, silently keeps them in memory
+  instead.
 
 Options on a language's run command come after these. Where an option is
 given twice, the last one wins, so a command can set its own `-Xmx`,

@@ -99,6 +99,12 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  *       the judger could not tell from any other, with the program's peak memory telling nothing
  *       either (see {@link #isOutOfMemoryExit}). The output is never compared: only an Accepted
  *       run's output is.
+ *   <li>{@code -XX:-UsePerfData}: the JVM keeps no performance counters for tools such as {@code
+ *       jstat} to read, which nothing reads from a run. With them, it would map a file of them
+ *       ({@code hsperfdata_<user>/<pid>}) in the system's temporary directory, which on Linux is
+ *       {@code /tmp} whatever {@code TMPDIR} says: the native sandbox refuses to let a run create
+ *       it there (Landlock), and the JVM silently keeps the counters in memory instead, after
+ *       trying; under isolate the file lands in the box's {@code /tmp}.
  * </ul>
  *
  * @author Haozhe Xie
@@ -165,7 +171,7 @@ final class JavaOptions {
         .append("-XX:+UseSerialGC -XX:ActiveProcessorCount=1")
         .append(" -Djava.util.concurrent.ForkJoinPool.common.parallelism=")
         .append(COMMON_POOL_PARALLELISM)
-        .append(" -XX:+ExitOnOutOfMemoryError")
+        .append(" -XX:+ExitOnOutOfMemoryError -XX:-UsePerfData")
         .toString();
   }
 

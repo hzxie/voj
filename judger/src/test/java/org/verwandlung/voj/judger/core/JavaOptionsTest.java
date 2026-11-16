@@ -36,7 +36,7 @@ public class JavaOptionsTest {
   private static final String OTHER_OPTIONS =
       "-XX:+UseSerialGC -XX:ActiveProcessorCount=1"
           + " -Djava.util.concurrent.ForkJoinPool.common.parallelism=2"
-          + " -XX:+ExitOnOutOfMemoryError";
+          + " -XX:+ExitOnOutOfMemoryError -XX:-UsePerfData";
 
   /**
    * Test case: the options of runs with memory limits, and without one. Expected result: the JVM
