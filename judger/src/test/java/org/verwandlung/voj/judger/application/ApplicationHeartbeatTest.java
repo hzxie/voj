@@ -16,10 +16,17 @@
  */
 package org.verwandlung.voj.judger.application;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +36,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jms.UncategorizedJmsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -54,18 +62,13 @@ public class ApplicationHeartbeatTest {
   }
 
   /**
-   * Test case: tests the run method. Test data: a valid judger identity. Expected result: a
-   * KeepAlive message carrying the judger's username and description is sent.
+   * Test case: tests the run method. Expected result: a KeepAlive message carrying the judger's
+   * username and description is sent, without checking the identity again (that is done once, at
+   * startup).
    */
   @Test
   @SuppressWarnings("unchecked")
-  public void testRunWithValidIdentity() {
-    UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
-    Language language = new Language("cpp", "C++", "g++", "./a.out");
-    User user = new User("judger", "{bcrypt}stored-hash", "judger@voj.org", userGroup, language);
-    when(userMapper.getUserUsingUsername("judger")).thenReturn(user);
-    when(passwordEncoder.matches("secret", "{bcrypt}stored-hash")).thenReturn(true);
-
+  public void testRun() {
     applicationHeartbeat.run();
 
     ArgumentCaptor<Map<String, Object>> messageCaptor = ArgumentCaptor.forClass(Map.class);
@@ -75,6 +78,44 @@ public class ApplicationHeartbeatTest {
     Assertions.assertEquals("judger", message.get("username"));
     Assertions.assertEquals("Test Judger", message.get("description"));
     Assertions.assertNotNull(message.get("heartbeatTime"));
+    verifyNoInteractions(userMapper);
+  }
+
+  /**
+   * Test case: the heartbeat runs on a fixed-rate schedule, as at startup, and a heartbeat fails
+   * (e.g. the broker is restarting). Expected result: later heartbeats are still sent; an
+   * exception escaping a run would cancel all of them.
+   */
+  @Test
+  public void testHeartbeatSurvivesFailures() {
+    doThrow(new UncategorizedJmsException("broker down"))
+        .doNothing()
+        .when(messageSender)
+        .sendMessage(any());
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      scheduler.scheduleAtFixedRate(applicationHeartbeat, 0, 10, TimeUnit.MILLISECONDS);
+      verify(messageSender, timeout(10000).atLeast(2)).sendMessage(any());
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  /**
+   * Test case: tests the isIdentityValid method. Test data: the judger's account, with the right
+   * and a wrong password. Expected result: only the right password is valid.
+   */
+  @Test
+  public void testIsIdentityValid() {
+    UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
+    Language language = new Language("cpp", "C++", "g++", "./a.out");
+    User user = new User("judger", "{bcrypt}stored-hash", "judger@voj.org", userGroup, language);
+    when(userMapper.getUserUsingUsername("judger")).thenReturn(user);
+    when(passwordEncoder.matches("secret", "{bcrypt}stored-hash")).thenReturn(true);
+
+    Assertions.assertTrue(applicationHeartbeat.isIdentityValid());
+    ReflectionTestUtils.setField(applicationHeartbeat, "judgerPassword", "wrong");
+    Assertions.assertFalse(applicationHeartbeat.isIdentityValid());
   }
 
   /** The mocked MessageSender object. */

@@ -43,14 +43,22 @@ import org.verwandlung.voj.judger.model.User;
  */
 @Component
 public class ApplicationHeartbeat implements Runnable {
-  /* (non-Javadoc)
-   * @see java.lang.Runnable#run()
+  /**
+   * Sends a heartbeat. It runs on a fixed-rate schedule, which cancels every later run once a run
+   * throws, so a failure (e.g. the broker restarting) is logged here and the next heartbeat simply
+   * tries again.
    */
+  @Override
   public void run() {
-    if (!isIdentityValid()) {
-      LOGGER.error("Unauthorized: Please check your username and password.");
-      System.exit(-1);
+    try {
+      sendHeartbeat();
+    } catch (Throwable ex) {
+      LOGGER.error("Failed to send the heartbeat to the web server.", ex);
     }
+  }
+
+  /** Sends a Keep-Alive message with the judger's identity and live telemetry. */
+  private void sendHeartbeat() {
     Calendar calendar = Calendar.getInstance();
     long currentTime = calendar.getTimeInMillis();
 
@@ -173,9 +181,8 @@ public class ApplicationHeartbeat implements Runnable {
   }
 
   /**
-   * Checks whether the judger's identity information is valid. Besides the periodic heartbeat, this
-   * is also invoked once at startup so the judger fails fast on bad credentials before accepting any
-   * judging task.
+   * Checks whether the judger's identity information is valid. Invoked once at startup, so that the
+   * judger fails fast on bad credentials before accepting any judging task.
    *
    * @return whether the judger's identity information is valid
    */
