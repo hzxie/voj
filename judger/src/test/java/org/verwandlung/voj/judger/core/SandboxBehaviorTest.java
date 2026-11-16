@@ -519,8 +519,10 @@ public class SandboxBehaviorTest {
   /**
    * Test case: a run on Windows that tries to write where a later run of the sandbox account would
    * find it: a variable of the account (HKCU\Environment, whose variables reach the processes the
-   * account starts), a file in its profile and one in C:\Users\Public; and that creates a file in
-   * its work directory and one in its USERPROFILE. Expected result: the run is Low integrity, so
+   * account starts), a file in its profile, one in C:\Users\Public and one in its LocalLow folder,
+   * and a key in its HKCU\Software\AppDataLow (both of which Windows keeps writable for Low
+   * processes); and that creates a file in its work directory and one in its USERPROFILE. Expected
+   * result: the run is Low integrity, and the judger labelled LocalLow and AppDataLow Medium, so
    * every write is refused but those into the work directory, which USERPROFILE points into.
    */
   @Test
@@ -536,6 +538,8 @@ public class SandboxBehaviorTest {
             "integrity: low",
             "HKCU\\Environment: denied",
             "profile: denied",
+            "LocalLow: denied",
+            "AppDataLow: denied",
             "public: denied",
             "work: created",
             "USERPROFILE: created",
@@ -1692,8 +1696,9 @@ public class SandboxBehaviorTest {
 
   /**
    * Given a NAME on its input, a Windows program that reports its integrity level, tries to set
-   * the variable NAME of its account (HKCU\Environment) and to create the file NAME in its
-   * account's profile directory and in C:\Users\Public (removing what it managed to write), creates
+   * the variable NAME of its account (HKCU\Environment), to create the file NAME in its account's
+   * profile directory, in its LocalLow folder and in C:\Users\Public and the key NAME in its
+   * HKCU\Software\AppDataLow (removing what it managed to write), creates
    * the file NAME in its work directory and home.txt in its USERPROFILE, and reports how each
    * attempt ends.
    */
@@ -1752,6 +1757,18 @@ public class SandboxBehaviorTest {
               return 2;
           }
           std::printf("profile: %s\\n", create(std::string(profile) + "\\\\" + name, false));
+          std::printf("LocalLow: %s\\n",
+                      create(std::string(profile) + "\\\\AppData\\\\LocalLow\\\\" + name, false));
+          std::string lowKeyName = std::string("Software\\\\AppDataLow\\\\") + name;
+          HKEY lowKey;
+          status = RegCreateKeyExA(HKEY_CURRENT_USER, lowKeyName.c_str(), 0, NULL, 0, KEY_WRITE,
+                                   NULL, &lowKey, NULL);
+          if (status == ERROR_SUCCESS) {
+              RegCloseKey(lowKey);
+              RegDeleteKeyA(HKEY_CURRENT_USER, lowKeyName.c_str());
+          }
+          std::printf("AppDataLow: %s\\n", status == ERROR_SUCCESS ? "written"
+                      : status == ERROR_ACCESS_DENIED ? "denied" : "failed");
           char publicDirectory[MAX_PATH];
           if (!GetEnvironmentVariableA("PUBLIC", publicDirectory, MAX_PATH)) {
               return 3;

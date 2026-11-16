@@ -165,14 +165,23 @@ static const wchar_t* const GO_PATH_DIRECTORY        = L"/go";              // G
  * grants, and an object without a label is Medium. So a Low process of the sandbox account cannot
  * write to the account's registry (HKCU, such as HKCU\Environment) and profile (such as the
  * Python user site), nor to C:\Users\Public or the other directories every account may write
- * to, but only to what is labelled Low: its work directory (see WORK_DIRECTORY_LABEL), and what
- * Windows keeps for Low processes, the account's own %USERPROFILE%\AppData\LocalLow (and
- * HKCU\Software\AppDataLow, once something created it). Reading is not restricted (files have
- * no "no read up" policy). Nor can it open the processes of the account that are not Low, or
- * send messages to their windows (UIPI).
+ * to, but only to what is labelled Low: its work directory (see WORK_DIRECTORY_LABEL). What
+ * Windows keeps for Low processes, the account's own %USERPROFILE%\AppData\LocalLow and
+ * HKCU\Software\AppDataLow, would outlive the program, and let it leave data for a later one: the
+ * judger labels both Medium (see raiseLowLabels). Reading is not restricted (files have no "no read
+ * up" policy). Nor can it open the processes of the account that are not Low, or send messages to
+ * their windows (UIPI).
  * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control
  */
 static const wchar_t* const LOW_INTEGRITY_SID = L"S-1-16-4096";
+/**
+ * The labels of the account's LocalLow folder and AppDataLow key (see raiseLowLabels): Medium, with
+ * the "no write up" policy, inherited by what is in them (a registry key has no objects to pass
+ * it on to, only subkeys: CI).
+ */
+static const wchar_t* const MEDIUM_INTEGRITY_SID  = L"S-1-16-8192";
+static const wchar_t* const MEDIUM_FOLDER_LABEL   = L"S:(ML;OICI;NW;;;ME)";
+static const wchar_t* const MEDIUM_KEY_LABEL      = L"S:(ML;CI;NW;;;ME)";
 /**
  * The label the work directory of a compilation or run gets so that a Low process may write to it
  * (only the DACL decides then): Low, with the "no write up" policy, inherited by what is created in
@@ -266,7 +275,9 @@ bool openSandboxSession(const std::wstring&, const std::wstring&, std::string&);
 void closeSandboxSession();
 HANDLE createLowIntegrityToken(HANDLE);
 bool labelLowIntegrity(const std::wstring&);
-bool hasLowIntegrityLabel(PACL, PSID);
+bool hasLabel(PACL, PSID, BYTE);
+bool raiseLowLabels(HANDLE);
+bool ensureMediumLabel(const std::wstring&, SE_OBJECT_TYPE, const wchar_t*, BYTE);
 bool createPrivateDesktop(HANDLE, HWINSTA&, HDESK&, std::wstring&);
 bool getTokenUserSid(HANDLE, std::wstring&);
 bool buildEnvironmentBlock(const std::wstring&, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
@@ -928,9 +939,13 @@ bool openSandboxSession(const std::wstring& username, const std::wstring& passwo
     } else if ( !LoadUserProfileW(session.hToken, &profileInfo) ) {
         failedApi = "LoadUserProfile";
     } else {
-        session.hProfile  = profileInfo.hProfile;
-        session.hRunToken = createLowIntegrityToken(session.hToken);
-        failedApi         = "CreateLowIntegrityToken";
+        session.hProfile = profileInfo.hProfile;
+        if ( !raiseLowLabels(session.hToken) ) {
+            failedApi = "RaiseLowLabels";
+        } else {
+            session.hRunToken = createLowIntegrityToken(session.hToken);
+            failedApi         = "CreateLowIntegrityToken";
+        }
     }
     if ( session.hRunToken != NULL &&
             !createPrivateDesktop(session.hToken, session.hWinsta, session.hDesktop, session.desktop) ) {
@@ -1064,7 +1079,8 @@ bool labelLowIntegrity(const std::wstring& directory) {
     PSECURITY_DESCRIPTOR pCurrent    = NULL;
     DWORD                error       = GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT,
                                            LABEL_SECURITY_INFORMATION, NULL, NULL, NULL, &pSacl, &pCurrent);
-    bool                 labelled    = error == ERROR_SUCCESS && hasLowIntegrityLabel(pSacl, lowSid);
+    bool                 labelled    = error == ERROR_SUCCESS &&
+                                       hasLabel(pSacl, lowSid, OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE);
     if ( pCurrent != NULL ) {
         LocalFree(pCurrent);
     }
@@ -1096,12 +1112,15 @@ bool labelLowIntegrity(const std::wstring& directory) {
 }
 
 /**
- * Checks whether the label of a directory is Low and passed on to what is created in it.
- * @param  pSacl  - the directory's SACL (its label; may be NULL: Medium)
- * @param  lowSid - the SID of the Low integrity level
- * @return whether the directory is labelled as WORK_DIRECTORY_LABEL does
+ * Checks whether an object (a directory, a registry key) is labelled with an integrity level and
+ * passes the label on to what is created in it.
+ * @param  pSacl       - the object's SACL (its label; may be NULL: Medium)
+ * @param  levelSid    - the SID of the integrity level
+ * @param  inheritance - the inheritance flags the label must have (OBJECT_INHERIT_ACE,
+ *                       CONTAINER_INHERIT_ACE)
+ * @return whether the object is labelled so
  */
-bool hasLowIntegrityLabel(PACL pSacl, PSID lowSid) {
+bool hasLabel(PACL pSacl, PSID levelSid, BYTE inheritance) {
     if ( pSacl == NULL ) {
         return false;
     }
@@ -1111,13 +1130,90 @@ bool hasLowIntegrityLabel(PACL pSacl, PSID lowSid) {
             continue;
         }
         PSYSTEM_MANDATORY_LABEL_ACE label = (PSYSTEM_MANDATORY_LABEL_ACE) ace;
-        BYTE inheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
-        if ( EqualSid((PSID) &label->SidStart, lowSid) && (ace->AceFlags & inheritance) == inheritance &&
-                (ace->AceFlags & INHERIT_ONLY_ACE) == 0 ) {
-            return true;
-        }
+        // The first label applies: an object has one.
+        return EqualSid((PSID) &label->SidStart, levelSid) &&
+               (ace->AceFlags & inheritance) == inheritance && (ace->AceFlags & INHERIT_ONLY_ACE) == 0;
     }
     return false;
+}
+
+/**
+ * Labels Medium what Windows keeps writable for Low processes in the sandbox account's profile:
+ * its LocalLow folder (%USERPROFILE%\AppData\LocalLow) and its HKCU\Software\AppDataLow key, with
+ * everything in them, so that a compilation or run (a Low process) cannot write to them, and so
+ * cannot leave anything there for a later one. A label of their own that something in them was
+ * given is replaced by the one they pass on (TREE_SEC_INFO_RESET), so nothing in them stays Low.
+ * Done once the account's profile is loaded, and only where it is still needed: a folder or key
+ * labelled Medium already (by an earlier judger) is left as it is, and so is one that does not
+ * exist (the AppDataLow key exists only once something created it, which a Low process cannot).
+ * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control and
+ * https://learn.microsoft.com/windows/win32/api/aclapi/nf-aclapi-treesetnamedsecurityinfow
+ * @param  hToken - the logon token of the sandbox account, whose profile is loaded
+ * @return whether neither is writable at Low integrity any more (GetLastError() tells why not)
+ */
+bool raiseLowLabels(HANDLE hToken) {
+    WCHAR        profile[MAX_PATH] = L"";
+    DWORD        size              = MAX_PATH;
+    std::wstring sid;
+    if ( !GetUserProfileDirectoryW(hToken, profile, &size) || !getTokenUserSid(hToken, sid) ) {
+        return false;
+    }
+    // The account's hive is loaded under HKEY_USERS\<SID>.
+    return ensureMediumLabel(std::wstring(profile) + L"\\AppData\\LocalLow", SE_FILE_OBJECT,
+               MEDIUM_FOLDER_LABEL, OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE) &&
+           ensureMediumLabel(L"USERS\\" + sid + L"\\Software\\AppDataLow", SE_REGISTRY_KEY,
+               MEDIUM_KEY_LABEL, CONTAINER_INHERIT_ACE);
+}
+
+/**
+ * Labels a folder or registry key, and everything in it, Medium (see raiseLowLabels), unless it is
+ * already or does not exist.
+ * @param  name        - the object's name (a path, or a key as "USERS\<SID>\...")
+ * @param  type        - its type, SE_FILE_OBJECT or SE_REGISTRY_KEY
+ * @param  labelSddl   - the label to give it, in SDDL
+ * @param  inheritance - the inheritance flags of that label
+ * @return whether the object is labelled Medium, or does not exist (GetLastError() tells why not)
+ */
+bool ensureMediumLabel(const std::wstring& name, SE_OBJECT_TYPE type, const wchar_t* labelSddl,
+        BYTE inheritance) {
+    PSID mediumSid = NULL;
+    if ( !ConvertStringSidToSidW(MEDIUM_INTEGRITY_SID, &mediumSid) ) {
+        return false;
+    }
+    PACL                 pSacl    = NULL;
+    PSECURITY_DESCRIPTOR pCurrent = NULL;
+    DWORD error    = GetNamedSecurityInfoW(name.c_str(), type, LABEL_SECURITY_INFORMATION, NULL, NULL,
+                         NULL, &pSacl, &pCurrent);
+    bool  labelled = error == ERROR_SUCCESS && hasLabel(pSacl, mediumSid, inheritance);
+    if ( pCurrent != NULL ) {
+        LocalFree(pCurrent);
+    }
+    LocalFree(mediumSid);
+    if ( error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND ) {
+        return true;
+    }
+    if ( error != ERROR_SUCCESS || labelled ) {
+        SetLastError(error);
+        return labelled;
+    }
+    PSECURITY_DESCRIPTOR pLabel = NULL;
+    if ( !ConvertStringSecurityDescriptorToSecurityDescriptorW(labelSddl, SDDL_REVISION_1, &pLabel,
+            NULL) ) {
+        return false;
+    }
+    BOOL present   = FALSE;
+    BOOL defaulted = FALSE;
+    pSacl = NULL;
+    if ( !GetSecurityDescriptorSacl(pLabel, &present, &pSacl, &defaulted) ) {
+        error = GetLastError();
+    } else {
+        std::wstring objectName = name;
+        error = TreeSetNamedSecurityInfoW(&objectName[0], type, LABEL_SECURITY_INFORMATION, NULL,
+                    NULL, NULL, pSacl, TREE_SEC_INFO_RESET, NULL, ProgressInvokeNever, NULL);
+    }
+    LocalFree(pLabel);
+    SetLastError(error);
+    return error == ERROR_SUCCESS;
 }
 
 /**

@@ -638,12 +638,11 @@ create anything next to it. It cannot write to the sandbox account's registry (`
 account's variables in `HKCU\Environment`), its profile (such as the Python
 user site in `%APPDATA%`), `C:\Users\Public`, `%ProgramData%` or anywhere else
 every account may write to, nor open the account's processes that are not Low.
-What Windows keeps for Low processes stays writable: the account's own
-`%USERPROFILE%\AppData\LocalLow` (and `HKCU\Software\AppDataLow`, once
-something created it). No toolchain reads anything from there, but a run can
-leave files there for a later one; to close that too, label the folder Medium
-before the account's first run:
-`icacls C:\Users\voj-sandbox\AppData\LocalLow /setintegritylevel (OI)(CI)M`.
+Nor what Windows keeps writable for Low processes, the account's own
+`%USERPROFILE%\AppData\LocalLow` and `HKCU\Software\AppDataLow`, where a run
+could otherwise leave data for a later one: once it has loaded the account's
+profile, the judger labels both Medium, with everything in them (once: a later
+start finds them Medium already).
 
 The submission's environment is the system environment (the system variables
 of `HKLM\System\CurrentControlSet\Control\Session Manager\Environment`, such as
