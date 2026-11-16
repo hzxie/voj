@@ -4,57 +4,74 @@
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.verwandlung.voj.web.mapper.ContestSubmissionMapper">
 	<!-- ResultMap -->
+	<!-- A contest submission with only what the contest pages and the leaderboards read: the
+	     identifiers, the time, the verdict and the score. The leaderboards load every submission of
+	     a contest, so this is a single join instead of one nested query (with the source code) per
+	     submission. -->
 	<resultMap id="ContestSubmissionResultMap" type="org.verwandlung.voj.web.model.ContestSubmission">
-		<association property="contest" 
-			javaType="org.verwandlung.voj.web.model.Contest" 
-			column="contest_id"
-			select="org.verwandlung.voj.web.mapper.ContestMapper.getContest" />
-		<association property="submission" 
-			javaType="org.verwandlung.voj.web.model.Submission" 
-			column="submission_id"
-			select="org.verwandlung.voj.web.mapper.SubmissionMapper.getSubmission" />
+		<association property="contest" javaType="org.verwandlung.voj.web.model.Contest">
+			<id property="contestId" column="contest_id" />
+		</association>
+		<association property="submission" javaType="org.verwandlung.voj.web.model.Submission">
+			<id property="submissionId" column="submission_id" />
+			<result property="submitTime" column="submission_submit_time" />
+			<result property="usedTime" column="submission_used_time" />
+			<result property="usedMemory" column="submission_used_memory" />
+			<result property="judgeScore" column="submission_judge_score" />
+			<association property="problem" javaType="org.verwandlung.voj.web.model.Problem">
+				<id property="problemId" column="problem_id" />
+			</association>
+			<association property="user" javaType="org.verwandlung.voj.web.model.User">
+				<id property="uid" column="uid" />
+			</association>
+			<association property="judgeResult" javaType="org.verwandlung.voj.web.model.JudgeResult">
+				<id property="judgeResultSlug" column="submission_judge_result" />
+				<result property="judgeResultName" column="judge_result_name" />
+			</association>
+		</association>
 	</resultMap>
+
+	<sql id="contestSubmissionColumns">
+		cs.contest_id, s.submission_id, s.problem_id, s.uid, s.submission_submit_time,
+		s.submission_used_time, s.submission_used_memory, s.submission_judge_score,
+		s.submission_judge_result, jr.judge_result_name
+		FROM voj_contest_submissions cs
+		JOIN voj_submissions s ON s.submission_id = cs.submission_id
+		JOIN voj_judge_results jr ON jr.judge_result_slug = s.submission_judge_result
+	</sql>
 
 	<!-- Methods -->
 	<select id="getSubmissionsOfContest"
 		parameterType="long"
 		resultMap="ContestSubmissionResultMap">
-		SELECT *
-		FROM voj_contest_submissions
-		NATURAL JOIN voj_submissions
-		WHERE contest_id = #{contestId}
-		ORDER BY submission_id
+		SELECT <include refid="contestSubmissionColumns" />
+		WHERE cs.contest_id = #{contestId}
+		ORDER BY s.submission_id
 	</select>
 	<select id="getAcceptedSubmissionsOfContest"
 		parameterType="long"
 		resultMap="ContestSubmissionResultMap">
-		SELECT *
-		FROM voj_contest_submissions
-		NATURAL JOIN voj_submissions
-		WHERE contest_id = #{contestId}
-		AND submission_judge_result = 'AC'
-		ORDER BY submission_id
+		SELECT <include refid="contestSubmissionColumns" />
+		WHERE cs.contest_id = #{contestId}
+		AND s.submission_judge_result = 'AC'
+		ORDER BY s.submission_id
 	</select>
 	<select id="getSubmissionOfContestOfContest"
 		parameterType="map"
 		resultMap="ContestSubmissionResultMap">
-		SELECT *
-		FROM voj_contest_submissions
-		NATURAL JOIN voj_submissions
-		WHERE contest_id = #{contestId}
-		AND uid = #{contestantUid}
-		ORDER BY submission_id
+		SELECT <include refid="contestSubmissionColumns" />
+		WHERE cs.contest_id = #{contestId}
+		AND s.uid = #{contestantUid}
+		ORDER BY s.submission_id
 	</select>
 	<select id="getSubmissionOfContestOfContestProblem"
 		parameterType="map"
 		resultMap="ContestSubmissionResultMap">
-		SELECT *
-		FROM voj_contest_submissions
-		NATURAL JOIN voj_submissions
-		WHERE contest_id = #{contestId}
-		AND problem_id = #{problemId}
-		AND uid = #{contestantUid}
-		ORDER BY submission_id DESC
+		SELECT <include refid="contestSubmissionColumns" />
+		WHERE cs.contest_id = #{contestId}
+		AND s.problem_id = #{problemId}
+		AND s.uid = #{contestantUid}
+		ORDER BY s.submission_id DESC
 	</select>
 	<select id="getContestIdsOfSubmission"
 		parameterType="long"

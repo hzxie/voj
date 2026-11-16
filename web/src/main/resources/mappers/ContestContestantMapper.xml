@@ -19,6 +19,17 @@
 			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 
+	<!-- A leaderboard row: the contestant's identifier and username (the only user fields the
+	     leaderboards show), joined in rather than loaded with one query per contestant. -->
+	<resultMap id="ContestContestantRankingResultMap" type="org.verwandlung.voj.web.model.ContestContestant">
+		<result property="score" column="contestant_score" />
+		<result property="time" column="contestant_time" />
+		<association property="contestant" javaType="org.verwandlung.voj.web.model.User">
+			<id property="uid" column="contestant_uid" />
+			<result property="username" column="username" />
+		</association>
+	</resultMap>
+
 	<!-- Methods -->
 	<select id="getNumberOfContestantsOfContest"
 			parameterType="long"
@@ -38,9 +49,10 @@
 	     contest rules and the leaderboard cells say), for both the score and the time. -->
 	<select id="getContestantsOfContestForOi"
 		parameterType="map"
-		resultMap="ContestContestantResultMap">
-		SELECT cc.*, IFNULL(r.score, 0) AS contestant_score, IFNULL(r.used_time, 0) AS contestant_time
+		resultMap="ContestContestantRankingResultMap">
+		SELECT cc.contestant_uid, u.username, IFNULL(r.score, 0) AS contestant_score, IFNULL(r.used_time, 0) AS contestant_time
 		FROM voj_contest_contestants cc
+		JOIN voj_users u ON u.uid = cc.contestant_uid
 		LEFT JOIN (
 			SELECT s.uid,
 				SUM(IFNULL(s.submission_judge_score, 0)) AS score,
@@ -68,9 +80,10 @@
 	     accepted submission. ContestService turns it into penalty time. -->
 	<select id="getContestantsOfContestForAcm"
 		parameterType="map"
-		resultMap="ContestContestantResultMap">
-		SELECT cc.*, IFNULL(r.solved, 0) AS contestant_score, IFNULL(r.rejected, 0) AS contestant_time
+		resultMap="ContestContestantRankingResultMap">
+		SELECT cc.contestant_uid, u.username, IFNULL(r.solved, 0) AS contestant_score, IFNULL(r.rejected, 0) AS contestant_time
 		FROM voj_contest_contestants cc
+		JOIN voj_users u ON u.uid = cc.contestant_uid
 		LEFT JOIN (
 			SELECT first_ac.uid,
 				COUNT(DISTINCT first_ac.problem_id) AS solved,

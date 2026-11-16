@@ -612,6 +612,34 @@ public class ContestService {
   }
 
   /**
+   * Gets the top of a contest's leaderboard, ranked exactly as on the leaderboard page (including
+   * the scoreboard freeze), without the per-problem cells. An OI ranking is final in the database
+   * query, so only the top rows are read; an ACM ranking depends on the penalty time, which is
+   * computed from the accepted submissions, so the whole (lightweight) ranking is computed first.
+   *
+   * @param contest - the contest
+   * @param viewer - the user viewing the standings (may be null)
+   * @param limit - the maximum number of contestants to return
+   * @return the best-ranked contestants, best first
+   */
+  public List<ContestContestant> getStandings(Contest contest, User viewer, int limit) {
+    if ("OI".equals(contest.getContestMode())) {
+      List<ContestContestant> contestants =
+          contestContestantMapper.getContestantsOfContestForOi(
+              contest.getContestId(), getScoreboardFrozenAt(contest, viewer), 0, limit);
+      rankingContestants(contestants);
+      return contestants;
+    }
+    @SuppressWarnings("unchecked")
+    List<ContestContestant> contestants =
+        (List<ContestContestant>)
+            getLeaderBoardForAcm(contest.getContestId(), viewer).get("contestants");
+    return contestants.size() > limit
+        ? new ArrayList<>(contestants.subList(0, limit))
+        : contestants;
+  }
+
+  /**
    * Ranks the contestants.
    *
    * @param contestants - the list of contest contestants

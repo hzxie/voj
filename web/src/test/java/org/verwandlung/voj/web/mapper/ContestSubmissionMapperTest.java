@@ -48,7 +48,16 @@ public class ContestSubmissionMapperTest {
 
     ContestSubmission firstSubmission = submissions.get(0);
     Assertions.assertEquals(1, firstSubmission.getContest().getContestId());
-    Assertions.assertNotNull(firstSubmission.getSubmission());
+    Submission submission = firstSubmission.getSubmission();
+    Assertions.assertEquals(1000, submission.getSubmissionId());
+    Assertions.assertEquals(1000, submission.getProblem().getProblemId());
+    Assertions.assertEquals(1000, submission.getUser().getUid());
+    Assertions.assertEquals("AC", submission.getJudgeResult().getJudgeResultSlug());
+    Assertions.assertEquals("Accepted", submission.getJudgeResult().getJudgeResultName());
+    Assertions.assertEquals(100, submission.getJudgeScore());
+    Assertions.assertNotNull(submission.getSubmitTime());
+    // The leaderboards load every submission of a contest: the source code is never read.
+    Assertions.assertNull(submission.getCode());
   }
 
   /** Test case: tests the getSubmissionsOfContest(long) method. Test data: the unique identifier of a contest that has no submission records. Expected: an empty list. */

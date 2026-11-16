@@ -324,6 +324,48 @@ public class ContestServiceTest {
   }
 
   /**
+   * Test case: tests the getStandings(Contest, User, int) method on an ACM contest with a scoreboard
+   * freeze. Test data: the fixture above, frozen from 30 minutes after the start. Expected: the top
+   * rows are those of the (frozen) leaderboard, with the same ranks and penalty times, cut to the
+   * limit; the source code of the submissions is never loaded.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetStandingsForAcmMatchesLeaderBoard() {
+    createAcmContestFixture(150);
+    Contest contest = contestService.getContest(FIXTURE_CONTEST_ID);
+    User viewer = userWithUid(1002);
+
+    List<ContestContestant> standings = contestService.getStandings(contest, viewer, 2);
+
+    List<ContestContestant> leaderBoard =
+        (List<ContestContestant>)
+            contestService.getLeaderBoardForAcm(FIXTURE_CONTEST_ID, viewer).get("contestants");
+    Assertions.assertEquals(uidsOf(leaderBoard).subList(0, 2), uidsOf(standings));
+    Assertions.assertEquals(ranksOf(leaderBoard).subList(0, 2), ranksOf(standings));
+    Assertions.assertEquals(leaderBoard.get(1).getTime(), standings.get(1).getTime());
+    Assertions.assertEquals("voj@judger", standings.get(0).getContestant().getUsername());
+  }
+
+  /**
+   * Test case: tests the getStandings(Contest, User, int) method on an OI contest. Test data: the
+   * OI-mode Contest #1. Expected: the same order, ranks and scores as the leaderboard.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetStandingsForOiMatchesLeaderBoard() {
+    List<ContestContestant> standings =
+        contestService.getStandings(contestService.getContest(1), null, 10);
+
+    List<ContestContestant> leaderBoard =
+        (List<ContestContestant>) contestService.getLeaderBoardForOi(1, null).get("contestants");
+    Assertions.assertEquals(uidsOf(leaderBoard), uidsOf(standings));
+    Assertions.assertEquals(ranksOf(leaderBoard), ranksOf(standings));
+    Assertions.assertEquals(leaderBoard.get(0).getScore(), standings.get(0).getScore());
+    Assertions.assertEquals("zjhzxhz", standings.get(0).getContestant().getUsername());
+  }
+
+  /**
    * Test case: tests the getLeaderBoardForOi(long, User) method. Test data: user 1000 scores 100 then
    * 40 on P1000 and 60 on P1001; user 1001 scores 70 on P1000. Expected: only the last submission per
    * problem counts, for the score (40 + 60) and the time (50 + 10 ms), and the leaderboard cells show

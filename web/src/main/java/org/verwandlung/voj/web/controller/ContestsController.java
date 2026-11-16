@@ -183,15 +183,7 @@ public class ContestsController {
     // contest has started (the leaderboard is meaningless before then).
     List<ContestContestant> standings = null;
     if (!currentTime.before(contest.getStartTime())) {
-      Map<String, Object> leaderBoard =
-          "OI".equals(contest.getContestMode())
-              ? contestService.getLeaderBoardForOi(contestId, currentUser)
-              : contestService.getLeaderBoardForAcm(contestId, currentUser);
-      List<ContestContestant> contestants =
-          (List<ContestContestant>) leaderBoard.get("contestants");
-      if (contestants != null) {
-        standings = contestants.size() > 10 ? contestants.subList(0, 10) : contestants;
-      }
+      standings = contestService.getStandings(contest, currentUser, NUMBER_OF_STANDINGS);
     }
 
     ModelAndView view = new ModelAndView("pages/contests/contest");
@@ -387,6 +379,9 @@ public class ContestsController {
     }
     return contest;
   }
+
+  /** The number of contestants shown in the standings panel of the contest page. */
+  private static final int NUMBER_OF_STANDINGS = 10;
 
   /** The default number of contests to load per query when the admin option is unset. */
   private static final int DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE = 50;
