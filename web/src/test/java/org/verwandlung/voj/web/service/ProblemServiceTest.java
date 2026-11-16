@@ -376,6 +376,53 @@ public class ProblemServiceTest {
     jdbcTemplate.update("DELETE FROM voj_problems");
   }
 
+  /**
+   * Test case: tests the submission counts of a published problem (getProblem, getProblemsByPage)
+   * while a contest over it runs, and after it ends. Test data: problem 1001 (one accepted
+   * submission outside contests) and a running contest in which it gets one more accepted
+   * submission. Expected: the counts leave the contest submission out until the contest ends.
+   */
+  @Test
+  public void testProblemCountsHideRunningContestSubmissions() {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    // The times come from the database clock, the one the counts are compared with.
+    jdbcTemplate.update(
+        "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
+            + " contest_end_time, contest_problems, contest_status, contest_scoring)"
+            + " VALUES (9301, 'Running', '', NOW() - INTERVAL 1 HOUR, NOW() + INTERVAL 1 HOUR,"
+            + " '[1001]', 'PUBLISHED', 'ICPC')");
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
+            + " submission_code) VALUES (1001, 1002, 2, 'AC', 'Code')");
+    jdbcTemplate.update(
+        "INSERT INTO voj_contest_submissions (contest_id, submission_id)"
+            + " VALUES (9301, LAST_INSERT_ID())");
+
+    Problem problem = problemService.getProblem(1001);
+    Assertions.assertEquals(1, problem.getTotalSubmission());
+    Assertions.assertEquals(1, problem.getAcceptedSubmission());
+    Problem listed = findProblem(problemService.getProblemsByPage(1, 100, "title", null, "", true));
+    Assertions.assertEquals(1, listed.getTotalSubmission());
+    Assertions.assertEquals(1, listed.getAcceptedSubmission());
+
+    jdbcTemplate.update(
+        "UPDATE voj_contests SET contest_end_time = NOW() - INTERVAL 1 SECOND"
+            + " WHERE contest_id = 9301");
+    // The contest ended behind MyBatis's back: a MyBatis update clears the results it cached.
+    problemMapper.updateProblem(problem);
+
+    problem = problemService.getProblem(1001);
+    Assertions.assertEquals(2, problem.getTotalSubmission());
+    Assertions.assertEquals(2, problem.getAcceptedSubmission());
+    listed = findProblem(problemService.getProblemsByPage(1, 100, "title", null, "", true));
+    Assertions.assertEquals(2, listed.getAcceptedSubmission());
+  }
+
+  /** Finds problem 1001 in a list of problems. */
+  private static Problem findProblem(List<Problem> problems) {
+    return problems.stream().filter(p -> p.getProblemId() == 1001).findFirst().orElseThrow();
+  }
+
   /** The ProblemService object under test. */
   @Autowired private ProblemService problemService;
 

@@ -25,6 +25,21 @@
 		</association>
 	</resultMap>
 
+	<!-- Leaves the submissions (aliased s) made in a contest that has not ended out of a problem's
+	     public submission counts: until a contest ends nobody but the contestant (and the
+	     administrators) may see its submissions, not even as a count that moves when a contestant
+	     gets a verdict (see ContestService#isSubmissionVisible). NOW() is the database's clock on a
+	     UTC session, the same one the contest times were stored in. -->
+	<sql id="notInRunningContest">
+		AND NOT EXISTS (
+			SELECT 1
+			FROM voj_contest_submissions running_cs
+			JOIN voj_contests running_c ON running_c.contest_id = running_cs.contest_id
+			WHERE running_cs.submission_id = s.submission_id
+			AND running_c.contest_end_time &gt; NOW()
+		)
+	</sql>
+
 	<!-- Methods -->
 	<select id="getNumberOfProblems" 
 		resultType="long">
@@ -85,10 +100,12 @@
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id
+			<include refid="notInRunningContest" />
 		) AS total_submission, (
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+			<include refid="notInRunningContest" />
 		) AS accepted_submission
 		FROM voj_problems p
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
@@ -129,10 +146,12 @@
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id
+			<include refid="notInRunningContest" />
 		) AS total_submission, (
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+			<include refid="notInRunningContest" />
 		) AS accepted_submission
 		FROM voj_problems p
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
