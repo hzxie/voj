@@ -55,10 +55,11 @@ public class ApplicationDispatcher {
    *
    * @param submissionId - the unique identifier of the submission
    * @param generation - the judging generation of the task, or {@code null} if it carries none
+   * @param expiration - when the task expires (ms since the epoch), or 0 if it never does
    */
-  public void onSubmissionCreated(long submissionId, Long generation) {
+  public void onSubmissionCreated(long submissionId, Long generation, long expiration) {
     try {
-      judgerDispatcher.createNewTask(submissionId, generation);
+      judgerDispatcher.createNewTask(submissionId, generation, expiration);
     } catch (IllgealSubmissionException ex) {
       LOGGER.warn(
           String.format(

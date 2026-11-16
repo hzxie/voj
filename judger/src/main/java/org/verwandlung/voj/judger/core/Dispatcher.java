@@ -32,6 +32,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.config.JmsConfig;
 import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
@@ -60,16 +61,31 @@ public class Dispatcher {
       "An internal error occurred in the judger while judging this submission.";
 
   /**
+   * How long (ms) before its expiration a task must be handed back for another delivery at least.
+   * A judger whose judgings failed waits up to {@link JmsConfig#MAXIMUM_PAUSE_MS} before it asks
+   * for a task again; a minute more allows for the broker and for clocks a little apart (the web
+   * application's sets the expiration).
+   */
+  static final long REDELIVERY_MARGIN_MS = JmsConfig.MAXIMUM_PAUSE_MS + 60000;
+
+  /**
    * Creates a new judging task. Only one judging task runs at a time.
+   *
+   * <p>A judging that cannot be completed now, but likely later (see {@link
+   * RetryableJudgingException}), is handed back for another delivery only while one can still
+   * happen before the task expires. Otherwise the broker would expire the task meanwhile, and the
+   * web application report that no judger was available; the submission is judged a System Error
+   * with the actual reason instead.
    *
    * @param submissionId - the unique identifier of the submission
    * @param generation - the judging generation of the task, or {@code null} if it carries none
+   * @param expiration - when the task expires (ms since the epoch), or 0 if it never does
    * @throws IllgealSubmissionException if the submission does not exist
    * @throws DataAccessException if the submission or the outcome of its judging cannot be read or
    *     written
    * @throws RetryableJudgingException if the submission cannot be judged now, but likely later
    */
-  public void createNewTask(long submissionId, Long generation)
+  public void createNewTask(long submissionId, Long generation, long expiration)
       throws IllgealSubmissionException {
     synchronized (this) {
       // In this judger's own directory, so that a judger that died while judging leaves nothing
@@ -117,6 +133,16 @@ public class Dispatcher {
         // The task is delivered again later (see MessageReceiver).
         throw ex;
       } catch (RetryableJudgingException ex) {
+        if (expiration != 0 && expiration - System.currentTimeMillis() < REDELIVERY_MARGIN_MS) {
+          LOGGER.error(
+              String.format(
+                  "Cannot judge submission #%d now, and its task expires before it could be"
+                      + " delivered again: System Error.",
+                  submissionId),
+              ex);
+          applicationDispatcher.onErrorOccurred(submission, ex.getMessage());
+          return;
+        }
         LOGGER.warn(
             String.format(
                 "Cannot judge submission #%d now; its task is delivered again.", submissionId),

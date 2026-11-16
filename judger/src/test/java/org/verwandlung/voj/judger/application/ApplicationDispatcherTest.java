@@ -63,8 +63,8 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnSubmissionCreated() throws Exception {
-    applicationDispatcher.onSubmissionCreated(100L, 3L);
-    verify(judgerDispatcher).createNewTask(100L, 3L);
+    applicationDispatcher.onSubmissionCreated(100L, 3L, 0L);
+    verify(judgerDispatcher).createNewTask(100L, 3L, 0L);
   }
 
   /**
@@ -76,11 +76,11 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
     org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any());
+        .createNewTask(anyLong(), any(), anyLong());
 
     Assertions.assertThrows(
         DataAccessResourceFailureException.class,
-        () -> applicationDispatcher.onSubmissionCreated(100L, 3L));
+        () -> applicationDispatcher.onSubmissionCreated(100L, 3L, 0L));
   }
 
   /**
@@ -91,9 +91,9 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
     org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any());
+        .createNewTask(anyLong(), any(), anyLong());
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L));
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L, 0L));
     verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
   }
 

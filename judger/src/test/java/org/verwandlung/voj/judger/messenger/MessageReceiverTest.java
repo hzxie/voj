@@ -44,7 +44,7 @@ public class MessageReceiverTest {
   /**
    * Test case: tests the onMessage method. Test data: a MapMessage carrying a SubmissionCreated
    * event. Expected result: the dispatcher's onSubmissionCreated callback is invoked with the
-   * submission identifier.
+   * submission identifier, the judging generation and when the task expires.
    */
   @Test
   public void testOnMessageSubmissionCreated() throws JMSException {
@@ -53,10 +53,11 @@ public class MessageReceiverTest {
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
     when(mapMessage.itemExists("generation")).thenReturn(true);
     when(mapMessage.getLong("generation")).thenReturn(3L);
+    when(mapMessage.getJMSExpiration()).thenReturn(1700000000000L);
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher).onSubmissionCreated(1234L, 3L);
+    verify(dispatcher).onSubmissionCreated(1234L, 3L, 1700000000000L);
   }
 
   /**
@@ -72,7 +73,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher).onSubmissionCreated(1234L, null);
+    verify(dispatcher).onSubmissionCreated(1234L, null, 0L);
   }
 
   /**
@@ -86,7 +87,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
   }
 
   /**
@@ -99,7 +100,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(message);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
   }
 
   /**
@@ -113,7 +114,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
   }
 
   /**
@@ -128,7 +129,7 @@ public class MessageReceiverTest {
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
     org.mockito.Mockito.doThrow(new IllegalStateException("database down"))
         .when(dispatcher)
-        .onSubmissionCreated(1234L, null);
+        .onSubmissionCreated(1234L, null, 0L);
 
     org.junit.jupiter.api.Assertions.assertThrows(
         IllegalStateException.class, () -> messageReceiver.onMessage(mapMessage));

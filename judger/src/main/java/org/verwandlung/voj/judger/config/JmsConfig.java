@@ -81,7 +81,7 @@ public class JmsConfig {
   static final long INITIAL_PAUSE_MS = 10000;
 
   /** The longest pause (ms) of a judger whose judgings keep failing. */
-  static final long MAXIMUM_PAUSE_MS = INITIAL_PAUSE_MS << (MAXIMUM_REDELIVERIES - 1);
+  public static final long MAXIMUM_PAUSE_MS = INITIAL_PAUSE_MS << (MAXIMUM_REDELIVERIES - 1);
 
   /**
    * The JMS connection factory for sending, with a cached connection. The cache drops the

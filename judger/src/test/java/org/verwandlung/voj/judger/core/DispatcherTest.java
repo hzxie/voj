@@ -85,7 +85,7 @@ public class DispatcherTest {
     when(submissionMapper.getSubmission(anyLong())).thenReturn(null);
 
     Assertions.assertThrows(
-        IllgealSubmissionException.class, () -> dispatcher.createNewTask(404L, GENERATION));
+        IllgealSubmissionException.class, () -> dispatcher.createNewTask(404L, GENERATION, NEVER));
     verify(submissionMapper, times(1)).getSubmission(404L);
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
@@ -108,7 +108,7 @@ public class DispatcherTest {
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(submissionMapper, times(1)).getSubmission(100L);
     verify(applicationDispatcher).onCompileFinished(any(), any());
@@ -151,7 +151,7 @@ public class DispatcherTest {
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("WA");
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<Map<String, Object>> resultCaptor =
@@ -180,7 +180,7 @@ public class DispatcherTest {
     when(comparator.getComparisonResult(anyString(), anyString(), eq(true))).thenReturn("PE");
     when(comparator.getComparisonResult(anyString(), anyString(), eq(false))).thenReturn("AC");
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
@@ -200,7 +200,7 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, never())
@@ -217,7 +217,7 @@ public class DispatcherTest {
   public void testCreateNewTaskWithoutCheckpointsIsSystemError() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(new ArrayList<>());
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("no test data"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
@@ -234,7 +234,7 @@ public class DispatcherTest {
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be loaded"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
@@ -254,8 +254,8 @@ public class DispatcherTest {
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.createNewTask(100L, GENERATION);
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     org.mockito.ArgumentCaptor<String> reasons = org.mockito.ArgumentCaptor.forClass(String.class);
     verify(applicationDispatcher, times(2)).onErrorOccurred(any(), reasons.capture());
@@ -280,13 +280,38 @@ public class DispatcherTest {
         .sync(any());
 
     Assertions.assertThrows(
-        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION));
+        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NEVER));
 
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
     try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
       Assertions.assertEquals(0, leftovers.count());
     }
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded now,
+   * for a task that expires in 30 minutes, then for one that expires before it could be delivered
+   * again (a judger whose judgings failed pauses up to 160 s before it takes a task again).
+   * Expected result: the first is passed on to be delivered again; the second, which the broker
+   * would expire meanwhile (reported as no judger being available), is a System Error saying why.
+   */
+  @Test
+  public void testCreateNewTaskIsRetriedOnlyWhileItCanBeDeliveredAgainBeforeItExpires()
+      throws Exception {
+    org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
+        .when(checkpointStore)
+        .sync(any());
+
+    long later = System.currentTimeMillis() + 30 * 60 * 1000;
+    Assertions.assertThrows(
+        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, later));
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+
+    long soon = System.currentTimeMillis() + Dispatcher.REDELIVERY_MARGIN_MS - 10000;
+    dispatcher.createNewTask(100L, GENERATION, soon);
+    verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be downloaded"));
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
   /**
@@ -300,7 +325,7 @@ public class DispatcherTest {
     result.put("verdict", Verdict.INTERNAL_ERROR);
     when(compiler.getCompileResult(any(), anyString(), anyString())).thenReturn(result);
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("compiler"));
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
@@ -320,7 +345,7 @@ public class DispatcherTest {
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean()))
         .thenThrow(new java.io.IOException("No such file"));
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be read"));
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
@@ -346,7 +371,7 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("compiler crashed"));
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.INTERNAL_ERROR_REASON));
     try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
@@ -364,8 +389,8 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION);
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     org.mockito.ArgumentCaptor<String> workDirectories =
         org.mockito.ArgumentCaptor.forClass(String.class);
@@ -393,7 +418,7 @@ public class DispatcherTest {
 
     Assertions.assertThrows(
         org.springframework.dao.DataAccessException.class,
-        () -> dispatcher.createNewTask(100L, GENERATION));
+        () -> dispatcher.createNewTask(100L, GENERATION, NEVER));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
 
@@ -406,7 +431,7 @@ public class DispatcherTest {
   public void testCreateNewTaskSkipsSubmissionsThatAreNotPending() throws Exception {
     when(applicationDispatcher.onJudgingStarted(anyLong(), any())).thenReturn(null);
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     verify(submissionMapper, never()).getSubmission(anyLong());
     verify(checkpointStore, never()).sync(any());
@@ -425,7 +450,7 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION);
+    dispatcher.createNewTask(100L, GENERATION, NEVER);
 
     InOrder inOrder = org.mockito.Mockito.inOrder(applicationDispatcher, submissionMapper);
     inOrder.verify(applicationDispatcher).onJudgingStarted(100L, GENERATION);
@@ -447,7 +472,7 @@ public class DispatcherTest {
   public void testCreateNewTaskSkipsStaleTasks() throws Exception {
     when(applicationDispatcher.onJudgingStarted(100L, 2L)).thenReturn(null);
 
-    dispatcher.createNewTask(100L, 2L);
+    dispatcher.createNewTask(100L, 2L, NEVER);
 
     verify(submissionMapper, never()).getSubmission(anyLong());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
@@ -463,7 +488,7 @@ public class DispatcherTest {
     when(checkpointStore.getWorkDirectory()).thenThrow(new java.io.IOException("read-only"));
 
     Assertions.assertThrows(
-        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION));
+        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NEVER));
 
     verify(applicationDispatcher, never()).onJudgingStarted(anyLong(), any());
   }
@@ -521,6 +546,9 @@ public class DispatcherTest {
 
   /** The judging generation of the tasks of the tests. */
   private static final Long GENERATION = 3L;
+
+  /** The expiration of a task that never expires. */
+  private static final long NEVER = 0;
 
   /** The start time of the judgings that the tests claim. */
   private static final Date START_TIME = new Date(1700000000000L);

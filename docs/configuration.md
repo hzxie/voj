@@ -87,7 +87,13 @@ restarts with it):
   `ActiveMQ.DLQ`, where the web app marks the submission as a System Error
   whose judge log says that judging it failed repeatedly (a task that expired
   because no judger took it says instead that no available judger supports
-  the language).
+  the language). A task whose test data cannot be downloaded for now goes back
+  only while it can still be delivered again before it expires
+  (`jms.submissionTask.ttl`): within 220 s of its expiration (the longest pause
+  plus a minute), the judger judges the submission a System Error that says
+  the test data could not be downloaded, rather than let the task expire and
+  be reported as having no judger. The judger reads the expiration the web
+  app's broker client set, so the clocks of the hosts must roughly agree.
 
 ### Identity
 
