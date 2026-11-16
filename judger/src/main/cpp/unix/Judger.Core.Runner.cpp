@@ -192,7 +192,7 @@ enum LimitExceeded {
 enum ChildStep {
   STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
   STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_LANDLOCK,
-  STEP_SECCOMP, STEP_EXEC,
+  STEP_LANDLOCK_TRUNCATE, STEP_SECCOMP, STEP_EXEC,
   // Not a failure: the program's static data alone exceeds RLIMIT_DATA (see getWritableImageSize).
   STEP_STATIC_DATA_LIMIT,
 };
@@ -201,6 +201,8 @@ static const char* const CHILD_STEP_NAMES[] = {
   "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
   "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
   "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
+  "confining truncation to the work directory with Landlock (needs Linux 6.2+, Landlock ABI 3, "
+  "unless the judger runs as root and drops privileges to the sandbox user)",
   "installing the seccomp filter", "execve()",
 };
 struct ChildFailure {
@@ -227,7 +229,8 @@ static void reportChildFailure(int syncWriteFd, int step) __attribute__((noretur
 static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
 static bool markInheritedDescriptorsCloseOnExec();
-static bool confineFileSystemWrites(const std::string& workDirectory);
+static long getLandlockAbi();
+static bool confineFileSystemWrites(const std::string& workDirectory, long landlockAbi);
 static unsigned long long getWritableImageSize(const char* path, unsigned long long pageSize);
 
 /**
@@ -237,7 +240,8 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  * isolation is layered: the seccomp syscall filter, the Landlock rules that confine writes to the
  * work directory and (when running as root) the privilege drop are mandatory - the run is refused
  * if any of them cannot be applied - while the network namespace is best-effort, as the filter
- * already refuses every socket but AF_UNIX.
+ * already refuses every socket but AF_UNIX. Without the privilege drop (a judger that is not root),
+ * the Landlock rules must also cover truncation, which needs Linux 6.2 (see runProgram).
  *
  * Every compilation and run is the same sandbox user, so whatever one of them could leave behind
  * outside its own work directory (a file in /tmp or /dev/shm, a System V shared memory segment, a
@@ -658,8 +662,21 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         reportChildFailure(syncWriteFd, STEP_NO_NEW_PRIVS);
     }
     // Mandatory as well (it needs no_new_privs): nothing may outlive the program outside its work
-    // directory.
-    if ( !confineFileSystemWrites(plan.workDirectory) ) {
+    // directory. Before Landlock ABI 3 (Linux 6.2), truncation is not a right Landlock handles, so
+    // truncate(2) and open(O_TRUNC) still reach every file the program's user may write. That is
+    // acceptable for the sandbox user, a separate account that cannot write the judger's files. A
+    // program running as the judger's own user (a judger that is not root) could empty them
+    // instead, e.g. the cached expected output, so that an empty output would be accepted: such a
+    // run is refused.
+    long landlockAbi = getLandlockAbi();
+    if ( landlockAbi < 1 ) {
+        reportChildFailure(syncWriteFd, STEP_LANDLOCK);
+    }
+    if ( landlockAbi < 3 && !plan.dropPrivileges ) {
+        errno = EOPNOTSUPP;
+        reportChildFailure(syncWriteFd, STEP_LANDLOCK_TRUNCATE);
+    }
+    if ( !confineFileSystemWrites(plan.workDirectory, landlockAbi) ) {
         reportChildFailure(syncWriteFd, STEP_LANDLOCK);
     }
     if ( syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
@@ -756,6 +773,16 @@ static bool markInheritedDescriptorsCloseOnExec() {
 }
 
 /**
+ * Gets the version of the Landlock ABI the running kernel supports. Async-signal-safe.
+ * @return the ABI version (1 for Linux 5.13, 3 for Linux 6.2, 6 for Linux 6.12, ...), or -1 if
+ *         Landlock is unavailable (errno tells why: ENOSYS without Landlock, EOPNOTSUPP if it is
+ *         disabled at boot, EPERM if a container's seccomp profile denies it)
+ */
+static long getLandlockAbi() {
+    return syscall(SYS_landlock_create_ruleset, nullptr, 0, landlock::CREATE_RULESET_VERSION);
+}
+
+/**
  * Confines the file system writes of the calling process, and of everything it runs, to the work
  * directory with Landlock: outside it, files cannot be created, written, truncated, renamed, linked
  * or removed (only /dev/null may be written). Descriptors opened before, such as standard output,
@@ -772,15 +799,15 @@ static bool markInheritedDescriptorsCloseOnExec() {
  * runtimes' temporary files and caches land there.
  * See https://docs.kernel.org/userspace-api/landlock.html
  *
+ * Before ABI 3 (Linux 6.2), truncation is not handled: files outside the work directory can still
+ * be truncated (truncate, ftruncate, open with O_TRUNC) as far as file permissions allow, which is
+ * why a run as the judger's own user needs ABI 3 (see runProgram).
+ *
  * @param  workDirectory - the only directory to allow writes beneath (empty for none)
- * @return whether the rules are in force (errno tells why not: ENOSYS without Landlock, EOPNOTSUPP
- *         if it is disabled at boot, EPERM if a container's seccomp profile denies it)
+ * @param  abi           - the kernel's Landlock ABI version, at least 1 (see getLandlockAbi)
+ * @return whether the rules are in force (errno tells why not)
  */
-static bool confineFileSystemWrites(const std::string& workDirectory) {
-    long abi = syscall(SYS_landlock_create_ruleset, nullptr, 0, landlock::CREATE_RULESET_VERSION);
-    if ( abi < 1 ) {
-        return false;
-    }
+static bool confineFileSystemWrites(const std::string& workDirectory, long abi) {
     uint64_t writeAccess =
         landlock::ACCESS_FS_WRITE_FILE | landlock::ACCESS_FS_REMOVE_DIR |
         landlock::ACCESS_FS_REMOVE_FILE | landlock::ACCESS_FS_MAKE_CHAR | landlock::ACCESS_FS_MAKE_DIR |

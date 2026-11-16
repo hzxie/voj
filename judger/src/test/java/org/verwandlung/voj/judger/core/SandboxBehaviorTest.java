@@ -415,6 +415,32 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that tries to empty a file of the judger outside its work directory, such as
+   * the cached expected output, with truncate(2) and with open(O_RDONLY | O_TRUNC), neither of which
+   * Landlock confined before ABI 3 (Linux 6.2). Expected result: both are refused and the file is
+   * intact. When the judger runs as root, the sandbox user cannot write the file anyway; otherwise
+   * the program runs as the judger's own user and only Landlock stops it (on an older kernel, such
+   * a run is refused as a system error rather than started).
+   */
+  @Test
+  public void testRunCannotTruncateTheJudgersFiles() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "Landlock is Linux-only.");
+    Path expectedOutput = Path.of(workBaseDirectory, "voj-sandbox-900022-output.txt");
+    Files.writeString(expectedOutput, "42\n");
+    try {
+      Assertions.assertEquals(
+          "AC", judge(900022L, TRUNCATE_CODE, 5000, 262144, expectedOutput.toString()));
+      Assertions.assertEquals(
+          "truncate: EACCES\nopen: EACCES\n",
+          Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900022", "output.txt")));
+      Assertions.assertEquals("42\n", Files.readString(expectedOutput));
+    } finally {
+      Files.deleteIfExists(expectedOutput);
+    }
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -982,6 +1008,35 @@ public class SandboxBehaviorTest {
           report("keyctl",
               syscall(SYS_keyctl, KEYCTL_GET_KEYRING_ID, KEY_SPEC_USER_KEYRING, 1L) >= 0, "created");
           report("memfd_create", memfd_create("voj-sandbox-leak", 0) >= 0, "created");
+          return 0;
+      }
+      """;
+
+  /**
+   * Given the path of a file, a program that tries to empty it with truncate(2) and with
+   * open(O_RDONLY | O_TRUNC), and reports how each attempt ends.
+   */
+  private static final String TRUNCATE_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "truncated"
+              : error == EACCES ? "EACCES" : error == EPERM ? "EPERM" : std::strerror(error));
+      }
+
+      int main() {
+          char path[4096] = "";
+          if (std::scanf("%4095s", path) != 1) {
+              return 1;
+          }
+          report("truncate", truncate(path, 0) == 0);
+          report("open", open(path, O_RDONLY | O_TRUNC) >= 0);
           return 0;
       }
       """;
