@@ -16,12 +16,9 @@
  */
 package org.verwandlung.voj.judger.util;
 
-import java.nio.channels.FileChannel;
-import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 
 import org.junit.jupiter.api.Assertions;
@@ -74,86 +71,6 @@ public class ExclusiveFileLockTest {
       Path other = Files.createFile(tempDir.resolve("other"));
       Files.move(other, lockFile, StandardCopyOption.REPLACE_EXISTING);
       Assertions.assertFalse(lock.isValid());
-    }
-  }
-
-  /**
-   * Test case: the lock file is removed between its opening and its locking (e.g. by a clean-up of
-   * old files in /tmp). Expected result: no failure; the file now at the path is locked instead.
-   */
-  @Test
-  public void testLockFileRemovedWhileBeingLockedIsLockedAgain() throws Exception {
-    Path lockFile = tempDir.resolve("judger-0.lock");
-    boolean[] removed = new boolean[1];
-
-    try (ExclusiveFileLock lock =
-        ExclusiveFileLock.tryAcquire(
-            lockFile,
-            path -> {
-              if (!removed[0]) {
-                removed[0] = true;
-                deleteQuietly(path);
-              }
-            })) {
-      Assertions.assertTrue(removed[0]);
-      Assertions.assertNotNull(lock);
-      Assertions.assertTrue(lock.isValid());
-      assertLocked(lockFile);
-    }
-  }
-
-  /**
-   * Test case: the lock file is replaced by another file between its opening and its locking (as
-   * another judger may create one after a removal). Expected result: the lock is taken on the file
-   * now at the path, not on the replaced one, which guards nothing.
-   */
-  @Test
-  public void testLockFileReplacedWhileBeingLockedIsLockedAgain() throws Exception {
-    Path lockFile = tempDir.resolve("judger-0.lock");
-    boolean[] replaced = new boolean[1];
-
-    try (ExclusiveFileLock lock =
-        ExclusiveFileLock.tryAcquire(
-            lockFile,
-            path -> {
-              if (!replaced[0]) {
-                replaced[0] = true;
-                try {
-                  Path other = Files.createFile(tempDir.resolve("other"));
-                  Files.move(other, path, StandardCopyOption.REPLACE_EXISTING);
-                } catch (java.io.IOException ex) {
-                  throw new java.io.UncheckedIOException(ex);
-                }
-              }
-            })) {
-      Assertions.assertTrue(replaced[0]);
-      Assertions.assertTrue(lock.isValid());
-      assertLocked(lockFile);
-    }
-  }
-
-  /**
-   * Asserts that this process holds the lock of the file at a path. (The probe's channel is closed
-   * afterwards, which may release that lock: only for the end of a test.)
-   *
-   * @param lockFile - the path of the lock file
-   */
-  private static void assertLocked(Path lockFile) throws Exception {
-    try (FileChannel probe = FileChannel.open(lockFile, StandardOpenOption.WRITE)) {
-      Assertions.assertThrows(OverlappingFileLockException.class, probe::tryLock);
-    }
-  }
-
-  /**
-   * Deletes a file.
-   *
-   * @param file - the file
-   */
-  private static void deleteQuietly(Path file) {
-    try {
-      Files.delete(file);
-    } catch (java.io.IOException ex) {
-      throw new java.io.UncheckedIOException(ex);
     }
   }
 

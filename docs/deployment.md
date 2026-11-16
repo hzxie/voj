@@ -174,12 +174,12 @@ The judger manages two directories from `voj.properties`:
 | Property | Default | Purpose | Permissions |
 | --- | --- | --- | --- |
 | `judger.workDir` | `/tmp` | Parent of the per-submission work directories | The judger (root) must be able to create subdirectories here |
-| `judger.checkpointDir` | `/tmp/voj-testpoints` | Reference inputs and expected outputs | Must belong to the judger and not be writable by its group or others (the judger refuses to start otherwise, and creates a missing one with mode `0700`) |
+| `judger.checkpointDir` | `/tmp/voj-testpoints` | Reference inputs and expected outputs, and the lock files of the judgers' slots | Must belong to the judger and not be writable by its group or others (the judger refuses to start otherwise, and creates a missing one with mode `0700`) |
 
 How it behaves at runtime:
 
 - For each submission the judger creates a private work directory in its own
-  directory under `judger.workDir` (`voj-judger-<n>/`, see
+  directory under `judger.workDir` (`voj-judger-<h>-<n>/`, see
   [`configuration.md`](configuration.md#directories)), sets it to mode `0700`
   and, when running as root, hands it to `system.username`. The compiler and the submitted program run with dropped
   privileges and write their output here, so the work directory must be owned by
@@ -266,8 +266,9 @@ Go, Kotlin, JavaScript and Rust).
 ## Several judgers on one host
 
 Judgers on one host may share `judger.checkpointDir` and `judger.workDir`, each
-or both: each judger claims a slot of its own in each of them, with a lock file
-there (see
+or both: each judger claims a slot of its own under `judger.checkpointDir`, with
+a lock file there, which gives it a cache directory there and a work directory
+under `judger.workDir`, named after the slot and `judger.checkpointDir` (see
 [`configuration.md`](configuration.md#directories)). Their sandboxes, though,
 must be their own:
 
