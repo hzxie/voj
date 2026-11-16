@@ -476,11 +476,19 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
         }
     }
     if ( !outputFilePath.empty() ) {
-        // FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
+        // The work directory is writable by the sandbox account, which may have left a hard link (or,
+        // given the right to create one, a symbolic link) at this path during an earlier checkpoint.
+        // Opening it with CREATE_ALWAYS would truncate the link's target with the judger's rights.
+        // So whatever is at the path is removed first (DeleteFileW removes a link, never its target)
+        // and the file is created with CREATE_NEW, which fails rather than open anything that is
+        // still, or again, at the path; FILE_FLAG_OPEN_REPARSE_POINT never follows a reparse point.
+        // A failed deletion is not an error of its own: CREATE_NEW then fails, and the run is
+        // refused. FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
         // (GetFileSizeEx needs it, and GENERIC_WRITE does not include it). The child inherits the
         // handle as its stdout, which only lets it read the attributes of its own output file.
+        DeleteFileW(outputFilePath.c_str());
         hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ, &sa,
-                    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                    CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
         if ( hOutput == INVALID_HANDLE_VALUE )  {
             hOutput = NULL;
             return false;

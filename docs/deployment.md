@@ -249,7 +249,9 @@ as soon as a limit is exceeded:
 
 The final CPU time, memory and output size are checked again after the program
 exits, so a program that exceeds a limit between two polls is never judged on
-its output.
+its output. The output file is created anew for every run: whatever the sandbox
+account may have left at its path (such as a hard link to another file) is
+removed first, never written through.
 
 The submission's environment is the sandbox account's own (system variables,
 the account's variables and profile paths such as `TEMP` and `APPDATA`) plus
