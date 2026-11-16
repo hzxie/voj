@@ -38,8 +38,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 /**
  * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
- * contest_mode and contest_is_rated columns, no submission_judge_generation column, and problem
- * statements and contest notes written for HTML output (with HTML entities).
+ * contest_mode and contest_is_rated columns, no submission_judge_generation column, the foreign
+ * key from voj_email_validation to voj_users, and problem statements and contest notes written for
+ * HTML output (with HTML entities).
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -124,6 +125,11 @@ public class UpgradeFrom102Test {
         "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
     // The submissions as 1.0.2 created them, without a judge generation.
     jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
+    // The email validations as 1.0.2 created them, owned by a user.
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_email_validation ADD CONSTRAINT voj_email_validation_ibfk_1"
+            + " FOREIGN KEY (email) REFERENCES voj_users (email)"
+            + " ON DELETE CASCADE ON UPDATE CASCADE");
     // A statement and contest notes written for HTML output.
     StringBuilder columns = new StringBuilder();
     Object[] values = new Object[PROBLEM_FIELDS.length + 1];
@@ -242,6 +248,20 @@ public class UpgradeFrom102Test {
     Assertions.assertEquals(2, getJudgeGeneration(1000));
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_judge_generation = 0 WHERE submission_id = 1000");
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: the foreign key
+   * from voj_email_validation to voj_users. Expected: it is dropped, and the second run succeeds.
+   */
+  @Test
+  public void testDropsTheForeignKeyOfEmailValidations() throws SQLException {
+    Assertions.assertEquals("CASCADE", getDeleteRule("voj_email_validation_ibfk_1"));
+
+    runUpgrade();
+    Assertions.assertNull(getDeleteRule("voj_email_validation_ibfk_1"));
+    runUpgrade();
+    Assertions.assertNull(getDeleteRule("voj_email_validation_ibfk_1"));
   }
 
   /**

@@ -100,6 +100,9 @@ CREATE TABLE `voj_discussion_topics` (
   `discussion_parent_topic_id` int(8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- The validation token and the daily email counters of an email address. Keyed by the address
+-- alone, not by a user (no foreign key): the counters must stay with the address when its user
+-- switches to another one, or several accounts taking turns on one address could each mail it.
 CREATE TABLE `voj_email_validation` (
   `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `token` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -402,9 +405,6 @@ ALTER TABLE `voj_discussion_threads`
   ADD CONSTRAINT `voj_discussion_thread_ibfk_1` FOREIGN KEY (`discussion_thread_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `voj_email_validation`
-  ADD CONSTRAINT `voj_email_validation_ibfk_1` FOREIGN KEY (`email`) REFERENCES `voj_users` (`email`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `voj_problem_category_relationships`
   ADD CONSTRAINT `voj_problem_category_relationships_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,

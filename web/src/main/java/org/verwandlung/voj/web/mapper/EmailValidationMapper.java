@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.Date;
+
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.EmailValidation;
@@ -40,6 +42,17 @@ public interface EmailValidationMapper {
    * @param emailValidation - the email validation credential
    */
   int createEmailValidation(EmailValidation emailValidation);
+
+  /**
+   * Makes the token of an email address unusable, keeping the address's daily email counters.
+   *
+   * @param email - the email address
+   * @param token - the token replacing the current one (a random value nobody was sent)
+   * @param now - the current time, which becomes the expiration time
+   * @return the number of rows updated (0 when the address has no row)
+   */
+  int expireEmailValidation(
+      @Param("email") String email, @Param("token") String token, @Param("now") Date now);
 
   /**
    * Deletes an email validation credential.

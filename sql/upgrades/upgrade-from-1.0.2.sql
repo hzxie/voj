@@ -18,7 +18,13 @@
 --    submission; every judging task carries it, so that a task a rejudge
 --    superseded is told apart from the current one. It is added (0 for every
 --    existing submission).
--- 5. Up to 1.0.2 the problem page wrote the description, the input and output
+-- 5. voj_email_validation, which holds the token and the daily email counters
+--    of an email address, referenced voj_users.email (ON UPDATE / DELETE
+--    CASCADE), so its counters followed an account to its new address, and
+--    several accounts taking turns on one address could each have it mailed
+--    up to the daily limit. The foreign key is dropped: the counters stay with
+--    the address.
+-- 6. Up to 1.0.2 the problem page wrote the description, the input and output
 --    formats and the samples of a problem, and the contest page the notes of
 --    a contest, as HTML (th:utext). Statements were therefore written with
 --    HTML entities, e.g. a sample output "a &lt; b". Those fields are now
@@ -28,10 +34,10 @@
 --    a statement that showed "&lt;" (stored "&amp;lt;") still shows "&lt;".
 --    The hint was already written as text, so it is left alone.
 --
--- Safe to run more than once. Steps 1 to 4 first check the information
+-- Safe to run more than once. Steps 1 to 5 first check the information
 -- schema and only change what is still in the old state (MySQL commits DDL
 -- implicitly, so a transaction could not make them atomic; an interrupted run
--- is completed by running the script again). Step 5 runs in one transaction
+-- is completed by running the script again). Step 6 runs in one transaction
 -- with the recording of the option upgradeFrom102Applied in voj_options, and
 -- only if that option was not recorded yet, so that text typed after the
 -- upgrade (e.g. a statement that means "&amp;") is never decoded. New
@@ -129,7 +135,16 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
--- 5. The HTML entities of the statements and contest notes, decoded on the
+-- 5. The address-keyed email counters.
+SET @voj_has_key = (SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
+  WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'voj_email_validation_ibfk_1');
+SET @voj_sql = IF(@voj_has_key > 0,
+  'ALTER TABLE `voj_email_validation` DROP FOREIGN KEY `voj_email_validation_ibfk_1`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
+-- 6. The HTML entities of the statements and contest notes, decoded on the
 --    first run only: the marker is recorded in the same transaction, and a
 --    later run (or concurrent one, which waits on the unique option_name
 --    index) finds it and decodes nothing.

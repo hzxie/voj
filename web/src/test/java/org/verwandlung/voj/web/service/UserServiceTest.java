@@ -541,7 +541,7 @@ public class UserServiceTest {
     Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
   }
 
-  /** Test case: tests the updateProfile (profile) method. Test data: a pending password-reset token for the old address, then an email change. Expected: the token is not usable for the new address, while the daily email counter carries over. */
+  /** Test case: tests the updateProfile (profile) method. Test data: a pending password-reset token for the old address, then an email change. Expected: the token is usable for neither address, while the daily email counter stays with the old address. */
   @Test
   public void testUpdateProfileInvalidatesTokenOfOldEmail() {
     emailValidationMapper.createEmailValidation(
@@ -559,17 +559,56 @@ public class UserServiceTest {
             "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
 
-    Assertions.assertNull(emailValidationMapper.getEmailValidation("cshzxie@gmail.com"));
+    Assertions.assertFalse(userService.isEmailValidationValid("cshzxie@gmail.com", "old-token"));
     Assertions.assertFalse(
         userService.isEmailValidationValid("new-address@example.com", "old-token"));
     Assertions.assertFalse(
         userService
             .resetPassword("new-address@example.com", "old-token", "new-password", "new-password")
             .get("isSuccessful"));
-    EmailValidation moved = emailValidationMapper.getEmailValidation("new-address@example.com");
-    Assertions.assertNotNull(moved);
-    Assertions.assertNotEquals("old-token", moved.getToken());
-    Assertions.assertEquals(2, moved.getDailyCount());
+    EmailValidation kept = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertNotEquals("old-token", kept.getToken());
+    Assertions.assertEquals(2, kept.getDailyCount());
+    Assertions.assertNull(emailValidationMapper.getEmailValidation("new-address@example.com"));
+  }
+
+  /**
+   * Test case: the daily email limit of an address that several accounts take turns on. Test data:
+   * email verification required, a daily limit of 3; user 1000 switches to victim@example.com and
+   * has 3 verification emails sent to it (one by the change, two resent), switches away, then user
+   * 1002 switches to it. Expected: the address gets no fourth email, neither for user 1000 nor for
+   * user 1002: the counter stays with the address, not with the account.
+   */
+  @Test
+  public void testDailyEmailLimitStaysWithTheAddress() {
+    enableEmailVerificationRequirement();
+    String victim = "victim@example.com";
+    User user = userService.getUserUsingUid(1000);
+    Assertions.assertTrue(
+        userService
+            .updateProfile(user, PLAINTEXT_PASSWORD, victim, "", "", "", "{}", "")
+            .get("isSuccessful"));
+    user = userService.getUserUsingUid(1000);
+    Assertions.assertTrue(userService.resendVerificationEmail(user).get("isSuccessful"));
+    Assertions.assertTrue(userService.resendVerificationEmail(user).get("isSuccessful"));
+    Assertions.assertTrue(userService.resendVerificationEmail(user).get("isRateLimited"));
+    Assertions.assertEquals(3, emailValidationMapper.getEmailValidation(victim).getDailyCount());
+
+    Assertions.assertTrue(
+        userService
+            .updateProfile(user, PLAINTEXT_PASSWORD, "elsewhere@example.com", "", "", "", "{}", "")
+            .get("isSuccessful"));
+    User anotherUser = userService.getUserUsingUid(1002);
+    Assertions.assertTrue(
+        userService
+            .updateProfile(anotherUser, PLAINTEXT_PASSWORD, victim, "", "", "", "{}", "")
+            .get("isSuccessful"));
+    anotherUser = userService.getUserUsingUid(1002);
+    Assertions.assertTrue(userService.resendVerificationEmail(anotherUser).get("isRateLimited"));
+    Assertions.assertEquals(3, emailValidationMapper.getEmailValidation(victim).getDailyCount());
+    // No email went out for user 1002: the address holds no usable token.
+    Assertions.assertFalse(
+        emailValidationMapper.getEmailValidation(victim).getExpireTime().after(new Date()));
   }
 
   /** Test case: tests the updateUserByAdministrator(...) method. Test data: a pending verification token for the old address, then an email change by an administrator. Expected: the token is not usable for the new address. */

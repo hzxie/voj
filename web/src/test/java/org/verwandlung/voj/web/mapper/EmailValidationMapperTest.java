@@ -93,19 +93,42 @@ public class EmailValidationMapperTest {
   }
 
   /**
-   * Test case: tests the createEmailValidation(EmailValidation) method. Test data: a valid data set,
-   * but no user uses this email address (violating foreign-key referential integrity). Expected: a
-   * DataIntegrityViolationException is thrown.
+   * Test case: tests the createEmailValidation(EmailValidation) method. Test data: an address no
+   * user uses (any longer). Expected: the row is created: the counters belong to the address, not
+   * to a user.
    */
   @Test
-  public void testCreateEmailValidationUsingNotExistingEmail() {
+  public void testCreateEmailValidationUsingAddressOfNoUser() {
     EmailValidation emailValidation =
         new EmailValidation("not-exists@verwandlung.org", "RandomToken", new Date());
-    Executable e =
-        () -> {
-          emailValidationMapper.createEmailValidation(emailValidation);
-        };
-    Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
+    Assertions.assertEquals(1, emailValidationMapper.createEmailValidation(emailValidation));
+  }
+
+  /**
+   * Test case: tests the expireEmailValidation(String, String, Date) method. Test data: the row of
+   * support@verwandlung.org (3 emails sent today) and an address without a row. Expected: the token
+   * is replaced and expires now, the counters are kept; nothing happens to the other address.
+   */
+  @Test
+  public void testExpireEmailValidation() {
+    Date windowStart = new Date(System.currentTimeMillis() / 1000 * 1000);
+    emailValidationMapper.deleteEmailValidation("support@verwandlung.org");
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation(
+            "support@verwandlung.org", "Token", new Date(windowStart.getTime() + 86_400_000L), 3,
+            windowStart));
+    Date now = new Date(windowStart.getTime() + 1000);
+
+    Assertions.assertEquals(
+        1, emailValidationMapper.expireEmailValidation("support@verwandlung.org", "Other", now));
+    EmailValidation emailValidation =
+        emailValidationMapper.getEmailValidation("support@verwandlung.org");
+    Assertions.assertEquals("Other", emailValidation.getToken());
+    Assertions.assertEquals(now, emailValidation.getExpireTime());
+    Assertions.assertEquals(3, emailValidation.getDailyCount());
+    Assertions.assertEquals(windowStart, emailValidation.getWindowStart());
+    Assertions.assertEquals(
+        0, emailValidationMapper.expireEmailValidation("nobody@verwandlung.org", "Other", now));
   }
 
   /** Test case: tests the deleteEmailValidation(String) method. Test data: an existing email address. Expected: the data deletion operation completes successfully. */

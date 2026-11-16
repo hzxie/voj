@@ -724,14 +724,14 @@ public class UserService {
    */
   public Map<String, Boolean> resetPassword(
       String email, String token, String newPassword, String confirmPassword) {
-    boolean isEmailValidationValid = isEmailValidationValid(email, token);
+    // The token belongs to the address, which a user who was deleted since may have left.
+    User user = isEmailValidationValid(email, token) ? userMapper.getUserUsingEmail(email) : null;
     Map<String, Boolean> result =
-        getResetPasswordResult(newPassword, confirmPassword, isEmailValidationValid);
+        getResetPasswordResult(newPassword, confirmPassword, user != null);
 
     if (result.get("isSuccessful")) {
       emailValidationMapper.deleteEmailValidation(email);
 
-      User user = userMapper.getUserUsingEmail(email);
       user.setPassword(passwordEncoder.encode(newPassword));
       userMapper.updateUser(user);
       userMapper.updateEmailVerified(user.getUid(), true);
@@ -974,40 +974,28 @@ public class UserService {
   }
 
   /**
-   * Sets the user's email address and persists the user, invalidating any pending email-validation
-   * token of the previous address.
+   * Sets the user's email address and persists the user, invalidating the pending email-validation
+   * tokens of the previous and of the new address.
    *
-   * <p>voj_email_validation.email references voj_users.email with ON UPDATE CASCADE, so changing the
-   * address used to carry a token mailed to the old address over to the new one: whoever controlled
-   * the old address could then verify the new address, or reset the account's password, with it.
-   * The row of the old address is therefore replaced by one for the new address whose token is
-   * random and already expired. Its rate-limit counters are kept, so switching addresses back and
-   * forth does not reset the daily email limit.
+   * <p>A token mailed to the old address must not stay usable: whoever controls the old address
+   * could otherwise reset the account's password (or another account that takes the address over
+   * could be reset with it). A token of the new address was mailed for a previous owner. Both are
+   * replaced by a random, already expired one. The daily email counters stay with each address
+   * (voj_email_validation is keyed by the address alone), so neither switching addresses back and
+   * forth nor several accounts taking turns on one address get more emails sent to it.
    *
    * @param user - the user to update
    * @param email - the (possibly unchanged) new email address
    */
   private void changeEmailAndUpdateUser(User user, String email) {
     String oldEmail = user.getEmail();
-    EmailValidation oldEmailValidation = null;
     if (oldEmail != null && !oldEmail.equals(email)) {
-      oldEmailValidation = emailValidationMapper.getEmailValidation(oldEmail);
-      if (oldEmailValidation != null) {
-        emailValidationMapper.deleteEmailValidation(oldEmail);
-      }
+      Date now = new Date();
+      emailValidationMapper.expireEmailValidation(oldEmail, DigestUtils.getGuid(), now);
+      emailValidationMapper.expireEmailValidation(email, DigestUtils.getGuid(), now);
     }
     user.setEmail(email);
     userMapper.updateUser(user);
-
-    if (oldEmailValidation != null) {
-      emailValidationMapper.createEmailValidation(
-          new EmailValidation(
-              email,
-              DigestUtils.getGuid(),
-              new Date(),
-              oldEmailValidation.getDailyCount(),
-              oldEmailValidation.getWindowStart()));
-    }
   }
 
   /**
