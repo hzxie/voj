@@ -37,6 +37,7 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
 import org.verwandlung.voj.judger.core.CheckpointStore;
+import org.verwandlung.voj.judger.core.SandboxAccountLock;
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
 import org.verwandlung.voj.judger.model.Language;
 
@@ -68,6 +69,7 @@ public class VojJudgerApplication {
    *
    * @param languageMapper - the data access object for programming languages
    * @param heartbeat - the heartbeat task
+   * @param sandboxAccountLock - the lock that keeps other judgers off this judger's sandbox account
    * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
    * @param submissionTaskListenerContainer - the listener for the judging-task queue, started here
    *     only after the identity check passes
@@ -78,6 +80,7 @@ public class VojJudgerApplication {
   public ApplicationRunner startupRunner(
       LanguageMapper languageMapper,
       ApplicationHeartbeat heartbeat,
+      SandboxAccountLock sandboxAccountLock,
       CheckpointStore checkpointStore,
       DefaultMessageListenerContainer submissionTaskListenerContainer,
       @Value("${judger.apiToken:}") String apiToken) {
@@ -97,6 +100,8 @@ public class VojJudgerApplication {
         System.exit(-1);
       }
       logSystemEnvironment();
+      // Two judgers running submissions as one account could interfere with each other's runs.
+      sandboxAccountLock.acquire();
       // Claims this judger's test data cache and work directory, and removes the downloads and the
       // judgings a previous run left unfinished. A checkpoint or work directory that cannot be
       // used fails every judging, so it fails the startup.

@@ -135,5 +135,5 @@ restarts with it):
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. A dedicated account is preferable on a host where other services use `nobody`. See [`deployment.md`](deployment.md). |
+| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. A dedicated account is preferable on a host where other services use `nobody`. Every judger on a host needs an account of its own, as it needs an isolate box id of its own: a judger running as root holds a lock on `/run/voj-sandbox-<uid>.lock` (the temporary directory if `/run` is not writable) and refuses to start when another judger on the host already uses the account. See [`deployment.md`](deployment.md#several-judgers-on-one-host). |
 | `system.password` | *(empty)* | Unused on Linux; required on Windows for the separate low-privilege logon account. |

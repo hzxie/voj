@@ -28,7 +28,10 @@ docker run -d --name voj.judger --network voj \
 ```
 
 You can run as many judgers in parallel as you need — they are decoupled from the
-web app through the queue.
+web app through the queue. Judgers in containers on one host all run submissions
+as `nobody`, the same uid on the host, so the thread cap of a run
+(`RLIMIT_NPROC`) counts the runs of all of them together; see
+[Several judgers on one host](https://github.com/hzxie/voj/blob/master/docs/deployment.md#several-judgers-on-one-host).
 
 ## Sandbox
 

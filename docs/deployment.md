@@ -249,6 +249,32 @@ Go, Kotlin, JavaScript and Rust).
   run, which frees the captured output right away; `--init` empties a box that a
   judger which died mid-run left behind.
 
+## Several judgers on one host
+
+Judgers on one host may share `judger.checkpointDir` and `judger.workDir`: each
+claims a slot of its own in them (see
+[`configuration.md`](configuration.md#directories)). Their sandboxes, though,
+must be their own:
+
+- **Native sandbox:** give each judger a sandbox account of its own
+  (`system.username`). Runs of the same account could signal one another's
+  processes, read one another's work directories, and share one `RLIMIT_NPROC`,
+  so the runs of a busy judger could leave another's without threads. A judger
+  running as root holds a lock named after the account's uid,
+  `/run/voj-sandbox-<uid>.lock` (in the temporary directory when `/run` is not
+  writable), and refuses to start when another judger on the host already uses
+  the account.
+- **isolate:** give each judger a box of its own (`judger.isolate.boxId`).
+
+Judgers in separate Docker containers do not see each other's lock, and need
+not: their PID and mount namespaces keep their runs apart, so they may all use
+`nobody`. Without user namespace remapping, however, an account is the same uid
+on the host in every container, and `RLIMIT_NPROC` counts every process and
+thread of that uid on the host: the runs of all those judgers share one
+`judger.processLimit`. Run a judger's submissions under a uid of its own (a
+different `system.username` per container, or remapped user namespaces) if
+runs that use many threads may overlap.
+
 ## Native build prerequisites (Linux)
 
 Building the judger compiles its JNI library, which needs a C++ toolchain and
