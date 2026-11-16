@@ -22,13 +22,6 @@ install:
   - del "C:\Program Files\Git\usr\bin\mkdir.exe"
 # Fix path error for make
   - copy "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\make.exe"
-# Fix path error on JNI headers
-  - copy "C:\Program Files\Java\jdk17\include\win32\jni_md.h" "C:\Program Files\Java\jdk17\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk17\include\win32\jawt_md.h" "C:\Program Files\Java\jdk17\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk21\include\win32\jni_md.h" "C:\Program Files\Java\jdk21\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk21\include\win32\jawt_md.h" "C:\Program Files\Java\jdk21\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk25\include\win32\jni_md.h" "C:\Program Files\Java\jdk25\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk25\include\win32\jawt_md.h" "C:\Program Files\Java\jdk25\include\jawt_md.h"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 

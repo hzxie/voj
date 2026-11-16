@@ -93,8 +93,8 @@ cd judger
 mvn package -DskipTests        # -> judger/target/voj.judger.jar
 ```
 
-> On some JDK layouts the JNI build needs `jni_md.h` / `jawt_md.h` copied from
-> `$JAVA_HOME/include/linux` (or `.../win32`) up into `$JAVA_HOME/include`.
+> On Windows the JNI library is built with MinGW-w64 `g++` and `make`; see
+> [Native build prerequisites (Windows)](docs/deployment.md#native-build-prerequisites-windows).
 
 Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
 `build-docker.sh`, `run-web.sh` and `run-judger.sh` (the run scripts preflight

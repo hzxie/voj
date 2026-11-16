@@ -167,8 +167,8 @@ libseccomp:
 sudo apt-get install -y g++ make libseccomp-dev
 ```
 
-On some JDK layouts the build also needs `jni_md.h` and `jawt_md.h` copied from
-`$JAVA_HOME/include/linux` up into `$JAVA_HOME/include`.
+`JAVA_HOME` must point at a JDK (not a JRE): the build includes the JNI headers
+from `$JAVA_HOME/include` and `$JAVA_HOME/include/linux`.
 
 ## Docker
 
@@ -222,10 +222,16 @@ the judger account.
 
 ### Native build prerequisites (Windows)
 
-The JNI library is built with the MSVC toolchain (the Windows runner uses Win32
-APIs — `CreateProcessWithLogonW`, Job Objects). Build with a Visual Studio C++
-toolchain installed and a JDK whose `include/win32` headers are available to the
-compiler.
+The JNI library (`JudgerCore.dll`) is built by `judger/Makefile` with the
+64-bit [MinGW-w64](https://www.mingw-w64.org/) `g++` and GNU `make`, as in CI
+(`appveyor.yml`): put MinGW-w64's `bin` directory on `PATH` (its make is
+`mingw32-make.exe`; CI copies it to `make.exe`, which the Maven build runs),
+have a POSIX `sh`, `mkdir` and `rm` on `PATH` for the Makefile's recipes (CI
+uses Cygwin's), and set `JAVA_HOME` to a 64-bit JDK. The build includes the JNI headers from
+`%JAVA_HOME%\include` and `%JAVA_HOME%\include\win32`; nothing needs to be
+copied. The MinGW runtime is linked into the DLL statically, so the judger does
+not need MinGW on its `PATH` to load it (only to compile C/C++ submissions with
+`gcc`/`g++`). MSVC is not supported by the Makefile.
 
 ## Upgrading the web application
 
