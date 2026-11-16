@@ -189,8 +189,8 @@ public class FileSystemUtilsTest {
   /**
    * Test case: tests the deleteRecursively(Path) method on Windows. Test data: a tree with a
    * read-only file, a read-only directory and a directory whose ACL a submission emptied, which
-   * denies everyone (the judger, its owner, but changing its ACL) any access. Expected result: the
-   * whole tree is removed.
+   * denies everyone (the judger, its owner, but changing its ACL, unless it uses its backup
+   * privileges) any access. Expected result: the whole tree is removed.
    */
   @Test
   @EnabledOnOs(OS.WINDOWS)
@@ -204,7 +204,37 @@ public class FileSystemUtilsTest {
     Path denied = Files.createDirectory(root.resolve("denied"));
     Files.writeString(Files.createDirectory(denied.resolve("inner")).resolve("file.txt"), "data");
     setAcl(denied, List.of());
-    Assertions.assertThrows(IOException.class, () -> Files.list(denied).close());
+
+    FileSystemUtils.deleteRecursively(root);
+
+    Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
+  }
+
+  /**
+   * Test case: tests the deleteRecursively(Path) method on Windows, by a judger that runs as an
+   * elevated administrator. Test data: a tree with a directory that belongs to another account
+   * (SYSTEM, as a submission's belongs to the sandbox account) and whose ACL allows nobody
+   * anything, with a file in it: as a submission may create it, which the judger can then neither
+   * list nor change the ACL of. Expected result: the whole tree is removed, by the judger's backup
+   * privileges.
+   */
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  public void testDeleteRecursivelyRemovesWhatDeniesTheJudgerOnWindows() throws Exception {
+    Path root = Files.createDirectory(tempDir.resolve("work"));
+    Path denied = Files.createDirectory(root.resolve("denied"));
+    Files.writeString(denied.resolve("file.txt"), "data");
+    // Enables the judger's backup privileges, if it holds them, which giving the directory to
+    // another account takes.
+    FileSystemUtils.deleteRecursively(tempDir.resolve("missing"));
+    AclFileAttributeView view = Files.getFileAttributeView(denied, AclFileAttributeView.class);
+    try {
+      view.setOwner(
+          denied.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("SYSTEM"));
+    } catch (IOException ex) {
+      Assumptions.abort("The judger holds no backup privileges (not an elevated administrator).");
+    }
+    view.setAcl(List.of());
 
     FileSystemUtils.deleteRecursively(root);
 

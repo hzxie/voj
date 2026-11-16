@@ -37,6 +37,7 @@ import org.verwandlung.voj.judger.mapper.LanguageMapper;
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Problem;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Behavioural tests for the sandbox: they compile and run small programs that deliberately exceed a
@@ -445,6 +446,27 @@ public class SandboxBehaviorTest {
         Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
     Assertions.assertTrue(Files.exists(workDirectory.resolve("voj-sandbox-leak-900041")));
     Assertions.assertTrue(Files.exists(workDirectory.resolve("home.txt")));
+  }
+
+  /**
+   * Test case: a run on Windows that creates, in its work directory, a directory with a file in it
+   * and an ACL that allows nobody anything, which it may set as their owner, and which keeps the
+   * judger from listing, deleting or changing the ACL of either. Expected result: the judger, as
+   * an elevated administrator, removes the work directory anyway, by its backup privileges.
+   */
+  @Test
+  public void testWhatARunDeniesTheJudgerIsRemovedOnWindows() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeFalse(isLinux(), "ACLs are Windows-only here.");
+    Assertions.assertEquals("AC", judge(900042L, WINDOWS_DENY_JUDGER_CODE, 5000, 262144));
+    Path workDirectory = Path.of(workBaseDirectory, "voj-sandbox-900042");
+    Assertions.assertEquals(
+        "locked\n", Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
+    Assertions.assertTrue(Files.exists(workDirectory.resolve("locked")));
+
+    FileSystemUtils.deleteRecursively(workDirectory);
+
+    Assertions.assertFalse(Files.exists(workDirectory));
   }
 
   /**
@@ -1617,6 +1639,41 @@ public class SandboxBehaviorTest {
               return 4;
           }
           std::printf("USERPROFILE: %s\\n", create(std::string(home) + "\\\\home.txt", true));
+          return 0;
+      }
+      """;
+
+  /**
+   * A Windows program that creates the directory "locked" with a file in it, then gives both a
+   * protected ACL that allows nobody anything (not inherited from the work directory), and prints
+   * "locked" once it did.
+   */
+  private static final String WINDOWS_DENY_JUDGER_CODE =
+      """
+      #include <windows.h>
+      #include <sddl.h>
+      #include <cstdio>
+
+      int main() {
+          PSECURITY_DESCRIPTOR nobody;
+          if (!ConvertStringSecurityDescriptorToSecurityDescriptorA(
+                  "D:P", SDDL_REVISION_1, &nobody, NULL)) {
+              return 1;
+          }
+          if (!CreateDirectoryA("locked", NULL)) {
+              return 2;
+          }
+          HANDLE file =
+              CreateFileA("locked\\\\file.txt", GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL);
+          if (file == INVALID_HANDLE_VALUE) {
+              return 3;
+          }
+          CloseHandle(file);
+          if (!SetFileSecurityA("locked\\\\file.txt", DACL_SECURITY_INFORMATION, nobody) ||
+                  !SetFileSecurityA("locked", DACL_SECURITY_INFORMATION, nobody)) {
+              return 4;
+          }
+          std::printf("locked\\n");
           return 0;
       }
       """;

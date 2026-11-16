@@ -55,8 +55,7 @@ public class CheckpointStoreWindowsTest {
    * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it and
    * the directories of its slot with an ACL of their own, not the one they would inherit: only the
    * judger (the account of its process) may access the root and its cache; in its work directory,
-   * what is created is the sandbox account's too, but for changing its ACL or owner, and its owner
-   * may read its ACL only.
+   * what is created is the sandbox account's too, but for changing its ACL or owner.
    */
   @Test
   public void testOpenCreatesDirectoriesOnlyTheJudgerMayAccess() throws Exception {
@@ -78,19 +77,14 @@ public class CheckpointStoreWindowsTest {
       assertEntry(acl.get(0), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
     }
     List<AclEntry> acl = getAcl(work);
-    Assertions.assertEquals(3, acl.size(), acl.toString());
+    Assertions.assertEquals(2, acl.size(), acl.toString());
     assertEntry(
         acl.get(0),
         judger,
         EnumSet.complementOf(
             EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)),
         inheritedOnly);
-    assertEntry(
-        acl.get(1),
-        lookup("OWNER RIGHTS"),
-        EnumSet.of(AclEntryPermission.READ_ACL),
-        inheritedOnly);
-    assertEntry(acl.get(2), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
+    assertEntry(acl.get(1), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
   }
 
   /**
@@ -170,16 +164,6 @@ public class CheckpointStoreWindowsTest {
    */
   private static List<AclEntry> getAcl(Path file) throws IOException {
     return Files.getFileAttributeView(file, AclFileAttributeView.class).getAcl();
-  }
-
-  /**
-   * Looks an account up.
-   *
-   * @param name - its name
-   * @return the account
-   */
-  private UserPrincipal lookup(String name) throws IOException {
-    return tempDir.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName(name);
   }
 
   /**

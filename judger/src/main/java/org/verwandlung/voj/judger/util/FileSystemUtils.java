@@ -45,6 +45,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * File-system helpers for directories that untrusted (sandboxed) code may have written to.
  *
@@ -103,7 +106,10 @@ public class FileSystemUtils {
    * when the judger is denied access to a directory, it gives the directory's owner full access to
    * it again and tries once more. Root is never denied access, so a judger running as root never
    * changes a permission. Where there are no directory handles (Windows, whose paths have no such
-   * limit), the tree is walked by path (see {@link #deleteTreeByPath}).
+   * limit), the tree is walked by path (see {@link #deleteTreeByPath}). There, a submission may
+   * also deny the judger access to what it creates, by the ACL it creates it with (as its owner, it
+   * may set any), so a judger that can enables its backup privileges first (see {@link
+   * #enableBackupPrivilegesOnce}), which no ACL withstands.
    *
    * @param path - the file or directory to delete
    * @throws IOException if something cannot be deleted
@@ -111,6 +117,7 @@ public class FileSystemUtils {
   public static void deleteRecursively(Path path) throws IOException {
     Path file = path.toAbsolutePath();
     if (IS_WINDOWS) {
+      enableBackupPrivilegesOnce();
       // Never opened as a directory first: it may be a junction.
       deleteTreeByPath(file);
       return;
@@ -310,10 +317,11 @@ public class FileSystemUtils {
   /**
    * Gives the judger full access to a file it is denied access to. On POSIX systems, the owner of
    * a directory gets full access ({@code rwx}) to it, if the owner lacks any. On Windows, the ACL
-   * of the file, which a submission may have changed, is replaced by one that gives the judger full
-   * control (which it may do if it owns the file or may change its ACL), and its read-only
-   * attribute, which keeps it from being deleted, is cleared. Never applied to a link or a
-   * junction: on Windows, that would change its target.
+   * of the file, which a submission may have set, is replaced by one that gives the judger full
+   * control (which it may do if it owns the file or may change its ACL; failing that, it takes the
+   * file first, which its take-ownership privilege lets it), and its read-only attribute, which
+   * keeps it from being deleted, is cleared. Never applied to a link or a junction: on Windows,
+   * that would change its target.
    *
    * @param file - the absolute path of the file: on POSIX systems short, as it is at most two
    *     levels below the directory being deleted
@@ -323,14 +331,22 @@ public class FileSystemUtils {
     if (IS_WINDOWS) {
       boolean granted = false;
       try {
-        Files.getFileAttributeView(file, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS)
-            .setAcl(
-                List.of(
-                    AclEntry.newBuilder()
-                        .setType(AclEntryType.ALLOW)
-                        .setPrincipal(getJudgerAccount())
-                        .setPermissions(AclEntryPermission.values())
-                        .build()));
+        UserPrincipal judger = getJudgerAccount();
+        AclFileAttributeView view =
+            Files.getFileAttributeView(file, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        List<AclEntry> acl =
+            List.of(
+                AclEntry.newBuilder()
+                    .setType(AclEntryType.ALLOW)
+                    .setPrincipal(judger)
+                    .setPermissions(AclEntryPermission.values())
+                    .build());
+        try {
+          view.setAcl(acl);
+        } catch (IOException ex) {
+          view.setOwner(judger);
+          view.setAcl(acl);
+        }
         granted = true;
       } catch (IOException ex) {
         // Not the judger's to change: perhaps its read-only attribute only.
@@ -444,6 +460,41 @@ public class FileSystemUtils {
   }
 
   /**
+   * Enables the judger's backup privileges (Windows), once: with them, Windows lets it list,
+   * delete and take what a submission left, whatever its ACL (see {@link #enableBackupPrivileges}).
+   * They are an administrator's, so a judger that does not run as an elevated administrator goes
+   * without them, and may have to leave what it is denied behind (see {@link #grantOwnerAccess}).
+   */
+  private static synchronized void enableBackupPrivilegesOnce() {
+    if (backupPrivilegesEnabled != null) {
+      return;
+    }
+    Throwable failure = null;
+    try {
+      NativeLibraryLoader.loadLibrary(NATIVE_LIBRARY);
+      backupPrivilegesEnabled = enableBackupPrivileges();
+    } catch (IOException | RuntimeException | UnsatisfiedLinkError ex) {
+      backupPrivilegesEnabled = false;
+      failure = ex;
+    }
+    if (!backupPrivilegesEnabled) {
+      LOGGER.warn(
+          "The judger holds no backup privileges (it does not run as an elevated administrator):"
+              + " it may be unable to remove what a submission denies it access to.",
+          failure);
+    }
+  }
+
+  /**
+   * Enables the backup, restore and take-ownership privileges of the judger's process (Windows),
+   * for good. With them, a file opened for backup, as Windows opens a file to delete it and a
+   * directory to list it, is the judger's to list, delete and take, whatever its ACL.
+   *
+   * @return whether all of them are enabled, which they are not if the judger does not hold them
+   */
+  private static native boolean enableBackupPrivileges();
+
+  /**
    * Gets the name of the account the judger's process runs as, qualified with its domain
    * (Windows), such as {@code HOST\judger} or {@code NT AUTHORITY\SYSTEM}.
    *
@@ -457,8 +508,14 @@ public class FileSystemUtils {
   /** The account the judger runs as (Windows), once looked up. */
   private static UserPrincipal judgerAccount;
 
+  /** Whether the judger's backup privileges are enabled (Windows), once it tried. */
+  private static Boolean backupPrivilegesEnabled;
+
   /** Whether the judger runs on Windows. */
   private static final boolean IS_WINDOWS = System.getProperty("os.name").contains("Windows");
+
+  /** The logger. */
+  private static final Logger LOGGER = LogManager.getLogger(FileSystemUtils.class);
 
   /** The permissions the owner of a directory needs to empty it. */
   private static final Set<PosixFilePermission> OWNER_PERMISSIONS =

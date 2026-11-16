@@ -37,8 +37,6 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -279,7 +277,8 @@ public class CheckpointStore {
   /**
    * Removes what judgings of a slot that never completed (as the judger died) left in its work
    * directory, {@code work-<n>/}, with the directory. A leftover the judger cannot remove (e.g. on
-   * Windows, a directory of the sandbox account's whose ACL the judger may not change) does not
+   * Windows, a directory of the sandbox account's whose ACL denies a judger that holds no backup
+   * privileges, see {@link FileSystemUtils#deleteRecursively}) does not
    * keep it from starting: the directory is moved aside, to {@code trash-<n>-<random>/}, and
    * removed at a later start.
    *
@@ -317,10 +316,9 @@ public class CheckpointStore {
    * rwx--x--x}). On Windows, where every account may pass through a directory it cannot read
    * (Bypass traverse checking), the sandbox account is granted access to what is created in it
    * instead (not to the directory itself), i.e. to the work directory of each judging and what is
-   * in it, but changing its ACL or owner. As the owner of what it creates there, it could still
-   * change the ACL of that (and deny the judger, which then could not remove it): an entry for
-   * {@code OWNER RIGHTS} gives the owner of what is created there no more than reading its ACL
-   * instead.
+   * in it, but changing its ACL or owner. What the sandbox account creates there is its own, so it
+   * may give it any ACL, even one that denies the judger: the judger removes it anyway, by its
+   * backup privileges (see {@link FileSystemUtils#deleteRecursively}).
    *
    * @param directory - the work directory of this judger's slot
    * @throws IOException if the directory cannot be created, or the access cannot be granted
@@ -330,28 +328,16 @@ public class CheckpointStore {
       createDirectory(directory, PASSABLE);
       return;
     }
-    UserPrincipalLookupService accounts =
-        directory.getFileSystem().getUserPrincipalLookupService();
-    List<AclEntry> entries = new ArrayList<>();
-    entries.add(
-        inheritedOnly(
-            accounts.lookupPrincipalByName(sandboxUsername),
-            EnumSet.complementOf(
-                EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER))));
-    try {
-      entries.add(
-          inheritedOnly(
-              accounts.lookupPrincipalByName(OWNER_RIGHTS),
-              EnumSet.of(AclEntryPermission.READ_ACL)));
-    } catch (UserPrincipalNotFoundException ex) {
-      // Its name (S-1-3-4) may be translated on Windows in another language.
-      LOGGER.warn(
-          "No account is named {} on this host: the sandbox account may change the ACL of what it"
-              + " creates in {}.",
-          OWNER_RIGHTS,
-          directory);
-    }
-    createWindowsDirectory(directory, entries);
+    createWindowsDirectory(
+        directory,
+        List.of(
+            inheritedOnly(
+                directory
+                    .getFileSystem()
+                    .getUserPrincipalLookupService()
+                    .lookupPrincipalByName(sandboxUsername),
+                EnumSet.complementOf(
+                    EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)))));
   }
 
   /**
@@ -372,9 +358,6 @@ public class CheckpointStore {
             AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT, AclEntryFlag.INHERIT_ONLY)
         .build();
   }
-
-  /** The name of the account that stands for the owner of a file in an ACL (S-1-3-4). */
-  private static final String OWNER_RIGHTS = "OWNER RIGHTS";
 
   /**
    * Creates a directory on Windows with an ACL of its own instead of the one it would inherit

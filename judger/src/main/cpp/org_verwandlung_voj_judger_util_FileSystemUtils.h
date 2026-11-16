@@ -9,6 +9,14 @@ extern "C" {
 #endif
 /*
  * Class:     org_verwandlung_voj_judger_util_FileSystemUtils
+ * Method:    enableBackupPrivileges
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_verwandlung_voj_judger_util_FileSystemUtils_enableBackupPrivileges
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     org_verwandlung_voj_judger_util_FileSystemUtils
  * Method:    getProcessAccountName
  * Signature: ()Ljava/lang/String;
  */

@@ -653,9 +653,12 @@ the judger account.
 Run the judger as an **elevated administrator** ("Run with highest
 privileges"). It creates each compilation and run with a Low integrity copy of
 the sandbox account's token (`CreateProcessWithTokenW`), which takes
-`SeImpersonatePrivilege`, and loading the account's profile takes
-administrative rights. Without them, every compilation and run fails as a
-System Error rather than running with more access than it should.
+`SeImpersonatePrivilege`; loading the account's profile takes administrative
+rights; and it removes what a submission leaves with its backup, restore and
+take-ownership privileges (see
+[The checkpoint directory on Windows](#the-checkpoint-directory-on-windows)).
+Without them, every compilation and run fails as a System Error rather than
+running with more access than it should.
 
 Run the judger in an interactive session (for example a scheduled task that runs
 at logon, or a console of a logged-on user), not as a service or from an SSH
@@ -675,19 +678,28 @@ of its own, which gives only the judger's account access (any account may still
 pass through a directory to one below it, by *Bypass traverse checking*). The
 judger's account is the user of its process's token, not a name looked up
 (which a local and a domain account may share). In `work-<n>\`, what is created
-(the work directory of each judging and what is in it) is also the sandbox account's, but for changing its ACL or its owner, and an
-`OWNER RIGHTS` entry keeps the sandbox account from changing the ACL of what it
-creates there either (Windows lets the owner of a file change its ACL
-otherwise). A directory whose ACL cannot be set is removed again, so it is
-never left with the ACL it would inherit. The judger does not change the ACL of
-a `judger.checkpointDir` that exists already: create it yourself only with an
+(the work directory of each judging and what is in it) is also the sandbox
+account's, but for changing the ACL or the owner of what the judger creates
+there. A directory whose ACL cannot be set is removed again, so it is never
+left with the ACL it would inherit. The judger does not change the ACL of a
+`judger.checkpointDir` that exists already: create it yourself only with an
 ACL that gives no other account access.
+
+What a submission creates in its work directory is its own, so it may give it
+any ACL, even one that denies the judger everything. The judger removes it
+anyway: it enables its backup, restore and take-ownership privileges, with which
+Windows lets it list and delete any file, whatever its ACL. A judger that does
+not hold them (one that does not run as an elevated administrator, which cannot
+run submissions either) logs a warning, and moves a work directory it cannot
+remove aside, to `trash-<n>-<random>\`, which it tries to remove again at every
+start.
 
 A lock file `judger-<n>.lock` cannot be deleted or renamed while its judger
 runs. When the judger removes a work directory, it removes a junction or a
 symbolic link a submission left there as a link, never what it points to, and
 takes back what it is denied (it replaces the ACL by one that gives it full
-control, and clears the read-only attribute) before it tries again.
+control, taking the file first if it may not change its ACL, and clears the
+read-only attribute) before it tries again.
 
 ### Native build prerequisites (Windows)
 
