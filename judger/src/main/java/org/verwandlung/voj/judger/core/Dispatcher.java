@@ -217,14 +217,20 @@ public class Dispatcher implements DisposableBean {
    * in the queue, without counting the judging as a failed one, so that another judger takes it at
    * once. The judging itself runs on until the process exits, but cannot record anything any more.
    * Nothing is released after a fatal error (see {@link #onFatalError}).
+   *
+   * <p>A claim in progress ends first (see {@link #claimLock}): then either it took nothing, or
+   * the submission it took is the one released here.
    */
   @Override
   public void destroy() {
-    if (isStopping) {
-      return;
+    Submission submission;
+    synchronized (claimLock) {
+      if (isStopping) {
+        return;
+      }
+      isStopping = true;
+      submission = claimedSubmission;
     }
-    isStopping = true;
-    Submission submission = claimedSubmission;
     if (submission == null) {
       return;
     }
@@ -258,21 +264,19 @@ public class Dispatcher implements DisposableBean {
    * @throws DataAccessException if no submission can be claimed as the database is unreachable
    */
   public boolean judgeNextSubmission(List<Integer> languageIds) {
-    if (isStopping) {
-      return false;
-    }
-    Submission submission = applicationDispatcher.claimSubmission(languageIds, getLeaseSeconds());
-    if (submission == null) {
-      return false;
-    }
-    claimedSubmission = submission;
-    try {
+    Submission submission;
+    synchronized (claimLock) {
       if (isStopping) {
-        // The judger started to shut down while it claimed the submission (see #destroy).
-        applicationDispatcher.handBackSubmission(submission);
-      } else {
-        judgeSubmission(submission);
+        return false;
       }
+      submission = applicationDispatcher.claimSubmission(languageIds, getLeaseSeconds());
+      if (submission == null) {
+        return false;
+      }
+      claimedSubmission = submission;
+    }
+    try {
+      judgeSubmission(submission);
     } finally {
       claimedSubmission = null;
     }
@@ -517,6 +521,13 @@ public class Dispatcher implements DisposableBean {
 
   /** The submission this judger claimed and judges, or {@code null}. */
   private volatile Submission claimedSubmission;
+
+  /**
+   * Held while a submission is claimed and set as the claimed one, and while the judger starts to
+   * shut down (see {@link #destroy}), never while a submission is judged: a shutdown either comes
+   * before a claim, which then takes nothing, or after it, and releases what it took.
+   */
+  private final Object claimLock = new Object();
 
   /** Renews the leases of the judgings, on a daemon thread, which never keeps the judger alive. */
   private static final ScheduledExecutorService LEASE_RENEWER =

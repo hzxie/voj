@@ -36,6 +36,8 @@ import static org.mockito.Mockito.when;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.ibatis.exceptions.PersistenceException;
@@ -418,6 +420,38 @@ public class DispatcherTest {
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
     Assertions.assertEquals(List.of(), exitStatuses);
+  }
+
+  /**
+   * Test case: the judger shuts down while it claims a submission, before the claim has returned
+   * it. Expected result: the shutdown waits for the claim, and releases the submission it took, at
+   * its place; the judger claims nothing more.
+   */
+  @Test
+  public void testAShutdownDuringAClaimReleasesTheClaimedSubmission() throws Exception {
+    CountDownLatch isClaiming = new CountDownLatch(1);
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenAnswer(
+            invocation -> {
+              isClaiming.countDown();
+              Thread.sleep(200);
+              return submission(0, null);
+            });
+    when(applicationDispatcher.handBackSubmission(any())).thenReturn(true);
+
+    Thread judging = new Thread(() -> dispatcher.judgeNextSubmission(LANGUAGES));
+    judging.start();
+    try {
+      Assertions.assertTrue(isClaiming.await(10, TimeUnit.SECONDS));
+      dispatcher.destroy();
+    } finally {
+      judging.join(10000);
+    }
+
+    verify(applicationDispatcher)
+        .handBackSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
+    Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
+    verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
   }
 
   /**
