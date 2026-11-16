@@ -23,16 +23,24 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.context.IContext;
+
+import org.verwandlung.voj.web.service.OptionService;
 
 /**
  * The test class for MailSender.
@@ -44,13 +52,14 @@ public class MailSenderTest {
   @BeforeEach
   public void setUp() throws Exception {
     templateEngine = mock(ITemplateEngine.class);
-    JavaMailSender mailSender = mock(JavaMailSender.class);
+    mailSender = mock(JavaMailSender.class);
 
     Constructor<MailSender> constructor =
         MailSender.class.getDeclaredConstructor(ITemplateEngine.class, JavaMailSender.class);
     constructor.setAccessible(true);
     vojMailSender = constructor.newInstance(templateEngine, mailSender);
     ReflectionTestUtils.setField(vojMailSender, "baseUrl", "https://voj.example.org");
+    ReflectionTestUtils.setField(vojMailSender, "optionService", mock(OptionService.class));
   }
 
   /** Test case: tests getMailContent(String, Map). Test data: a template name and a model. Expected: the rendered output is returned and the base URL is injected into the model. */
@@ -83,6 +92,39 @@ public class MailSenderTest {
     Assertions.assertEquals("zjhzxhz", context.getVariable("username"));
     Assertions.assertEquals("https://voj.example.org", context.getVariable("baseUrl"));
   }
+
+  /** Test case: tests sendAfterCommit(...) inside a transaction. Test data: an email requested while transaction synchronization is active. Expected: nothing is sent before the commit; it is sent once afterCommit runs. */
+  @Test
+  public void testSendAfterCommitWaitsForTheCommit() throws Exception {
+    CountDownLatch sent = new CountDownLatch(1);
+    org.mockito.Mockito.doAnswer(invocation -> { sent.countDown(); return null; })
+        .when(mailSender).send(org.mockito.ArgumentMatchers.any(MimeMessagePreparator.class));
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      vojMailSender.sendAfterCommit("a@example.org", "Subject", "Body", () -> {});
+      Assertions.assertFalse(sent.await(200, TimeUnit.MILLISECONDS));
+      for (TransactionSynchronization synchronization :
+          TransactionSynchronizationManager.getSynchronizations()) {
+        synchronization.afterCommit();
+      }
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+    Assertions.assertTrue(sent.await(5, TimeUnit.SECONDS));
+  }
+
+  /** Test case: tests sendAfterCommit(...) outside a transaction. Test data: a JavaMailSender that fails. Expected: the failure callback runs. */
+  @Test
+  public void testSendAfterCommitReportsFailures() throws Exception {
+    org.mockito.Mockito.doThrow(new MailSendException("down"))
+        .when(mailSender).send(org.mockito.ArgumentMatchers.any(MimeMessagePreparator.class));
+    CountDownLatch failed = new CountDownLatch(1);
+    vojMailSender.sendAfterCommit("a@example.org", "Subject", "Body", failed::countDown);
+    Assertions.assertTrue(failed.await(5, TimeUnit.SECONDS));
+  }
+
+  /** The mocked JavaMailSender. */
+  private JavaMailSender mailSender;
 
   /** The mocked Thymeleaf template engine. */
   private ITemplateEngine templateEngine;

@@ -31,6 +31,12 @@
 		SET token = #{token}, expire_time = #{now}
 		WHERE email = #{email}
 	</update>
+	<update id="refundDailyCount"
+		parameterType="String">
+		UPDATE voj_email_validation
+		SET daily_count = daily_count - 1
+		WHERE email = #{email} AND daily_count &gt; 0
+	</update>
 	<delete id="deleteEmailValidation"
 		parameterType="String">
 		DELETE FROM voj_email_validation 

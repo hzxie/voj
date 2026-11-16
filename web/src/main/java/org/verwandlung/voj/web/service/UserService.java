@@ -466,9 +466,9 @@ public class UserService {
     if (user != null && user.getEmail().equals(email)) {
       isUserExists = true;
       try {
-        dispatchVerificationEmail(username, email);
-      } catch (Exception e) {
-        e.printStackTrace();
+        dispatchEmail(username, email, "mail/reset-password", "Password Reset Request");
+      } catch (RuntimeException ex) {
+        LOGGER.error("Failed to send the password reset email of " + user.getUid(), ex);
         isSuccessful = false;
       }
     }
@@ -476,34 +476,6 @@ public class UserService {
     result.put("isSuccessful", isSuccessful && isUserExists);
 
     return result;
-  }
-
-  /**
-   * Sends the password reset email.
-   *
-   * @param username - the user's username
-   * @param email - the user's email address
-   */
-  private void dispatchVerificationEmail(String username, String email) {
-    String token = DigestUtils.getGuid();
-    // Rate-limit: skip the send once the address has reached its daily email limit, so the endpoint
-    // cannot be abused to flood an inbox with reset emails.
-    EmailValidation emailValidation = nextEmailValidation(email, token);
-    if (emailValidation == null) {
-      return;
-    }
-    Map<String, Object> model = new HashMap<>(4, 1);
-    model.put("username", username);
-    model.put("email", email);
-    model.put("token", token);
-
-    emailValidationMapper.deleteEmailValidation(email);
-    emailValidationMapper.createEmailValidation(emailValidation);
-
-    String templateName = "mail/reset-password";
-    String subject = "Password Reset Request";
-    String body = mailSender.getMailContent(templateName, model);
-    mailSender.sendMail(email, subject, body);
   }
 
   /**
@@ -526,9 +498,9 @@ public class UserService {
     userMapper.updateEmailVerified(user.getUid(), false);
     user.setEmailVerified(false);
     try {
-      dispatchEmailVerificationEmail(user.getUsername(), user.getEmail());
-    } catch (Exception e) {
-      e.printStackTrace();
+      dispatchEmail(user.getUsername(), user.getEmail(), "mail/verify-email", VERIFY_EMAIL_SUBJECT);
+    } catch (RuntimeException ex) {
+      LOGGER.error("Failed to send the verification email of " + user.getUid(), ex);
     }
   }
 
@@ -575,7 +547,9 @@ public class UserService {
       return result;
     }
     try {
-      boolean isSent = dispatchEmailVerificationEmail(user.getUsername(), user.getEmail());
+      boolean isSent =
+          dispatchEmail(
+              user.getUsername(), user.getEmail(), "mail/verify-email", VERIFY_EMAIL_SUBJECT);
       result.put("isRateLimited", !isSent);
       result.put("isSuccessful", isSent);
     } catch (RuntimeException ex) {
@@ -585,16 +559,18 @@ public class UserService {
   }
 
   /**
-   * Sends the email-verification email containing the confirmation link.
+   * Issues a new validation token for an email address and mails it (a password-reset or a
+   * verification link), unless the address has reached its daily email limit. The email goes out
+   * once the transaction commits; if it cannot be sent, it is taken back from the daily count.
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @return whether the email was sent (false when the address reached its daily email limit)
+   * @param templateName - the email template
+   * @param subject - the subject of the email
+   * @return whether the email was queued (false when the address reached its daily email limit)
    */
-  private boolean dispatchEmailVerificationEmail(String username, String email) {
+  private boolean dispatchEmail(String username, String email, String templateName, String subject) {
     String token = DigestUtils.getGuid();
-    // Rate-limit: skip the send once the address has reached its daily email limit, so repeated
-    // registrations / email changes cannot flood an inbox with verifications.
     EmailValidation emailValidation = nextEmailValidation(email, token);
     if (emailValidation == null) {
       return false;
@@ -603,12 +579,12 @@ public class UserService {
     model.put("username", username);
     model.put("email", email);
     model.put("token", token);
+    String body = mailSender.getMailContent(templateName, model);
 
     emailValidationMapper.deleteEmailValidation(email);
     emailValidationMapper.createEmailValidation(emailValidation);
-
-    String body = mailSender.getMailContent("mail/verify-email", model);
-    mailSender.sendMail(email, "Verify Your Email Address", body);
+    mailSender.sendAfterCommit(
+        email, subject, body, () -> emailValidationMapper.refundDailyCount(email));
     return true;
   }
 
@@ -1288,6 +1264,9 @@ public class UserService {
    */
   private static final Set<String> CENSORED_PROFILE_FIELDS =
       new HashSet<>(Arrays.asList("displayName", "location"));
+
+  /** The subject of the email-verification email. */
+  private static final String VERIFY_EMAIL_SUBJECT = "Verify Your Email Address";
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(UserService.class);

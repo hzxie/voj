@@ -57,6 +57,18 @@ public class EmailValidationMapperTest {
     Assertions.assertNull(emailValidation);
   }
 
+  /** Test case: tests refundDailyCount(String). Test data: an address with 2 emails counted, refunded three times. Expected: the count drops to 0 and stays there. */
+  @Test
+  public void testRefundDailyCount() {
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("refund@verwandlung.org", "Token", new Date(), 2, new Date()));
+    Assertions.assertEquals(1, emailValidationMapper.refundDailyCount("refund@verwandlung.org"));
+    Assertions.assertEquals(1, emailValidationMapper.refundDailyCount("refund@verwandlung.org"));
+    Assertions.assertEquals(0, emailValidationMapper.refundDailyCount("refund@verwandlung.org"));
+    Assertions.assertEquals(
+        0, emailValidationMapper.getEmailValidation("refund@verwandlung.org").getDailyCount());
+  }
+
   /**
    * Test case: tests the createEmailValidation(EmailValidation) method. Test data: a valid data set,
    * and no record exists for this email address. Expected: the data insertion operation completes

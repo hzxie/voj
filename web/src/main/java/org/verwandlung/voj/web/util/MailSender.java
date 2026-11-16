@@ -16,11 +16,9 @@
  */
 package org.verwandlung.voj.web.util;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Map;
-
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,8 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -71,17 +70,44 @@ public class MailSender {
   }
 
   /**
-   * Sends an email to the specified recipient.
+   * Sends an email once the current transaction commits (at once when there is none), so nothing is
+   * sent for a change that is rolled back and the link in the email is valid when it arrives. The
+   * email is delivered by a background thread; a failure is logged and reported to {@code
+   * onFailure}.
    *
    * @param recipient - the email address of the recipient
    * @param subject - the subject of the email
    * @param body - the content of the email
+   * @param onFailure - run (on the delivery thread) when the email cannot be sent
    */
-  public void sendMail(final String recipient, final String subject, final String body) {
-    final MimeMessagePreparator preparator =
-        new MimeMessagePreparator() {
-          public void prepare(MimeMessage mimeMessage)
-              throws MessagingException, UnsupportedEncodingException {
+  public void sendAfterCommit(String recipient, String subject, String body, Runnable onFailure) {
+    Runnable delivery =
+        () -> deliveryExecutor.execute(() -> deliver(recipient, subject, body, onFailure));
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              delivery.run();
+            }
+          });
+    } else {
+      delivery.run();
+    }
+  }
+
+  /**
+   * Sends an email.
+   *
+   * @param recipient - the email address of the recipient
+   * @param subject - the subject of the email
+   * @param body - the content of the email
+   * @param onFailure - run when the email cannot be sent
+   */
+  private void deliver(String recipient, String subject, String body, Runnable onFailure) {
+    try {
+      mailSender.send(
+          mimeMessage -> {
             MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
             message.setTo(recipient);
             message.setFrom(senderMail, senderName);
@@ -91,21 +117,23 @@ public class MailSender {
             }
             message.setSubject(subject);
             message.setText(body, true);
-          }
-        };
-    new Thread(
-            new Runnable() {
-              public void run() {
-                mailSender.send(preparator);
-                LOGGER.info(
-                    String.format(
-                        "An Email{Recipient: %s, Subject: %s} has been sent.",
-                        new Object[] {
-                          LogSanitizer.forLog(recipient), LogSanitizer.forLog(subject)
-                        }));
-              }
-            })
-        .start();
+          });
+      LOGGER.info(
+          String.format(
+              "An Email{Recipient: %s, Subject: %s} has been sent.",
+              LogSanitizer.forLog(recipient), LogSanitizer.forLog(subject)));
+    } catch (RuntimeException ex) {
+      LOGGER.error(
+          String.format(
+              "Failed to send an Email{Recipient: %s, Subject: %s}.",
+              LogSanitizer.forLog(recipient), LogSanitizer.forLog(subject)),
+          ex);
+      try {
+        onFailure.run();
+      } catch (RuntimeException failureEx) {
+        LOGGER.error("Failed to handle the failed email.", failureEx);
+      }
+    }
   }
 
   /**
@@ -122,6 +150,15 @@ public class MailSender {
 
   /** The autowired OptionService object. Used to resolve the contact email Reply-To address. */
   @Autowired private OptionService optionService;
+
+  /** Delivers the emails one after another, off the request threads. */
+  private final ExecutorService deliveryExecutor =
+      Executors.newSingleThreadExecutor(
+          runnable -> {
+            Thread thread = new Thread(runnable, "voj-mail");
+            thread.setDaemon(true);
+            return thread;
+          });
 
   /** The autowired JavaMailSender object. Used to send emails. */
   private final JavaMailSender mailSender;

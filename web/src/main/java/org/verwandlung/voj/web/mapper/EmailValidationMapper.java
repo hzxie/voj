@@ -55,6 +55,14 @@ public interface EmailValidationMapper {
       @Param("email") String email, @Param("token") String token, @Param("now") Date now);
 
   /**
+   * Takes back one email from the daily count of an address, after the email failed to send.
+   *
+   * @param email - the email address
+   * @return the number of rows updated
+   */
+  int refundDailyCount(@Param("email") String email);
+
+  /**
    * Deletes an email validation credential.
    *
    * @param email - the email address
