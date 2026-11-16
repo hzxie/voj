@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -66,6 +67,7 @@ public class DispatcherTest {
   public void setUp() {
     ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", "/tmp/voj-dispatcher-tests");
     ReflectionTestUtils.setField(dispatcher, "checkpointDirectory", "/tmp/voj-dispatcher-tests");
+    when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
   }
 
   /**
@@ -89,8 +91,6 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskAccepted() throws Exception {
-    Submission submission = buildSubmission();
-    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -123,8 +123,6 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskWrongAnswer() throws Exception {
-    Submission submission = buildSubmission();
-    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -152,8 +150,6 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskHonoursExactlyMatch() throws Exception {
-    Submission submission = buildSubmission();
-    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -183,8 +179,7 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskCompileFailed() throws Exception {
-    Submission submission = buildSubmission();
-    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
@@ -194,11 +189,80 @@ public class DispatcherTest {
     verify(programRunner, never())
         .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
+    verify(applicationDispatcher, never()).onErrorOccurred(anyLong(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a problem without any checkpoint.
+   * Expected result: a System Error, without compiling; never an Accepted with nothing checked.
+   */
+  @Test
+  public void testCreateNewTaskWithoutCheckpointsIsSystemError() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(new ArrayList<>());
+
+    dispatcher.createNewTask(100L);
+
+    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("no test data"));
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded.
+   * Expected result: a System Error.
+   */
+  @Test
+  public void testCreateNewTaskWithUnavailableCheckpointsIsSystemError() throws Exception {
+    org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 403"))
+        .when(checkpointStore)
+        .sync(any());
+
+    dispatcher.createNewTask(100L);
+
+    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("could not be loaded"));
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the sandbox fails to run the compiler.
+   * Expected result: a System Error rather than a Compile Error with an empty log.
+   */
+  @Test
+  public void testCreateNewTaskCompilerSandboxFailureIsSystemError() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    Map<String, Object> result = compileResult(false);
+    result.put("verdict", Verdict.INTERNAL_ERROR);
+    when(compiler.getCompileResult(any(), anyString(), anyString())).thenReturn(result);
+
+    dispatcher.createNewTask(100L);
+
+    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("compiler"));
+    verify(applicationDispatcher, never()).onCompileFinished(anyLong(), any());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the expected output cannot be read.
+   * Expected result: a System Error rather than a Wrong Answer.
+   */
+  @Test
+  public void testCreateNewTaskUnreadableAnswerIsSystemError() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(true));
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(runtimeResult("AC"));
+    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean()))
+        .thenThrow(new java.io.IOException("No such file"));
+
+    dispatcher.createNewTask(100L);
+
+    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("could not be read"));
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
   }
 
   /**
    * Test case: tests the createNewTask method. Test data: a stage throws after the work directory
-   * was created. Expected result: the exception propagates and the work directory is still removed.
+   * was created. Expected result: a System Error, and the work directory is still removed.
    */
   @Test
   public void testCreateNewTaskCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
@@ -206,13 +270,25 @@ public class DispatcherTest {
     Path workDirectory = Files.createDirectory(tempDir.resolve("voj-100"));
     Files.writeString(workDirectory.resolve("Main.cpp"), "int main() {}");
 
-    Submission submission = buildSubmission();
-    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("compiler crashed"));
 
-    Assertions.assertThrows(IllegalStateException.class, () -> dispatcher.createNewTask(100L));
+    dispatcher.createNewTask(100L);
+
+    verify(applicationDispatcher).onErrorOccurred(100L, Dispatcher.INTERNAL_ERROR_REASON);
     Assertions.assertFalse(Files.exists(workDirectory));
+  }
+
+  /**
+   * Builds a single checkpoint of Problem#1000.
+   *
+   * @return the checkpoints
+   */
+  private List<Checkpoint> oneCheckpoint() {
+    List<Checkpoint> checkpoints = new ArrayList<>();
+    checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
+    return checkpoints;
   }
 
   /**

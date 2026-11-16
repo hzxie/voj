@@ -89,7 +89,7 @@ public class ApplicationDispatcherTest {
   public void testOnErrorOccurredWithMissingSubmission() {
     when(submissionMapper.getSubmission(100L)).thenReturn(null);
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L));
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L, "reason"));
     verify(submissionMapper, never()).updateSubmission(any(Submission.class));
   }
 
@@ -101,11 +101,14 @@ public class ApplicationDispatcherTest {
   public void testOnErrorOccurred() {
     when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
 
-    applicationDispatcher.onErrorOccurred(100L);
+    applicationDispatcher.onErrorOccurred(100L, "This problem has no test data.");
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
     verify(submissionMapper).updateSubmission(submissionCaptor.capture());
     Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
+    Assertions.assertEquals(
+        "System Error.\n\nThis problem has no test data.\n",
+        submissionCaptor.getValue().getJudgeLog());
 
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("ErrorOccurred", message.get("event"));
@@ -282,6 +285,21 @@ public class ApplicationDispatcherTest {
     Assertions.assertEquals("TLE", submissionCaptor.getValue().getJudgeResultSlug());
     Assertions.assertEquals(25, submissionCaptor.getValue().getJudgeScore());
     Assertions.assertEquals("Time Limit Exceeded", captureSentMessage().get("runtimeResult"));
+  }
+
+  /**
+   * Test case: tests the onAllTestPointsFinished method. Test data: no checkpoint result at all.
+   * Expected result: a System Error, never an Accepted with nothing checked.
+   */
+  @Test
+  public void testOnAllTestPointsFinishedWithoutCheckpointsIsSystemError() {
+    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
+
+    applicationDispatcher.onAllTestPointsFinished(100L, new ArrayList<>());
+
+    ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
+    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
   }
 
   /**

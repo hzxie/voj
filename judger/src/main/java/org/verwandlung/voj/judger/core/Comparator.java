@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.util.FileSystemUtils;
@@ -68,7 +70,8 @@ public class Comparator {
    * @param exactlyMatch - whether the checkpoint requires an exact match
    * @return {@link #ACCEPTED}, {@link #PRESENTATION_ERROR} (only when {@code exactlyMatch} is set
    *     and the outputs differ only in trailing whitespace / blank lines) or {@link #WRONG_ANSWER}
-   * @throws IOException if either file cannot be read
+   * @throws IOException if the standard output cannot be read, or either file cannot be read to the
+   *     end; a user's output that cannot be opened as a plain file is a {@link #WRONG_ANSWER}
    */
   public String getComparisonResult(
       String standardOutputFilePath, String outputFilePath, boolean exactlyMatch)
@@ -88,14 +91,15 @@ public class Comparator {
    *
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
-   * @return whether the user's output and the standard output are the same
+   * @return whether the user's output and the standard output are the same (never when the user's
+   *     output cannot be opened as a plain file)
    * @throws IOException if either file cannot be read
    */
   public boolean isOutputTheSame(String standardOutputFilePath, String outputFilePath)
       throws IOException {
     try (OutputReader stdReader = openStandardOutput(standardOutputFilePath, true);
         OutputReader reader = openOutput(outputFilePath, true)) {
-      return isOutputTheSame(stdReader, reader);
+      return reader != null && isOutputTheSame(stdReader, reader);
     }
   }
 
@@ -105,14 +109,15 @@ public class Comparator {
    *
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
-   * @return whether the user's output and the standard output are exactly the same
+   * @return whether the user's output and the standard output are exactly the same (never when the
+   *     user's output cannot be opened as a plain file)
    * @throws IOException if either file cannot be read
    */
   public boolean isOutputExactlyTheSame(String standardOutputFilePath, String outputFilePath)
       throws IOException {
     try (OutputReader stdReader = openStandardOutput(standardOutputFilePath, false);
         OutputReader reader = openOutput(outputFilePath, false)) {
-      return isOutputExactlyTheSame(stdReader, reader);
+      return reader != null && isOutputExactlyTheSame(stdReader, reader);
     }
   }
 
@@ -243,15 +248,20 @@ public class Comparator {
 
   /**
    * Opens the user's output. It lives in the sandbox-owned work directory, so it is opened without
-   * following links.
+   * following links. An output the submission replaced with anything but a plain file (e.g. a link
+   * to the answer) cannot be opened, and is not the same as any answer.
    *
    * @param path - the path of the user's output file
    * @param lenient - whether a lone CR ends a line too
-   * @return the reader
-   * @throws IOException if the file cannot be opened or is not a plain file
+   * @return the reader, or {@code null} if the output cannot be opened as a plain file
    */
-  private OutputReader openOutput(String path, boolean lenient) throws IOException {
-    return new OutputReader(FileSystemUtils.newSandboxFileInputStream(Paths.get(path)), lenient);
+  private OutputReader openOutput(String path, boolean lenient) {
+    try {
+      return new OutputReader(FileSystemUtils.newSandboxFileInputStream(Paths.get(path)), lenient);
+    } catch (IOException ex) {
+      LOGGER.warn("Cannot open the output " + path + ", judging it wrong: " + ex.getMessage());
+      return null;
+    }
   }
 
   /** A buffered byte reader that reads every CRLF as LF, and when lenient a lone CR as well. */
@@ -335,4 +345,7 @@ public class Comparator {
     /** The byte read after a lone CR, returned by the next read, or {@link #NONE}. */
     private int pushedBack = NONE;
   }
+
+  /** The logger. */
+  private static final Logger LOGGER = LogManager.getLogger(Comparator.class);
 }

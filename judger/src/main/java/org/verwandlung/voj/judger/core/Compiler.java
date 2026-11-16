@@ -22,7 +22,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,16 +121,40 @@ public class Compiler {
     RunResult runResult =
         sandboxRunner.run(
             commandLine, inputFilePath, compileLogPath, compileTimeLimit, memoryLimit, true);
-    Map<String, Object> result = new HashMap<>(3, 1);
+    Map<String, Object> result = new HashMap<>(4, 1);
 
-    boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;
-    result.put("isSuccessful", isSuccessful);
-    result.put("log", getCompileOutput(compileLogPath));
+    Verdict verdict = runResult.getVerdict();
+    result.put("verdict", verdict);
+    result.put("isSuccessful", verdict == Verdict.NORMAL);
+    result.put("log", getCompileOutput(compileLogPath) + getLimitExceededMessage(verdict));
     return result;
   }
 
   /**
-   * Gets the content of the compilation log.
+   * Explains a compilation that the sandbox stopped at one of its limits, which the compiler itself
+   * cannot report (it was killed, often before printing anything).
+   *
+   * @param verdict - the verdict of the compilation
+   * @return the explanation, on a line of its own, or an empty string
+   */
+  private String getLimitExceededMessage(Verdict verdict) {
+    switch (verdict) {
+      case TIME_LIMIT_EXCEEDED:
+        return String.format(
+            "\nCompilation exceeded the time limit (%d ms).\n", new Object[] {compileTimeLimit});
+      case MEMORY_LIMIT_EXCEEDED:
+        return "\nCompilation exceeded the memory limit.\n";
+      case OUTPUT_LIMIT_EXCEEDED:
+        return "\nCompilation exceeded the output size limit.\n";
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * Gets the content of the compilation log, at most its first {@value #MAX_COMPILE_LOG_BYTES}
+   * bytes. A compiler can print far more (the output size limit is hundreds of megabytes), which
+   * neither belongs in the judger's heap nor fits the judge log's column.
    *
    * @param compileLogPath - the path of the compilation log
    * @return the content of the compilation log
@@ -141,11 +164,22 @@ public class Compiler {
     // a link planted there, or the log shown to the user could be any file the judger can read.
     try (InputStream inputStream =
         FileSystemUtils.newSandboxFileInputStream(Paths.get(compileLogPath))) {
-      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+      byte[] log = inputStream.readNBytes(MAX_COMPILE_LOG_BYTES + 1);
+      if (log.length <= MAX_COMPILE_LOG_BYTES) {
+        return new String(log, StandardCharsets.UTF_8);
+      }
+      return new String(log, 0, MAX_COMPILE_LOG_BYTES, StandardCharsets.UTF_8)
+          + "\n... (truncated)\n";
     } catch (Exception ex) {
       return "";
     }
   }
+
+  /**
+   * The largest part of the compilation log that is kept. The judge log quotes it with every line
+   * indented by four spaces, and must fit a TEXT column (64 KB) even for a log of empty lines.
+   */
+  static final int MAX_COMPILE_LOG_BYTES = 8192;
 
   /** The configured sandbox runner, used to execute the compile command. */
   @Autowired private SandboxRunner sandboxRunner;

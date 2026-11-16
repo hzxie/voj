@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.verwandlung.voj.judger.model.Checkpoint;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +32,7 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
+import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.DigestUtils;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
@@ -43,10 +42,18 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * message is pushed to the message queue; after judging completes, the result is written to the
  * database.
  *
+ * <p>A judging that cannot be completed for a reason other than the submission itself (no test
+ * data, a sandbox failure, unreadable test data, ...) is judged a System Error, never a verdict
+ * that blames the submission.
+ *
  * @author Haozhe Xie
  */
 @Component
 public class Dispatcher {
+  /** The judge log reason of a System Error with an unexpected cause. */
+  static final String INTERNAL_ERROR_REASON =
+      "An internal error occurred in the judger while judging this submission.";
+
   /**
    * Creates a new judging task. Only one judging task runs at a time.
    *
@@ -67,10 +74,13 @@ public class Dispatcher {
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
       try {
-        if (preprocess(submission, baseDirectory, baseFileName)
-            && compile(submission, baseDirectory, baseFileName)) {
-          runProgram(submission, baseDirectory, baseFileName);
-        }
+        judge(submission, baseDirectory, baseFileName);
+      } catch (SystemError ex) {
+        LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
+        applicationDispatcher.onErrorOccurred(submissionId, ex.getMessage());
+      } catch (Exception ex) {
+        LOGGER.error(String.format("Failed to judge submission #%d", submissionId), ex);
+        applicationDispatcher.onErrorOccurred(submissionId, INTERNAL_ERROR_REASON);
       } finally {
         // Always remove the work directory (source, binary and program output), even when a stage
         // throws; otherwise it lingers in a shared location, readable by later submissions that
@@ -81,26 +91,47 @@ public class Dispatcher {
   }
 
   /**
-   * Performs preprocessing work before judging. Note: the random file name is used to prevent the
-   * application from recursively invoking itself.
+   * Judges a submission: loads the problem's test data, compiles the submission and runs it against
+   * every checkpoint. Note: the random file name is used to prevent the application from
+   * recursively invoking itself.
    *
    * @param submission - the submission object
-   * @param workDirectory - the directory used for producing compilation output
+   * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the random file name (without suffix)
-   * @return whether preprocessing succeeded; when it fails the task must not proceed to compilation
+   * @throws SystemError if the submission cannot be judged for a known reason
+   * @throws Exception if the submission cannot be judged for an unexpected reason
    */
-  private boolean preprocess(Submission submission, String workDirectory, String baseFileName) {
-    try {
-      preprocessor.createTestCode(submission, workDirectory, baseFileName);
-      checkpointStore.sync(submission.getProblem());
-      return true;
-    } catch (Exception ex) {
-      LOGGER.catching(ex);
-
-      long submissionId = submission.getSubmissionId();
-      applicationDispatcher.onErrorOccurred(submissionId);
-      return false;
+  private void judge(Submission submission, String workDirectory, String baseFileName)
+      throws Exception {
+    List<Checkpoint> checkpoints = getCheckpoints(submission);
+    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    if (compile(submission, workDirectory, baseFileName)) {
+      runProgram(submission, checkpoints, workDirectory, baseFileName);
     }
+  }
+
+  /**
+   * Makes the problem's test data available locally and reads its checkpoints. There is nothing to
+   * judge a submission against without them, so a problem without checkpoints is a System Error:
+   * every submission that compiles would be Accepted otherwise.
+   *
+   * @param submission - the submission object
+   * @return the problem's checkpoints (never empty)
+   * @throws SystemError if the test data cannot be loaded or there is none
+   */
+  private List<Checkpoint> getCheckpoints(Submission submission) throws SystemError {
+    long problemId = submission.getProblem().getProblemId();
+    List<Checkpoint> checkpoints;
+    try {
+      checkpointStore.sync(submission.getProblem());
+      checkpoints = checkpointStore.getCheckpoints(problemId);
+    } catch (IOException ex) {
+      throw new SystemError("The test data of this problem could not be loaded.", ex);
+    }
+    if (checkpoints.isEmpty()) {
+      throw new SystemError("This problem has no test data (checkpoints) to judge against.", null);
+    }
+    return checkpoints;
   }
 
   /**
@@ -110,11 +141,16 @@ public class Dispatcher {
    * @param submission - the submission object
    * @param workDirectory - the directory used for producing compilation output
    * @param baseFileName - the random file name (without suffix)
+   * @return whether the compilation succeeded
+   * @throws SystemError if the sandbox failed to run the compiler
    */
-  private boolean compile(Submission submission, String workDirectory, String baseFileName) {
+  private boolean compile(Submission submission, String workDirectory, String baseFileName)
+      throws SystemError {
     long submissionId = submission.getSubmissionId();
     Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
-
+    if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
+      throw new SystemError("The sandbox failed to run the compiler.", null);
+    }
     applicationDispatcher.onCompileFinished(submissionId, result);
     return (Boolean) result.get("isSuccessful");
   }
@@ -123,22 +159,21 @@ public class Dispatcher {
    * Runs the program.
    *
    * @param submission - the submission object
+   * @param checkpoints - the problem's checkpoints
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the file name of the application to run (without file suffix)
+   * @throws SystemError if the test data cannot be read
    */
-  private void runProgram(Submission submission, String workDirectory, String baseFileName) {
+  private void runProgram(
+      Submission submission,
+      List<Checkpoint> checkpoints,
+      String workDirectory,
+      String baseFileName)
+      throws SystemError {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
     long submissionId = submission.getSubmissionId();
     long problemId = submission.getProblem().getProblemId();
 
-    List<Checkpoint> checkpoints;
-    try {
-      checkpoints = checkpointStore.getCheckpoints(problemId);
-    } catch (IOException ex) {
-      LOGGER.catching(ex);
-      applicationDispatcher.onErrorOccurred(submissionId);
-      return;
-    }
     for (Checkpoint checkpoint : checkpoints) {
       int checkpointId = checkpoint.getCheckpointId();
       int checkpointScore = checkpoint.getScore();
@@ -183,18 +218,27 @@ public class Dispatcher {
    * @param outputFilePath - the path of the user's output file
    * @param exactlyMatch - whether the checkpoint requires an exact match
    * @return the Map object containing the program's runtime result
+   * @throws SystemError if the standard output cannot be read
    */
   private Map<String, Object> getRuntimeResult(
       Map<String, Object> result,
       String standardOutputFilePath,
       String outputFilePath,
-      boolean exactlyMatch) {
+      boolean exactlyMatch)
+      throws SystemError {
     String runtimeResultSlug = (String) result.get("runtimeResult");
     int usedTime = (Integer) result.get("usedTime");
     int usedMemory = (Integer) result.get("usedMemory");
 
     if (runtimeResultSlug.equals("AC")) {
-      runtimeResultSlug = getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
+      try {
+        runtimeResultSlug =
+            comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
+      } catch (IOException ex) {
+        // The comparator judges an output it may not read (e.g. a planted link) a Wrong Answer
+        // itself, so this is the judger failing to read the test data or the output.
+        throw new SystemError("The test data of this problem could not be read.", ex);
+      }
       result.put("runtimeResult", runtimeResultSlug);
     }
     LOGGER.info(
@@ -203,24 +247,6 @@ public class Dispatcher {
             new Object[] {runtimeResultSlug, usedTime, usedMemory}));
 
     return result;
-  }
-
-  /**
-   * Gets the comparison result between the user's output and the standard output.
-   *
-   * @param standardOutputFilePath - the path of the standard output file
-   * @param outputFilePath - the path of the user's output file
-   * @param exactlyMatch - whether the checkpoint requires an exact match
-   * @return the judge result slug: AC, PE (exact match required but only whitespace differs) or WA
-   */
-  private String getComparisonResult(
-      String standardOutputFilePath, String outputFilePath, boolean exactlyMatch) {
-    try {
-      return comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
-    } catch (IOException ex) {
-      LOGGER.catching(ex);
-    }
-    return Comparator.WRONG_ANSWER;
   }
 
   /**
@@ -235,6 +261,25 @@ public class Dispatcher {
     } catch (IOException ex) {
       LOGGER.catching(ex);
     }
+  }
+
+  /**
+   * A judging that cannot be completed for a known reason that is not the submission's fault. Its
+   * message is shown to the user in the judge log of the resulting System Error.
+   */
+  static final class SystemError extends Exception {
+    /**
+     * Constructor.
+     *
+     * @param reason - the reason, shown to the user
+     * @param cause - the underlying exception, or {@code null}
+     */
+    SystemError(String reason, Throwable cause) {
+      super(reason, cause);
+    }
+
+    /** The unique serialization identifier. */
+    private static final long serialVersionUID = 1L;
   }
 
   /**

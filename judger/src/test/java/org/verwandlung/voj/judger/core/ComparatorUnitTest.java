@@ -222,12 +222,25 @@ public class ComparatorUnitTest {
   public void testSymlinkedOutputIsNotFollowed() throws Exception {
     Path std = Files.writeString(tempDir.resolve("std-link.txt"), "42\n");
     Path out = Files.createSymbolicLink(tempDir.resolve("out-link.txt"), std);
+    Assertions.assertEquals(
+        "WA", comparator.getComparisonResult(std.toString(), out.toString(), false));
+    Assertions.assertEquals(
+        "WA", comparator.getComparisonResult(std.toString(), out.toString(), true));
+  }
+
+  /**
+   * Test case: the standard output (the test data) cannot be read. Expected result: an IOException,
+   * which the dispatcher judges a System Error, rather than a verdict blaming the submission.
+   */
+  @Test
+  public void testUnreadableStandardOutputThrows() throws Exception {
+    Path out = Files.writeString(tempDir.resolve("out-missing-std.txt"), "42\n");
+    String std = tempDir.resolve("missing-std.txt").toString();
     Assertions.assertThrows(
         java.io.IOException.class,
-        () -> comparator.getComparisonResult(std.toString(), out.toString(), false));
+        () -> comparator.getComparisonResult(std, out.toString(), false));
     Assertions.assertThrows(
-        java.io.IOException.class,
-        () -> comparator.getComparisonResult(std.toString(), out.toString(), true));
+        java.io.IOException.class, () -> comparator.getComparisonResult(std, out.toString(), true));
   }
 
   /**

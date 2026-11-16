@@ -56,17 +56,20 @@ public class ApplicationDispatcher {
       // Any unexpected failure during judging (e.g. in the compile or run stage) must still leave a
       // terminal result; otherwise the submission stays stuck "pending" forever. Mark it as a
       // System Error so both the user and the web side see a final state.
-      onErrorOccurred(submissionId);
+      onErrorOccurred(
+          submissionId, "An internal error occurred in the judger while judging this submission.");
     }
   }
 
   /**
-   * Notifies the user when a system error occurs.
+   * Notifies the user when a system error occurs: the submission could not be judged for a reason
+   * that is not its own fault.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param reason - why the submission could not be judged, shown to the user in the judge log
    */
-  public void onErrorOccurred(long submissionId) {
-    updateSubmission(submissionId, 0, 0, 0, "SE", "Internal error occured.");
+  public void onErrorOccurred(long submissionId, String reason) {
+    updateSubmission(submissionId, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason));
 
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "ErrorOccurred");
@@ -83,7 +86,7 @@ public class ApplicationDispatcher {
    */
   public void onCompileFinished(long submissionId, Map<String, Object> result) {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
-    String log = log = getJudgeLog(result);
+    String log = getJudgeLog(result);
 
     if (!isSuccessful) {
       updateSubmission(submissionId, 0, 0, 0, "CE", log);
@@ -134,8 +137,9 @@ public class ApplicationDispatcher {
     int totalTime = 0;
     int maxMemory = 0;
     int totalScore = 0;
-    String runtimeResultSlug = "AC";
-    String log = "System Error.";
+    // Without any checkpoint there is nothing the submission was judged against: never Accepted.
+    String runtimeResultSlug = runtimeResults.isEmpty() ? "SE" : "AC";
+    String log;
 
     for (Map<String, Object> runtimeResult : runtimeResults) {
       String currentRuntimeResultSlug = getRuntimeResultSlug(runtimeResult);
