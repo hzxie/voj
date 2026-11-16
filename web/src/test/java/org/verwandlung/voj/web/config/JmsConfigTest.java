@@ -24,7 +24,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import jakarta.jms.DeliveryMode;
 import jakarta.jms.MapMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
@@ -34,7 +33,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
@@ -68,65 +66,16 @@ public class JmsConfigTest {
 
   /**
    * Test case: two instances of the web application subscribe to the topic of the progress, and a
-   * judger, then one of them, publishes a message. Expected: each instance receives every message,
-   * which are not persistent.
+   * judger publishes a message. Expected: each instance receives it.
    */
   @Test
   public void testEveryInstanceReceivesEveryMessage() throws Exception {
     BlockingQueue<Long> first = new LinkedBlockingQueue<>();
     BlockingQueue<Long> second = new LinkedBlockingQueue<>();
-    BlockingQueue<Integer> deliveryModes = new LinkedBlockingQueue<>();
-    startInstance(first, deliveryModes);
-    startInstance(second, new LinkedBlockingQueue<>());
-    JmsTemplate judger = judgerTemplate();
-    JmsTemplate instance =
-        jmsConfig.judgeProgressTemplate(jmsConfig.externalConnectionFactory(brokerUrl));
+    startInstance(first);
+    startInstance(second);
 
-    sendUntilReceived(judger, 1L, first, second);
-    instance.convertAndSend(Map.of("submissionId", 2L));
-    awaitMessage(first, 2L);
-    awaitMessage(second, 2L);
-    Assertions.assertTrue(deliveryModes.contains(DeliveryMode.NON_PERSISTENT));
-    Assertions.assertTrue(instance.isPubSubDomain());
-    Assertions.assertEquals(JmsConfig.MESSAGE_TIME_TO_LIVE_MS, instance.getTimeToLive());
-  }
-
-  /**
-   * Test case: the web application publishes several messages on the topic of the progress, then
-   * the broker restarts, and it publishes again. Expected: the messages go over one connection to
-   * the broker, not one each; after the restart, over one new connection.
-   */
-  @Test
-  public void testThePublisherKeepsOneConnection() throws Exception {
-    CachingConnectionFactory connectionFactory =
-        jmsConfig.judgeProgressConnectionFactory(jmsConfig.externalConnectionFactory(brokerUrl));
-    try {
-      JmsTemplate instance = jmsConfig.judgeProgressTemplate(connectionFactory);
-      Assertions.assertSame(connectionFactory, instance.getConnectionFactory());
-      for (long submissionId = 1; submissionId <= 5; ++submissionId) {
-        instance.convertAndSend(Map.of("submissionId", submissionId));
-      }
-      Assertions.assertEquals(1, tcpBroker.getBroker().getClients().length);
-
-      tcpBroker.stop();
-      tcpBroker.waitUntilStopped();
-      tcpBroker = startBroker(brokerUrl);
-      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-      for (long submissionId = 6; ; ++submissionId) {
-        try {
-          instance.convertAndSend(Map.of("submissionId", submissionId));
-          break;
-        } catch (RuntimeException ex) {
-          // The failed connection is dropped; the next message opens a new one.
-          Assertions.assertTrue(System.nanoTime() < deadline, ex.toString());
-          Thread.sleep(100);
-        }
-      }
-      instance.convertAndSend(Map.of("submissionId", 100L));
-      Assertions.assertEquals(1, tcpBroker.getBroker().getClients().length);
-    } finally {
-      connectionFactory.destroy();
-    }
+    sendUntilReceived(judgerTemplate(), 1L, first, second);
   }
 
   /**
@@ -137,8 +86,7 @@ public class JmsConfigTest {
   @Test
   public void testJudgeProgressIsReceivedAfterBrokerRestart() throws Exception {
     BlockingQueue<Long> received = new LinkedBlockingQueue<>();
-    DefaultMessageListenerContainer listenerContainer =
-        startInstance(received, new LinkedBlockingQueue<>());
+    DefaultMessageListenerContainer listenerContainer = startInstance(received);
     JmsTemplate judger = judgerTemplate();
 
     sendUntilReceived(judger, 1L, received);
@@ -157,17 +105,14 @@ public class JmsConfigTest {
    * Starts an instance of the web application's listener container of the topic.
    *
    * @param received - receives the submission identifiers of the messages
-   * @param deliveryModes - receives the delivery modes of the messages
    * @return the started listener container
    */
-  private DefaultMessageListenerContainer startInstance(
-      BlockingQueue<Long> received, BlockingQueue<Integer> deliveryModes) {
+  private DefaultMessageListenerContainer startInstance(BlockingQueue<Long> received) {
     DefaultMessageListenerContainer listenerContainer =
         jmsConfig.judgeProgressListenerContainer(
             jmsConfig.externalConnectionFactory(brokerUrl),
             message -> {
               try {
-                deliveryModes.add(message.getJMSDeliveryMode());
                 received.add(((MapMessage) message).getLong("submissionId"));
               } catch (jakarta.jms.JMSException ex) {
                 throw new IllegalStateException(ex);
@@ -213,22 +158,6 @@ public class JmsConfigTest {
         sender.convertAndSend(Map.of("submissionId", submissionId));
         received = subscriber.poll(500, TimeUnit.MILLISECONDS);
       }
-    }
-  }
-
-  /**
-   * Waits until a subscriber received a message (a message published before it may still come).
-   *
-   * @param subscriber - the messages received by the subscriber
-   * @param submissionId - the submission identifier of the message
-   */
-  private static void awaitMessage(BlockingQueue<Long> subscriber, long submissionId)
-      throws InterruptedException {
-    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-    for (Long received = subscriber.poll(10, TimeUnit.SECONDS);
-        received == null || received != submissionId;
-        received = subscriber.poll(500, TimeUnit.MILLISECONDS)) {
-      Assertions.assertTrue(System.nanoTime() < deadline, "Not received: " + submissionId);
     }
   }
 

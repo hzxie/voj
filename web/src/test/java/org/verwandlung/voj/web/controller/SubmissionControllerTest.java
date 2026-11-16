@@ -292,6 +292,8 @@ public class SubmissionControllerTest {
     authenticate(owner);
     long submissionId = 987654321L;
     ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(listener, "submissionService", submissionService);
+    when(submissionService.isCurrentJudging(submissionId, 42L)).thenReturn(true);
     ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
     Submission pending = submissionWithCode(owner, "code");
     pending.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
@@ -299,7 +301,7 @@ public class SubmissionControllerTest {
         .thenAnswer(
             invocation -> {
               listener.submissionEventHandler(
-                  new SubmissionEvent(this, submissionId, null, "System Error", "Log", true));
+                  new SubmissionEvent(this, submissionId, 42L, "System Error", "Log", true));
               return pending;
             });
 

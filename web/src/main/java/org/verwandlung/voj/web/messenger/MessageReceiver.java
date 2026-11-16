@@ -30,8 +30,7 @@ import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * The message receiving service. Receives the progress of the judgings, which the judgers publish
- * on a topic (and the web application the outcome of a submission it judged itself), and forwards
- * it to the live streams of the submissions on this instance.
+ * on a topic, and forwards it to the live streams of the submissions on this instance.
  *
  * @author Haozhe Xie
  */
@@ -65,19 +64,17 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * Handles the message of a System Error: one of a judging, with its claim token, or one the web
-   * application recorded itself, without a claim token but with its judge log.
+   * Handles the message of a System Error. Its judge log is read from the database by the page.
    *
    * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void errorHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    Long claimToken =
-        mapMessage.itemExists("claimToken") ? mapMessage.getLong("claimToken") : null;
-    String log = mapMessage.itemExists("log") ? mapMessage.getString("log") : "System Error.";
+    long claimToken = mapMessage.getLong("claimToken");
     eventPublisher.publishEvent(
-        new SubmissionEvent(this, submissionId, claimToken, "System Error", log, true));
+        new SubmissionEvent(
+            this, submissionId, claimToken, "System Error", "System Error.", true));
     LOGGER.info(String.format("Submission #%d returned [System Error].", submissionId));
   }
 

@@ -44,7 +44,6 @@ import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
-import org.verwandlung.voj.web.messenger.MessageSender;
 import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
@@ -587,8 +586,8 @@ public class SubmissionService {
    * held for longer), which checks again that no judging holds it and no judger taking submissions
    * supports its language: instances running this at the same time, a rejudge and a judger's claim
    * meanwhile neither deadlock with it nor lose their change. Its claim token is cleared, so that
-   * the messages of a judging that held it are dropped. The live streams of a marked submission, on
-   * every instance, are completed with its judge log (see {@link MessageSender}).
+   * the messages of a judging that held it are dropped. The pages of a marked submission read its
+   * verdict from the database.
    *
    * @return the number of submissions marked
    */
@@ -598,10 +597,6 @@ public class SubmissionService {
     if (noJudgerTimeout <= 0) {
       return 0;
     }
-    // A broker that does not take one message would hold every next one up (each send waits for
-    // its timeout): the rest of the run marks the submissions without telling the live views,
-    // whose pages read the verdicts from the database anyway.
-    isPublishing = true;
     try {
       long now = System.nanoTime();
       Set<Integer> languagesOfReadyJudgers = judgerService.getLanguageIdsOfReadyJudgers();
@@ -651,9 +646,6 @@ public class SubmissionService {
               submissionId, languageId, JudgerService.JUDGER_TIMEOUT_SECONDS, NO_JUDGER_JUDGE_LOG)
           == 1) {
         ++failed;
-        if (isPublishing) {
-          isPublishing = messageSender.sendSystemError(submissionId, NO_JUDGER_JUDGE_LOG);
-        }
       }
     }
     if (failed > 0) {
@@ -745,9 +737,6 @@ public class SubmissionService {
   /** The autowired JudgerService object, which tells the languages of the running judgers. */
   @Autowired private JudgerService judgerService;
 
-  /** The autowired MessageSender, which completes the live judging streams on every instance. */
-  @Autowired private MessageSender messageSender;
-
   /**
    * How long (ms) the pending submissions in a language wait while no judger taking submissions
    * supports it; 0 or less: as long as it takes.
@@ -760,12 +749,6 @@ public class SubmissionService {
    * runs of {@link #failSubmissionsWithoutJudger()}, and since when (by {@link System#nanoTime()}).
    */
   private final Map<Integer, Long> languagesWithoutJudgerSince = new HashMap<>();
-
-  /**
-   * Whether the current run of {@link #failSubmissionsWithoutJudger()} publishes the System Errors
-   * it marks: until a message cannot be sent.
-   */
-  private boolean isPublishing;
 
   /** Whether the last run of {@link #failSubmissionsWithoutJudger()} failed. */
   private boolean isReconciliationFailing;

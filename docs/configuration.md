@@ -45,9 +45,7 @@ serves them. The messages are live updates, the database holds the verdicts:
 they are not persistent, expire after 5 minutes (by the clocks of the hosts, which
 must not be further apart than that), and an instance that is not running misses
 them; a viewer's page reads the verdict from the database every 10 seconds
-anyway. The web app publishes there too, the System Error of a submission it
-marks itself (see below), so that every instance ends the live views of it. It
-survives a restart of an external broker: its listener tries to subscribe again
+anyway. The web app only receives from the broker. It survives a restart of an external broker: its listener tries to subscribe again
 every 5 seconds until the broker is back.
 
 | Property | Default | Purpose |
@@ -79,11 +77,8 @@ that no judging holds in a language without a judger that takes submissions,
 and marks them once it saw that language without one for the whole timeout, run
 after run: a run that fails (e.g. the database is unreachable) and a start of the
 instance start the timeout over, so that heartbeats that could not be recorded
-meanwhile never make running judgers look stopped. The live views of a
-submission it marks end with the System Error, on every instance; once a message
-cannot be sent (the broker is down), the run sends no more, as the pages read
-the verdicts from the database anyway. The web app publishes over one connection
-to the broker that it keeps, and opens again once it failed.
+meanwhile never make running judgers look stopped. The pages of a submission it
+marks show the System Error at their next read of the database.
 
 ### Checkpoint distribution
 

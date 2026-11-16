@@ -134,17 +134,6 @@
 	<!-- vojMailSender (MailSender) is picked up by component scanning and
 	     constructor-injected with the Thymeleaf engine and JavaMailSender. -->
 
-	<!-- Message Service -->
-	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-		<constructor-arg index="0" value="${jms.broker.url}" />
-	</bean>
-	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
-		<constructor-arg ref="amqConnectionFactory" />
-	</bean> 
-	<bean class="org.springframework.jms.listener.SimpleMessageListenerContainer">
-		<property name="connectionFactory" ref="connectionFactory" />
-		<property name="destinationName" value="vojMessageQueue" />
-		<property name="messageListener" ref="messageReceiver" />
-	</bean> 
-	<bean id="messageReceiver" class="org.verwandlung.voj.web.messenger.MessageReceiver"></bean>
+	<!-- Message Service: JmsConfig subscribes over jms.broker.url, whose vm:// URL starts a
+	     non-persistent broker in this JVM. -->
 </beans>

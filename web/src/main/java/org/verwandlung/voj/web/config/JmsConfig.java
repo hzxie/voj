@@ -21,15 +21,10 @@ import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.command.ActiveMQTopic;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.jms.connection.CachingConnectionFactory;
-import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
@@ -38,10 +33,8 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
  *
  * <p>Every instance of the web module subscribes to the topic {@value #JUDGE_PROGRESS_TOPIC}, on
  * which the judgers publish the progress of their judgings, so that the viewers of a judging see its
- * progress whichever instance serves them. The web module publishes there too, the outcome of a
- * submission it judged itself (see {@code SubmissionService#failSubmissionsWithoutJudger}), so that
- * every instance ends the live streams of the submission. The judgers take the pending submissions
- * from the database, and record their heartbeats there.
+ * progress whichever instance serves them. The web module only receives. The judgers take the
+ * pending submissions from the database, and record their heartbeats there.
  *
  * <p>The messages are live updates, the database holds the verdicts: they are not persistent and
  * expire after {@value #MESSAGE_TIME_TO_LIVE_MS} ms, and a subscriber that is not running misses
@@ -54,7 +47,7 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
  */
 @Configuration
 public class JmsConfig {
-  /** The name of the topic of the progress of the judgings (Judger, Web -> Web). */
+  /** The name of the topic of the progress of the judgings (Judger -> Web). */
   static final String JUDGE_PROGRESS_TOPIC = "vojJudgeProgressTopic";
 
   /**
@@ -63,9 +56,6 @@ public class JmsConfig {
    * the hosts minutes to disagree by.
    */
   static final long MESSAGE_TIME_TO_LIVE_MS = 300000;
-
-  /** How long (ms) a send may be held up by the broker's flow control before it fails. */
-  static final int SEND_TIMEOUT_MS = 10000;
 
   /** How long (ms) the listener container waits between two attempts to reconnect. */
   static final long RECOVERY_INTERVAL_MS = 5000;
@@ -111,13 +101,9 @@ public class JmsConfig {
    * from silently spinning up a second, unconfigured one).
    */
   @Bean
-  @Primary
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
   public ConnectionFactory connectionFactory(BrokerService embeddedBroker) {
-    ActiveMQConnectionFactory connectionFactory =
-        new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
-    connectionFactory.setSendTimeout(SEND_TIMEOUT_MS);
-    return connectionFactory;
+    return new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
   }
 
   /**
@@ -125,51 +111,9 @@ public class JmsConfig {
    * configured {@code jms.broker.url} over TCP.
    */
   @Bean
-  @Primary
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "false", matchIfMissing = true)
   public ConnectionFactory externalConnectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
-    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
-    connectionFactory.setSendTimeout(SEND_TIMEOUT_MS);
-    return connectionFactory;
-  }
-
-  /**
-   * The connection factory of the publisher of the topic of the progress of the judgings: it keeps
-   * one connection to the broker (and its sessions and producers) for every message, rather than a
-   * connection of its own per message, as a JmsTemplate opens on a plain connection factory. The
-   * connection is dropped once it fails (e.g. the broker restarts), and the next message opens a
-   * new one.
-   *
-   * @param connectionFactory - the connection factory of the broker
-   * @return the caching connection factory
-   */
-  @Bean
-  public CachingConnectionFactory judgeProgressConnectionFactory(
-      ConnectionFactory connectionFactory) {
-    CachingConnectionFactory cachingConnectionFactory =
-        new CachingConnectionFactory(connectionFactory);
-    cachingConnectionFactory.setReconnectOnException(true);
-    return cachingConnectionFactory;
-  }
-
-  /**
-   * The JmsTemplate that publishes to the topic of the progress of the judgings: messages that are
-   * not persistent and expire.
-   *
-   * @param connectionFactory - the connection factory of the publisher (see {@link
-   *     #judgeProgressConnectionFactory})
-   * @return the JmsTemplate
-   */
-  @Bean
-  public JmsTemplate judgeProgressTemplate(
-      @Qualifier("judgeProgressConnectionFactory") ConnectionFactory connectionFactory) {
-    JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
-    jmsTemplate.setPubSubDomain(true);
-    jmsTemplate.setDefaultDestination(new ActiveMQTopic(JUDGE_PROGRESS_TOPIC));
-    jmsTemplate.setExplicitQosEnabled(true);
-    jmsTemplate.setDeliveryPersistent(false);
-    jmsTemplate.setTimeToLive(MESSAGE_TIME_TO_LIVE_MS);
-    return jmsTemplate;
+    return new ActiveMQConnectionFactory(brokerUrl);
   }
 
   /**
@@ -180,7 +124,6 @@ public class JmsConfig {
    * <p>A DefaultMessageListenerContainer, which re-establishes its connection in a loop until the
    * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
    * when the connection fails (while the broker is still down), and then stops consuming for good.
-   * It holds its connection itself, on the broker's connection factory (not a caching one).
    *
    * @param connectionFactory - the connection factory of the broker
    * @param messageReceiver - the listener of the messages

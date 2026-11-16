@@ -16,14 +16,6 @@
  */
 package org.verwandlung.voj.web.service;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -38,19 +30,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.jms.listener.DefaultMessageListenerContainer;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.AopTestUtils;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import org.verwandlung.voj.web.messenger.ApplicationEventListener;
-import org.verwandlung.voj.web.messenger.MessageSender;
 
 /**
  * Checks that the pending submissions in a language that no judger taking submissions supports are
@@ -218,68 +204,6 @@ public class SubmissionsWithoutJudgerTest {
   }
 
   /**
-   * Test case: tests failSubmissionsWithoutJudger(). Test data: a viewer following the live judging
-   * of a pending submission in a language without a judger. Expected: the System Error goes over
-   * the topic of the progress, which every instance receives (this one included), so that its
-   * stream receives the System Error with the judge log, and is completed.
-   */
-  @Test
-  public void testTheLiveStreamOfAFailedSubmissionIsCompleted() throws Exception {
-    long pending = insertSubmission(CPP, null, null);
-    SseEmitter viewer = mock(SseEmitter.class);
-    applicationEventListener.addSseEmitters(pending, viewer);
-    // A message published before this instance subscribed would reach nobody.
-    long deadline = System.nanoTime() + 10_000_000_000L;
-    while (!judgeProgressListenerContainer.isRegisteredWithDestination()) {
-      Assertions.assertTrue(System.nanoTime() < deadline);
-      Thread.sleep(50);
-    }
-
-    submissionService.failSubmissionsWithoutJudger();
-    Thread.sleep(TIMEOUT + 200);
-    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
-
-    verify(viewer, timeout(10000))
-        .send(
-            argThat(
-                (Object message) ->
-                    Map.of(
-                            "judgeResult",
-                            "System Error",
-                            "message",
-                            SubmissionService.NO_JUDGER_JUDGE_LOG)
-                        .equals(message)));
-    verify(viewer, timeout(10000)).complete();
-  }
-
-  /**
-   * Test case: tests failSubmissionsWithoutJudger(). Test data: two pending submissions in C++,
-   * which no judger supports, and a broker that takes no message. Expected: both are marked SE, but
-   * the run publishes no more System Error after the first one that could not be sent (each would
-   * wait for the broker in vain); the next run tries again.
-   */
-  @Test
-  public void testARunStopsPublishingAfterAFailedSend() throws Exception {
-    insertSubmission(CPP, null, null);
-    insertSubmission(CPP, null, null);
-    MessageSender messageSender = mock(MessageSender.class);
-    Object originalMessageSender = ReflectionTestUtils.getField(getTarget(), "messageSender");
-    ReflectionTestUtils.setField(getTarget(), "messageSender", messageSender);
-    try {
-      Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
-      Thread.sleep(TIMEOUT + 200);
-      Assertions.assertEquals(2, submissionService.failSubmissionsWithoutJudger());
-      verify(messageSender, times(1)).sendSystemError(anyLong(), anyString());
-
-      insertSubmission(CPP, null, null);
-      Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
-      verify(messageSender, times(2)).sendSystemError(anyLong(), anyString());
-    } finally {
-      ReflectionTestUtils.setField(getTarget(), "messageSender", originalMessageSender);
-    }
-  }
-
-  /**
    * Registers a process of the judger account #1001 (voj@judger) as a running judger.
    *
    * @param languageIds - the languages it supports, comma-separated
@@ -355,14 +279,6 @@ public class SubmissionsWithoutJudgerTest {
 
   /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
-
-  /** The autowired ApplicationEventListener, which holds the live judging streams. */
-  @Autowired private ApplicationEventListener applicationEventListener;
-
-  /** The subscription of this instance to the topic of the progress of the judgings. */
-  @Autowired
-  @Qualifier("judgeProgressListenerContainer")
-  private DefaultMessageListenerContainer judgeProgressListenerContainer;
 
   /** The data source of the test database. */
   @Autowired private DataSource dataSource;

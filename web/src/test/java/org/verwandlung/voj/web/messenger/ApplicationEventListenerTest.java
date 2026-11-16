@@ -149,27 +149,6 @@ public class ApplicationEventListenerTest {
     Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9501L));
   }
 
-  /**
-   * Test case: tests submissionEventHandler(...). Test data: a viewer of a submission that the web
-   * application marked as a System Error itself (no judger took it in time), whose event carries
-   * no claim token; no judging of the submission is current. Expected: the message is sent and
-   * completes the stream.
-   */
-  @Test
-  public void testOutcomeRecordedByTheWebApplicationCompletesTheStream() throws IOException {
-    when(submissionService.isCurrentJudging(anyLong(), anyLong())).thenReturn(false);
-    SseEmitter viewer = mock(SseEmitter.class);
-    listener.addSseEmitters(9601L, viewer);
-
-    listener.submissionEventHandler(
-        new SubmissionEvent(this, 9601L, null, "System Error", "No judger took it.", true));
-
-    verify(viewer).send(any(Object.class));
-    verify(viewer).complete();
-    verify(submissionService, never()).isCurrentJudging(anyLong(), anyLong());
-    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9601L));
-  }
-
   /** Creates the listener under test, whose service says that every judging is current. */
   @BeforeEach
   public void setUp() {
