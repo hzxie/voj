@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.verwandlung.voj.judger.application;
+package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -49,17 +49,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import org.verwandlung.voj.judger.core.CheckpointResult;
-import org.verwandlung.voj.judger.core.CheckpointStore;
-import org.verwandlung.voj.judger.core.Comparator;
-import org.verwandlung.voj.judger.core.CompileResult;
-import org.verwandlung.voj.judger.core.Compiler;
-import org.verwandlung.voj.judger.core.Dispatcher;
-import org.verwandlung.voj.judger.core.Preprocessor;
-import org.verwandlung.voj.judger.core.ProgramRunner;
-import org.verwandlung.voj.judger.core.Verdict;
+import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.application.JudgerAccount;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
@@ -257,7 +249,6 @@ public class JudgingQueueTest {
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
     Assertions.assertNull(row.get("submission_judge_log"));
     Assertions.assertNull(row.get("submission_claim_token"));
-    Assertions.assertTrue(dispatcher.isReady());
   }
 
   /**
@@ -351,11 +342,11 @@ public class JudgingQueueTest {
         .thenThrow(new java.io.IOException("Failed to download checkpoints: HTTP 404"));
 
     for (int i = 0; i < Dispatcher.MAX_FAILURES_IN_A_ROW; ++i) {
-      Assertions.assertTrue(dispatcher.isReady());
       Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
     }
 
-    Assertions.assertFalse(dispatcher.isReady());
+    // As many failed judgings in a row as make a judger not ready: the longest pause.
+    Assertions.assertEquals(TIMES.maxPauseMs(), dispatcher.getPause());
     for (long submissionId : submissionIds) {
       Map<String, Object> row = getRow(submissionId);
       Assertions.assertEquals("PD", row.get("submission_judge_result"), row.toString());
@@ -384,7 +375,6 @@ public class JudgingQueueTest {
     Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
     Assertions.assertTrue(
         ((String) row.get("submission_judge_log")).contains("no test data"), row.toString());
-    Assertions.assertTrue(dispatcher.isReady());
   }
 
   /**
@@ -465,16 +455,15 @@ public class JudgingQueueTest {
         .thenReturn(List.of(new Checkpoint(1000L, 1, true, 100, "input", "output")));
     compiler = mock(Compiler.class);
     programRunner = mock(ProgramRunner.class);
-    dispatcher = new Dispatcher();
-    ReflectionTestUtils.setField(dispatcher, "applicationDispatcher", judgerApplication);
-    ReflectionTestUtils.setField(dispatcher, "checkpointStore", checkpointStore);
-    ReflectionTestUtils.setField(dispatcher, "preprocessor", mock(Preprocessor.class));
-    ReflectionTestUtils.setField(dispatcher, "compiler", compiler);
-    ReflectionTestUtils.setField(dispatcher, "programRunner", programRunner);
-    ReflectionTestUtils.setField(dispatcher, "comparator", mock(Comparator.class));
-    ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
-    ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
-    ReflectionTestUtils.setField(dispatcher, "isJudging", true);
+    Judge judge =
+        new Judge(
+            judgerApplication,
+            checkpointStore,
+            mock(Preprocessor.class),
+            compiler,
+            programRunner,
+            mock(Comparator.class));
+    dispatcher = new Dispatcher(judgerApplication, judge, TIMES, status -> {});
   }
 
   /**
@@ -486,12 +475,8 @@ public class JudgingQueueTest {
   private ApplicationDispatcher newApplicationDispatcher(MessageSender messageSender) {
     JudgerAccount judgerAccount = mock(JudgerAccount.class);
     when(judgerAccount.getUid()).thenReturn(1001L);
-    ApplicationDispatcher judgerApplication = new ApplicationDispatcher();
-    ReflectionTestUtils.setField(judgerApplication, "submissionMapper", submissionMapper);
-    ReflectionTestUtils.setField(judgerApplication, "judgeResultMapper", judgeResultMapper);
-    ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
-    ReflectionTestUtils.setField(judgerApplication, "judgerAccount", judgerAccount);
-    return judgerApplication;
+    return new ApplicationDispatcher(
+        submissionMapper, judgeResultMapper, messageSender, judgerAccount);
   }
 
   /**
@@ -582,8 +567,11 @@ public class JudgingQueueTest {
   /** The languages of the judgers of the tests: C++ only. */
   private static final List<Integer> CPP = List.of(2);
 
-  /** The lease (ms) of the judgings of the tests: renewed every 500 ms. */
-  private static final long LEASE_TIMEOUT = 2000;
+  /** The times of the judging queue of the tests: a lease of 2 s, renewed every 500 ms. */
+  private static final Dispatcher.Times TIMES = new Dispatcher.Times(10, 2000, 10, 40);
+
+  /** The lease (ms) of the judgings of the tests. */
+  private static final long LEASE_TIMEOUT = TIMES.leaseTimeoutMs();
 
   /** A judger of the tests, with the steps of a judging mocked. */
   private Dispatcher dispatcher;

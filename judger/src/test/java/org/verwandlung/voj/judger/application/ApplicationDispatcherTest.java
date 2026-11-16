@@ -33,13 +33,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
@@ -203,7 +201,6 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testVerdictIsRecordedDespiteShortOutages() throws Exception {
-    ReflectionTestUtils.setField(applicationDispatcher, "retryDelay", 1L);
     DataAccessResourceFailureException outage = new DataAccessResourceFailureException("down");
     when(submissionMapper.updateSubmissionResult(any(Submission.class)))
         .thenThrow(outage, outage)
@@ -455,6 +452,9 @@ public class ApplicationDispatcherTest {
   /** Records every verdict: the judgings of the tests are current, unless a test says otherwise. */
   @BeforeEach
   public void setUp() {
+    applicationDispatcher =
+        new ApplicationDispatcher(
+            submissionMapper, judgeResultMapper, messageSender, judgerAccount, 1);
     when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(1);
     when(judgerAccount.getUid()).thenReturn(1001L);
   }
@@ -477,6 +477,6 @@ public class ApplicationDispatcherTest {
   /** The mocked account of the judger. */
   @Mock private JudgerAccount judgerAccount;
 
-  /** The ApplicationDispatcher object under test. */
-  @InjectMocks private ApplicationDispatcher applicationDispatcher;
+  /** The ApplicationDispatcher object under test, which tries a failed statement again at once. */
+  private ApplicationDispatcher applicationDispatcher;
 }

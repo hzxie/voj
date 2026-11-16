@@ -55,6 +55,48 @@ public class ApplicationDispatcher {
   public static final String INTERRUPTED_REASON =
       "Its judger stopped, crashed or lost the database while judging it.";
 
+  /** How long (ms) a failed statement waits before it is tried again; doubles each time. */
+  static final long RETRY_DELAY_MS = 1000;
+
+  /**
+   * Creates the application dispatcher of a judger.
+   *
+   * @param submissionMapper - the submissions
+   * @param judgeResultMapper - the judge results
+   * @param messageSender - sends the progress of the judgings to the web application
+   * @param judgerAccount - the account of the judger
+   */
+  @Autowired
+  public ApplicationDispatcher(
+      SubmissionMapper submissionMapper,
+      JudgeResultMapper judgeResultMapper,
+      MessageSender messageSender,
+      JudgerAccount judgerAccount) {
+    this(submissionMapper, judgeResultMapper, messageSender, judgerAccount, RETRY_DELAY_MS);
+  }
+
+  /**
+   * Creates an application dispatcher.
+   *
+   * @param submissionMapper - the submissions
+   * @param judgeResultMapper - the judge results
+   * @param messageSender - sends the progress of the judgings to the web application
+   * @param judgerAccount - the account of the judger
+   * @param retryDelay - how long (ms) a failed statement waits before it is tried again
+   */
+  ApplicationDispatcher(
+      SubmissionMapper submissionMapper,
+      JudgeResultMapper judgeResultMapper,
+      MessageSender messageSender,
+      JudgerAccount judgerAccount,
+      long retryDelay) {
+    this.submissionMapper = submissionMapper;
+    this.judgeResultMapper = judgeResultMapper;
+    this.messageSender = messageSender;
+    this.judgerAccount = judgerAccount;
+    this.retryDelay = retryDelay;
+  }
+
   /**
    * Claims the next submission to judge in one of some languages (see {@code
    * SubmissionMapper#getNextSubmissionId}) for a new judging, and reads it once claimed: an
@@ -311,17 +353,17 @@ public class ApplicationDispatcher {
         || ex instanceof DataAccessResourceFailureException;
   }
 
-  /** The autowired MessageSender object, used to send messages to the message queue. */
-  @Autowired private MessageSender messageSender;
+  /** Sends the progress of the judgings to the web application. */
+  private final MessageSender messageSender;
 
-  /** The autowired SubmissionMapper object, used to query/update submission information. */
-  @Autowired private SubmissionMapper submissionMapper;
+  /** The submissions. */
+  private final SubmissionMapper submissionMapper;
 
-  /** The autowired JudgeResultMapper object, used to access information about all judge results. */
-  @Autowired private JudgeResultMapper judgeResultMapper;
+  /** The judge results, whose names the users see. */
+  private final JudgeResultMapper judgeResultMapper;
 
   /** The account of the judger, which its claims are recorded by. */
-  @Autowired private JudgerAccount judgerAccount;
+  private final JudgerAccount judgerAccount;
 
   /** The names of the judge results, by their slug, as read so far. */
   private final Map<String, String> judgeResultNames = new ConcurrentHashMap<>();
@@ -333,7 +375,7 @@ public class ApplicationDispatcher {
   static final int UPDATE_TRIES = 3;
 
   /** How long (ms) a failed statement waits before it is tried again; doubles each time. */
-  private long retryDelay = 1000;
+  private final long retryDelay;
 
   /** The source of the claim tokens. */
   private static final SecureRandom RANDOM = new SecureRandom();
