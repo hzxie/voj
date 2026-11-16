@@ -109,6 +109,36 @@
 		SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId}
 		WHERE uid = #{uid}
 	</update>
+	<update id="updatePassword"
+		parameterType="map">
+		UPDATE voj_users
+		SET password = #{password}
+		WHERE uid = #{uid}
+	</update>
+	<update id="updatePasswordIfUnchanged"
+		parameterType="map">
+		UPDATE voj_users
+		SET password = #{newPassword}
+		WHERE uid = #{uid} AND password = #{oldPassword}
+	</update>
+	<update id="updateEmail"
+		parameterType="map">
+		UPDATE voj_users
+		SET email = #{email}
+		WHERE uid = #{uid}
+	</update>
+	<update id="updateUserGroup"
+		parameterType="map">
+		UPDATE voj_users
+		SET user_group_id = #{userGroupId}
+		WHERE uid = #{uid}
+	</update>
+	<update id="updatePreferLanguage"
+		parameterType="map">
+		UPDATE voj_users
+		SET prefer_language_id = #{languageId}
+		WHERE uid = #{uid}
+	</update>
 	<update id="updateEmailVerified"
 		parameterType="map">
 		UPDATE voj_users

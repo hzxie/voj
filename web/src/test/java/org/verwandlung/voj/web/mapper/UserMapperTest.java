@@ -229,6 +229,43 @@ public class UserMapperTest {
     Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
   }
 
+  /**
+   * Test case: tests the targeted updates (updatePassword, updateEmail, updateUserGroup and
+   * updatePreferLanguage). Test data: user 1002. Expected: each changes its own column and leaves
+   * every other one as it is.
+   */
+  @Test
+  public void testTargetedUpdatesChangeOnlyTheirColumn() {
+    User before = userMapper.getUserUsingUid(1002);
+
+    Assertions.assertEquals(1, userMapper.updatePassword(1002, "new-hash"));
+    Assertions.assertEquals(1, userMapper.updateEmail(1002, "changed@verwandlung.org"));
+    Assertions.assertEquals(1, userMapper.updateUserGroup(1002, 8));
+    Assertions.assertEquals(1, userMapper.updatePreferLanguage(1002, 1));
+
+    User after = userMapper.getUserUsingUid(1002);
+    Assertions.assertEquals("new-hash", after.getPassword());
+    Assertions.assertEquals("changed@verwandlung.org", after.getEmail());
+    Assertions.assertEquals(8, after.getUserGroup().getUserGroupId());
+    Assertions.assertEquals(1, after.getPreferLanguage().getLanguageId());
+    Assertions.assertEquals(before.getUsername(), after.getUsername());
+    Assertions.assertEquals(before.isEmailVerified(), after.isEmailVerified());
+  }
+
+  /**
+   * Test case: tests the updatePasswordIfUnchanged(long, String, String) method. Test data: user
+   * 1002's current password hash, then a hash it no longer has. Expected: only the first update is
+   * applied.
+   */
+  @Test
+  public void testUpdatePasswordIfUnchanged() {
+    String password = userMapper.getUserUsingUid(1002).getPassword();
+
+    Assertions.assertEquals(1, userMapper.updatePasswordIfUnchanged(1002, password, "first"));
+    Assertions.assertEquals(0, userMapper.updatePasswordIfUnchanged(1002, password, "second"));
+    Assertions.assertEquals("first", userMapper.getUserUsingUid(1002).getPassword());
+  }
+
   /** Test case: tests the deleteUser(long) method. Test data: an existing user unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteUserExists() {

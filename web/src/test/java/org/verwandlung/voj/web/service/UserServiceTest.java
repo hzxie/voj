@@ -301,6 +301,56 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
+  /**
+   * Test case: the account operations of a user write only what they change. Test data: user 1002
+   * loaded at the start of a request; meanwhile an administrator bans the user and another session
+   * changes the password; then the request changes the preferred language, the profile (with a new
+   * email address) and the password with the stale object. Expected: the ban stays, the language,
+   * email and password are those the request set, and the password change of the other session is
+   * overwritten only by the password change (not by the language or profile change).
+   */
+  @Test
+  public void testAccountOperationsDoNotRevertConcurrentChanges() {
+    User staleUser = userService.getUserUsingUid(1002);
+    userService.banUser(1002);
+    String otherSessionPassword = "{bcrypt}changed-by-another-session";
+    userMapper.updatePassword(1002, otherSessionPassword);
+
+    userService.changePreferLanguage(staleUser, "text/x-java");
+    userService.updateProfile(
+        staleUser, PLAINTEXT_PASSWORD, "changed-1002@example.com", "", "", "", "{}", "");
+    User storedUser = userService.getUserUsingUid(1002);
+    Assertions.assertEquals("forbidden", storedUser.getUserGroup().getUserGroupSlug());
+    Assertions.assertEquals(otherSessionPassword, storedUser.getPassword());
+    Assertions.assertEquals("text/x-java", storedUser.getPreferLanguage().getLanguageSlug());
+    Assertions.assertEquals("changed-1002@example.com", storedUser.getEmail());
+
+    Assertions.assertTrue(
+        userService
+            .changePassword(staleUser, PLAINTEXT_PASSWORD, "new-password", "new-password")
+            .get("isSuccessful"));
+    storedUser = userService.getUserUsingUid(1002);
+    Assertions.assertEquals("forbidden", storedUser.getUserGroup().getUserGroupSlug());
+    Assertions.assertEquals("changed-1002@example.com", storedUser.getEmail());
+    Assertions.assertTrue(passwordEncoder.matches("new-password", storedUser.getPassword()));
+  }
+
+  /**
+   * Test case: tests the isAllowedToLogin(...) method with a legacy MD5 password. Test data: user
+   * 1000, whose password is a bare MD5 digest. Expected: the login succeeds and the password is
+   * re-encoded with bcrypt, without touching the rest of the account.
+   */
+  @Test
+  public void testLoginUpgradesALegacyPasswordOnly() {
+    userMapper.updatePreferLanguage(1000, 3);
+    Assertions.assertTrue(
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD).get("isSuccessful"));
+    User storedUser = userService.getUserUsingUid(1000);
+    Assertions.assertTrue(storedUser.getPassword().startsWith("{bcrypt}"));
+    Assertions.assertTrue(passwordEncoder.matches(PLAINTEXT_PASSWORD, storedUser.getPassword()));
+    Assertions.assertEquals(3, storedUser.getPreferLanguage().getLanguageId());
+  }
+
   /** Test case: tests the changePassword(...) method. Test data: the old password is left empty. Expected: the change fails as the old password is not correct. */
   @Test
   public void testChangePasswordWithEmptyOldPassword() {
@@ -872,6 +922,10 @@ public class UserServiceTest {
 
   /** The Mapper used to construct unassociated user data within the test transaction. */
   @Autowired private UserMapper userMapper;
+
+  /** The autowired PasswordEncoder, used to check the stored password hashes. */
+  @Autowired
+  private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   /** The SubmissionMapper object, used to check that submissions cascade. */
   @Autowired private SubmissionMapper submissionMapper;

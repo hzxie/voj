@@ -111,8 +111,7 @@ public class UserService {
     UserGroup forbidden = userGroupMapper.getUserGroupUsingSlug("forbidden");
     boolean isSuccessful = user != null && forbidden != null;
     if (isSuccessful) {
-      user.setUserGroup(forbidden);
-      userMapper.updateUser(user);
+      userMapper.updateUserGroup(userId, forbidden.getUserGroupId());
     }
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -284,9 +283,14 @@ public class UserService {
    * @param rawPassword - the plain-text password the user just authenticated with
    */
   private void upgradePasswordEncodingIfNeeded(User user, String rawPassword) {
-    if (passwordEncoder.upgradeEncoding(user.getPassword())) {
-      user.setPassword(passwordEncoder.encode(rawPassword));
-      userMapper.updateUser(user);
+    String oldPassword = user.getPassword();
+    if (passwordEncoder.upgradeEncoding(oldPassword)) {
+      // Only the password, and only while it is still the one that matched: a password changed
+      // (or a user banned) by another request since this one loaded the user must not be reverted.
+      String newPassword = passwordEncoder.encode(rawPassword);
+      if (userMapper.updatePasswordIfUnchanged(user.getUid(), oldPassword, newPassword) > 0) {
+        user.setPassword(newPassword);
+      }
     }
   }
 
@@ -732,8 +736,7 @@ public class UserService {
     if (result.get("isSuccessful")) {
       emailValidationMapper.deleteEmailValidation(email);
 
-      user.setPassword(passwordEncoder.encode(newPassword));
-      userMapper.updateUser(user);
+      userMapper.updatePassword(user.getUid(), passwordEncoder.encode(newPassword));
       userMapper.updateEmailVerified(user.getUid(), true);
     }
     return result;
@@ -778,7 +781,7 @@ public class UserService {
 
     if (preferLanguage != null) {
       user.setPreferLanguage(preferLanguage);
-      userMapper.updateUser(user);
+      userMapper.updatePreferLanguage(user.getUid(), preferLanguage.getLanguageId());
     }
     result.put("isSuccessful", preferLanguage != null);
     return result;
@@ -800,7 +803,7 @@ public class UserService {
 
     if (result.get("isSuccessful")) {
       user.setPassword(passwordEncoder.encode(newPassword));
-      userMapper.updateUser(user);
+      userMapper.updatePassword(user.getUid(), user.getPassword());
     }
     return result;
   }
@@ -869,7 +872,7 @@ public class UserService {
 
     if (result.get("isSuccessful")) {
       boolean isEmailChanged = !email.equals(user.getEmail());
-      changeEmailAndUpdateUser(user, email);
+      changeEmail(user, email);
 
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "location", location);
@@ -974,8 +977,9 @@ public class UserService {
   }
 
   /**
-   * Sets the user's email address and persists the user, invalidating the pending email-validation
-   * tokens of the previous and of the new address.
+   * Sets and stores the user's email address (and nothing else of the user), invalidating the
+   * pending email-validation tokens of the previous and of the new address. Nothing happens when
+   * the address is unchanged.
    *
    * <p>A token mailed to the old address must not stay usable: whoever controls the old address
    * could otherwise reset the account's password (or another account that takes the address over
@@ -987,15 +991,18 @@ public class UserService {
    * @param user - the user to update
    * @param email - the (possibly unchanged) new email address
    */
-  private void changeEmailAndUpdateUser(User user, String email) {
+  private void changeEmail(User user, String email) {
     String oldEmail = user.getEmail();
-    if (oldEmail != null && !oldEmail.equals(email)) {
-      Date now = new Date();
-      emailValidationMapper.expireEmailValidation(oldEmail, DigestUtils.getGuid(), now);
-      emailValidationMapper.expireEmailValidation(email, DigestUtils.getGuid(), now);
+    if (email.equals(oldEmail)) {
+      return;
     }
+    Date now = new Date();
+    if (oldEmail != null) {
+      emailValidationMapper.expireEmailValidation(oldEmail, DigestUtils.getGuid(), now);
+    }
+    emailValidationMapper.expireEmailValidation(email, DigestUtils.getGuid(), now);
     user.setEmail(email);
-    userMapper.updateUser(user);
+    userMapper.updateEmail(user.getUid(), email);
   }
 
   /**
@@ -1262,7 +1269,9 @@ public class UserService {
     user.setUserGroup(userGroup);
     user.setPreferLanguage(preferLanguage);
     boolean isEmailChanged = !email.equals(user.getEmail());
-    changeEmailAndUpdateUser(user, email);
+    changeEmail(user, email);
+    // The administrator edits every column of the user, so the whole row is written.
+    userMapper.updateUser(user);
     updateUserMeta(user, "displayName", displayName);
     updateUserMeta(user, "aboutMe", aboutMe);
 

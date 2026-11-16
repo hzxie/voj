@@ -116,11 +116,64 @@ public interface UserMapper {
   int createUser(User user);
 
   /**
-   * Updates a user object.
+   * Updates every column of a user (username, password, email, user group and preferred language).
+   * Only for the administrator's user editor, which edits all of them: an operation that changes
+   * one of them uses its own update, so that it cannot revert what another request changed in the
+   * meantime (e.g. a ban or a password change).
    *
    * @param user - the user object whose information is to be updated
    */
   int updateUser(User user);
+
+  /**
+   * Updates the password (hash) of a user.
+   *
+   * @param uid - the unique identifier of the user
+   * @param password - the new password hash
+   * @return the number of rows updated
+   */
+  int updatePassword(@Param("uid") long uid, @Param("password") String password);
+
+  /**
+   * Updates the password (hash) of a user only while it is still a given one, i.e. unless another
+   * request changed it in the meantime.
+   *
+   * @param uid - the unique identifier of the user
+   * @param oldPassword - the password hash the user is expected to have
+   * @param newPassword - the new password hash
+   * @return the number of rows updated (0 when the password was changed in the meantime)
+   */
+  int updatePasswordIfUnchanged(
+      @Param("uid") long uid,
+      @Param("oldPassword") String oldPassword,
+      @Param("newPassword") String newPassword);
+
+  /**
+   * Updates the email address of a user.
+   *
+   * @param uid - the unique identifier of the user
+   * @param email - the new email address
+   * @return the number of rows updated
+   */
+  int updateEmail(@Param("uid") long uid, @Param("email") String email);
+
+  /**
+   * Updates the user group of a user.
+   *
+   * @param uid - the unique identifier of the user
+   * @param userGroupId - the unique identifier of the new user group
+   * @return the number of rows updated
+   */
+  int updateUserGroup(@Param("uid") long uid, @Param("userGroupId") int userGroupId);
+
+  /**
+   * Updates the preferred programming language of a user.
+   *
+   * @param uid - the unique identifier of the user
+   * @param languageId - the unique identifier of the language
+   * @return the number of rows updated
+   */
+  int updatePreferLanguage(@Param("uid") long uid, @Param("languageId") int languageId);
 
   /**
    * Updates the email-verified flag of a user.
