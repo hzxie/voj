@@ -24,7 +24,9 @@ import jakarta.jms.MessageListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionException;
 
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.SubmissionService.JudgingTaskFailure;
@@ -43,7 +45,8 @@ import org.verwandlung.voj.web.service.SubmissionService.JudgingTaskFailure;
  * </ul>
  *
  * <p>Rather than leaving such a submission pending forever, it is marked as a system error with a
- * judge log that says which of the two happened.
+ * judge log that says which of the two happened. If the database cannot be reached for that, the
+ * task is left on the dead-letter queue and taken again later (see {@link #onMessage}).
  *
  * @author Haozhe Xie
  */
@@ -52,9 +55,20 @@ public class DeadLetterSubmissionTaskReceiver implements MessageListener {
   /** The message property in which ActiveMQ records why it dead-lettered a message. */
   static final String DLQ_DELIVERY_FAILURE_CAUSE = "dlqDeliveryFailureCause";
 
-  /* (non-Javadoc)
-   * @see jakarta.jms.MessageListener#onMessage(jakarta.jms.Message)
+  /**
+   * Finalizes the submission of a dead-lettered judging task.
+   *
+   * <p>A failure to reach the database (which may well be the outage that got the task
+   * dead-lettered) is thrown on: the listener container then rolls the task back, and the broker
+   * client delivers it again after a growing delay, as often as it takes (see JmsConfig). Any other
+   * failure would fail every delivery in the same way, so it is only logged, and the task dropped,
+   * rather than holding up the dead-lettered tasks behind it forever.
+   *
+   * @param message - the dead-lettered message
+   * @throws DataAccessException if the database cannot be reached
+   * @throws TransactionException if no transaction can be started on the database
    */
+  @Override
   public void onMessage(Message message) {
     if (!(message instanceof MapMessage)) {
       return;
@@ -91,6 +105,11 @@ public class DeadLetterSubmissionTaskReceiver implements MessageListener {
       }
     } catch (JMSException ex) {
       LOGGER.catching(ex);
+    } catch (DataAccessException | TransactionException ex) {
+      LOGGER.warn("Could not finalize a dead-lettered judging task; it will be retried.", ex);
+      throw ex;
+    } catch (RuntimeException ex) {
+      LOGGER.error("Dropped a dead-lettered judging task that could not be finalized.", ex);
     }
   }
 

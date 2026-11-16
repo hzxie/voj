@@ -28,7 +28,9 @@ import jakarta.jms.Message;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.SubmissionService.JudgingTaskFailure;
@@ -162,6 +164,41 @@ public class DeadLetterSubmissionTaskReceiverTest {
             org.mockito.ArgumentMatchers.anyLong(),
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.any());
+  }
+
+  /**
+   * Test case: tests onMessage(Message). Test data: the database cannot be reached while the
+   * submission is finalized (no transaction can be started, or the update fails). Expected: the
+   * exception is thrown on, so that the listener container rolls the task back and it is delivered
+   * again.
+   */
+  @Test
+  public void testOnMessageThrowsWhenTheDatabaseCannotBeReached() throws JMSException {
+    MapMessage message = deadLetteredTask(1000L, null);
+    when(submissionService.markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.UNKNOWN))
+        .thenThrow(new CannotCreateTransactionException("database down"))
+        .thenThrow(new DataAccessResourceFailureException("database down"));
+
+    Assertions.assertThrows(
+        CannotCreateTransactionException.class, () -> receiver.onMessage(message));
+    Assertions.assertThrows(
+        DataAccessResourceFailureException.class, () -> receiver.onMessage(message));
+  }
+
+  /**
+   * Test case: tests onMessage(Message). Test data: finalizing the submission fails with an error
+   * that is not about reaching the database. Expected: the error is not thrown on (the task would
+   * fail on every delivery and hold up the tasks behind it).
+   */
+  @Test
+  public void testOnMessageDropsTaskOnOtherErrors() throws JMSException {
+    MapMessage message = deadLetteredTask(1000L, null);
+    when(submissionService.markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.UNKNOWN))
+        .thenThrow(new IllegalStateException("bug"));
+
+    receiver.onMessage(message);
+
+    verify(submissionService).markSubmissionUnjudgeable(1000L, null, JudgingTaskFailure.UNKNOWN);
   }
 
   /** The mocked SubmissionService the receiver finalizes submissions through. */
