@@ -420,7 +420,7 @@ public class DiscussionController {
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
-              "User: {%s} voted discussion thread #%d at %s",
+              "User: {%s} edited discussion thread #%d at %s",
               new Object[] {
                 LogSanitizer.forLog(currentUser), discussionThreadId, LogSanitizer.forLog(ipAddress)
               }));
@@ -460,6 +460,7 @@ public class DiscussionController {
   /**
    * Handles the request of a user editing a discussion reply.
    *
+   * @param discussionThreadId - the unique identifier of the thread the reply belongs to
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param replyContent - the content of the discussion reply
    * @param request - the HttpServletRequest object
@@ -475,7 +476,8 @@ public class DiscussionController {
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
-        discussionService.editDiscussionReply(discussionReplyId, currentUser, replyContent);
+        discussionService.editDiscussionReply(
+            discussionThreadId, discussionReplyId, currentUser, replyContent);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -490,6 +492,7 @@ public class DiscussionController {
   /**
    * Handles the request of a user deleting a discussion reply.
    *
+   * @param discussionThreadId - the unique identifier of the thread the reply belongs to
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion reply deletion
@@ -503,7 +506,7 @@ public class DiscussionController {
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
-        discussionService.deleteDiscussionReply(discussionReplyId, currentUser);
+        discussionService.deleteDiscussionReply(discussionThreadId, discussionReplyId, currentUser);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(

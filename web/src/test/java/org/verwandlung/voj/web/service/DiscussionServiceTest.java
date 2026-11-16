@@ -505,13 +505,14 @@ public class DiscussionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createDiscussionReply(...) method. Test data: the discussion thread is locked. Expected: creation fails. */
+  /** Test case: tests the createDiscussionReply(...) method. Test data: a regular user replies to a locked thread. Expected: creation fails. */
   @Test
   public void testCreateDiscussionReplyOnLockedThread() {
     // Lock thread #1 (topic 1) through the moderation entry point, then attempt to reply.
     Assertions.assertTrue(discussionService.saveThread(1, "Thread #1", 1, true, false, true));
     Map<String, Object> result =
-        discussionService.createDiscussionReply(1, adminUser(), "A reply on a locked thread.");
+        discussionService.createDiscussionReply(
+            1, userMapper.getUserUsingUid(1001), "A reply on a locked thread.");
     Assertions.assertTrue((Boolean) result.get("isDiscussionThreadLocked"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
     Assertions.assertFalse(result.containsKey("discussionReply"));
@@ -533,14 +534,14 @@ public class DiscussionServiceTest {
   public void testEditDiscussionReplyByAdministrator() {
     // Reply 1 was created by user 1001; the administrator (user 1000) has permission to edit it.
     Map<String, Boolean> result =
-        discussionService.editDiscussionReply(1, adminUser(), "Edited reply content.");
+        discussionService.editDiscussionReply(1, 1, adminUser(), "Edited reply content.");
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
   /** Test case: tests the deleteDiscussionReply(...) method. Test data: deleted by an administrator. Expected: deletion succeeds. */
   @Test
   public void testDeleteDiscussionReplyByAdministrator() {
-    Map<String, Boolean> result = discussionService.deleteDiscussionReply(3, adminUser());
+    Map<String, Boolean> result = discussionService.deleteDiscussionReply(2, 3, adminUser());
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertNull(discussionService.getDiscussionReplyUsingReplyId(3));
   }
@@ -550,7 +551,7 @@ public class DiscussionServiceTest {
   public void testDeleteDiscussionReplyByUnauthorizedUser() {
     // Reply 1 was created by user 1001; regular user 1002 has no permission to delete it.
     Map<String, Boolean> result =
-        discussionService.deleteDiscussionReply(1, userMapper.getUserUsingUid(1002));
+        discussionService.deleteDiscussionReply(1, 1, userMapper.getUserUsingUid(1002));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
@@ -563,13 +564,13 @@ public class DiscussionServiceTest {
   @Test
   public void testDeleteOpeningPostIsRefused() {
     for (User editor : List.of(userMapper.getUserUsingUid(1002), adminUser())) {
-      Map<String, Boolean> result = discussionService.deleteDiscussionReply(2, editor);
+      Map<String, Boolean> result = discussionService.deleteDiscussionReply(2, 2, editor);
       Assertions.assertTrue(result.get("isFirstReply"));
       Assertions.assertFalse(result.get("isSuccessful"));
       Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(2));
     }
     Assertions.assertFalse(
-        discussionService.deleteDiscussionReply(3, adminUser()).get("isFirstReply"));
+        discussionService.deleteDiscussionReply(2, 3, adminUser()).get("isFirstReply"));
   }
 
   /**
@@ -582,20 +583,20 @@ public class DiscussionServiceTest {
     Assertions.assertTrue(discussionService.saveThread(2, "Thread #2", 2, true, false, true));
     User author = userMapper.getUserUsingUid(1001);
 
-    Map<String, Boolean> result = discussionService.editDiscussionReply(3, author, "Changed.");
+    Map<String, Boolean> result = discussionService.editDiscussionReply(2, 3, author, "Changed.");
     Assertions.assertTrue(result.get("isDiscussionThreadLocked"));
     Assertions.assertFalse(result.get("isSuccessful"));
-    result = discussionService.deleteDiscussionReply(3, author);
+    result = discussionService.deleteDiscussionReply(2, 3, author);
     Assertions.assertTrue(result.get("isDiscussionThreadLocked"));
     Assertions.assertFalse(result.get("isSuccessful"));
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(3));
 
     Assertions.assertTrue(
-        discussionService.editDiscussionReply(3, adminUser(), "Moderated.").get("isSuccessful"));
+        discussionService.editDiscussionReply(2, 3, adminUser(), "Moderated.").get("isSuccessful"));
 
     Assertions.assertTrue(discussionService.saveThread(2, "Thread #2", 2, true, false, false));
     Assertions.assertTrue(
-        discussionService.editDiscussionReply(3, author, "Changed.").get("isSuccessful"));
+        discussionService.editDiscussionReply(2, 3, author, "Changed.").get("isSuccessful"));
   }
 
   /**
@@ -631,17 +632,56 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /** Test case: tests editDiscussionReply(...) and deleteDiscussionReply(...). Test data: reply #1 (thread #1) addressed through thread #2, by an administrator. Expected: both fail and the reply is unchanged. */
+  @Test
+  public void testReplyMustBelongToTheGivenThread() {
+    Assertions.assertFalse(
+        discussionService.editDiscussionReply(2, 1, adminUser(), "Moved.").get("isSuccessful"));
+    Assertions.assertFalse(discussionService.deleteDiscussionReply(2, 1, adminUser()).get("isSuccessful"));
+    Assertions.assertEquals(
+        "Reply content for thread #1",
+        discussionService.getDiscussionReplyUsingReplyId(1).getDiscussionReplyContent());
+  }
+
+  /** Test case: tests createDiscussionReply(...). Test data: an administrator replies to a locked thread. Expected: the reply is created, as administrators may also edit and delete replies of locked threads. */
+  @Test
+  public void testAdministratorsMayReplyToLockedThreads() {
+    Assertions.assertTrue(discussionService.saveThread(2, "Thread #2", 2, true, false, true));
+    Map<String, Object> result =
+        discussionService.createDiscussionReply(2, adminUser(), "Moderator note.");
+    Assertions.assertFalse((Boolean) result.get("isDiscussionThreadLocked"));
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests createDiscussionReply(...), editDiscussionReply(...) and createDiscussionThread(...). Test data: content larger than a TEXT column (65,535 bytes). Expected: rejected with the length flag instead of a database error. */
+  @Test
+  public void testOversizedReplyContentIsRejected() {
+    String content = "\u4e2d".repeat(30000);
+    Map<String, Object> result = discussionService.createDiscussionReply(1, adminUser(), content);
+    Assertions.assertFalse((Boolean) result.get("isReplyContentLegal"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+
+    Map<String, Boolean> edit = discussionService.editDiscussionReply(1, 1, adminUser(), content);
+    Assertions.assertFalse(edit.get("isReplyContentLegal"));
+    Assertions.assertFalse(edit.get("isSuccessful"));
+
+    result =
+        discussionService.createDiscussionThread(adminUser(), "qa", -1, "Title", content);
+    Assertions.assertFalse((Boolean) result.get("isThreadContentLegal"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
   /** Test case: tests the editDiscussionReply(...) method. Test data: an anonymous (null) editor. Expected: editing is denied cleanly, without a NullPointerException. */
   @Test
   public void testEditDiscussionReplyByAnonymousUser() {
-    Map<String, Boolean> result = discussionService.editDiscussionReply(1, null, "Edited content.");
+    Map<String, Boolean> result = discussionService.editDiscussionReply(1, 1, null, "Edited content.");
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
   /** Test case: tests the deleteDiscussionReply(...) method. Test data: an anonymous (null) editor. Expected: deletion is denied cleanly, without a NullPointerException. */
   @Test
   public void testDeleteDiscussionReplyByAnonymousUser() {
-    Map<String, Boolean> result = discussionService.deleteDiscussionReply(1, null);
+    Map<String, Boolean> result = discussionService.deleteDiscussionReply(1, 1, null);
     Assertions.assertFalse(result.get("isSuccessful"));
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
   }
@@ -792,7 +832,7 @@ public class DiscussionServiceTest {
     Map<String, Object> result = discussionService.createDiscussionReply(1, adminUser(), " \n ");
     Assertions.assertTrue((Boolean) result.get("isReplyContentEmpty"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
-    Assertions.assertFalse(discussionService.editDiscussionReply(1, adminUser(), "  ").get("isSuccessful"));
+    Assertions.assertFalse(discussionService.editDiscussionReply(1, 1, adminUser(), "  ").get("isSuccessful"));
   }
 
   /** Test case: tests the createDiscussionTopic(...) and updateDiscussionTopic(...) methods. Test data: a parent topic (topic 1, itself top-level). Expected: the new topic's parent is that topic, not the parent's own parent. */

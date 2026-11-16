@@ -31,6 +31,7 @@ import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -883,6 +884,7 @@ public class DiscussionService {
     result.put("isThreadTitleEmpty", isBlank(dt.getDiscussionThreadTitle()));
     result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
     result.put("isThreadContentEmpty", isBlank(discussionThreadContent));
+    result.put("isThreadContentLegal", isReplyContentLegal(discussionThreadContent));
     result.put("isPostDelayElapsed", isPostDelayElapsed(dt.getDiscussionThreadCreator()));
 
     boolean isSuccessful =
@@ -891,6 +893,7 @@ public class DiscussionService {
             && !result.get("isThreadTitleEmpty")
             && result.get("isThreadTitleLegal")
             && !result.get("isThreadContentEmpty")
+            && result.get("isThreadContentLegal")
             && result.get("isPostDelayElapsed");
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -1001,11 +1004,14 @@ public class DiscussionService {
     result.put(
         "isDiscussionThreadExists",
         discussionThread != null && isDiscussionThreadViewable(discussionThread, replyCreator));
-    result.put("isDiscussionThreadLocked", discussionThread != null && discussionThread.isLocked());
+    result.put(
+        "isDiscussionThreadLocked",
+        discussionThread != null && isLockedFor(discussionThread, replyCreator));
     // A banned (forbidden) user never gets here: CurrentUserRefreshFilter logs them out, so they
     // post as nobody.
     result.put("isReplyCreatorExists", replyCreator != null);
     result.put("isReplyContentEmpty", isBlank(replyContent));
+    result.put("isReplyContentLegal", isReplyContentLegal(replyContent));
     result.put("isPostDelayElapsed", isPostDelayElapsed(replyCreator));
 
     boolean isSuccessful =
@@ -1013,6 +1019,7 @@ public class DiscussionService {
             && !result.get("isDiscussionThreadLocked")
             && result.get("isReplyCreatorExists")
             && !result.get("isReplyContentEmpty")
+            && result.get("isReplyContentLegal")
             && result.get("isPostDelayElapsed");
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -1022,6 +1029,7 @@ public class DiscussionService {
    * Edits a discussion reply. Editing condition: the current user is an administrator, or the reply
    * was created by the user themselves and its thread is not locked.
    *
+   * @param discussionThreadId - the unique identifier of the thread the reply must belong to
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
    * @param discussionReplyContent - the updated content of the discussion reply
@@ -1029,15 +1037,19 @@ public class DiscussionService {
    *     isDiscussionThreadLocked} and {@code isSuccessful})
    */
   public Map<String, Boolean> editDiscussionReply(
-      long discussionReplyId, User currentEditor, String discussionReplyContent) {
+      long discussionThreadId,
+      long discussionReplyId,
+      User currentEditor,
+      String discussionReplyContent) {
     Map<String, Boolean> result = new HashMap<>(4, 1);
     boolean isSuccessful = false;
     boolean isLocked = false;
-    DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+    DiscussionReply dr = getDiscussionReplyOfThread(discussionThreadId, discussionReplyId);
 
     String filteredContent = HtmlTextFilter.filter(discussionReplyContent);
+    boolean isContentLegal = !isBlank(filteredContent) && isReplyContentLegal(filteredContent);
 
-    if (dr != null && !isBlank(filteredContent)) {
+    if (dr != null && isContentLegal) {
       isLocked = isThreadOfReplyLockedFor(dr, currentEditor);
       if (!isLocked && canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
         dr.setDiscussionReplyContent(filteredContent);
@@ -1046,6 +1058,7 @@ public class DiscussionService {
       }
     }
     result.put("isDiscussionThreadLocked", isLocked);
+    result.put("isReplyContentLegal", isContentLegal);
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -1056,17 +1069,19 @@ public class DiscussionService {
    * first reply) of a thread is never deleted on its own, since the next reply would then take its
    * place: whoever may do so deletes the whole thread instead.
    *
+   * @param discussionThreadId - the unique identifier of the thread the reply must belong to
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
    * @return a Map object containing the discussion reply deletion result ({@code isFirstReply},
    *     {@code isDiscussionThreadLocked} and {@code isSuccessful})
    */
-  public Map<String, Boolean> deleteDiscussionReply(long discussionReplyId, User currentEditor) {
+  public Map<String, Boolean> deleteDiscussionReply(
+      long discussionThreadId, long discussionReplyId, User currentEditor) {
     Map<String, Boolean> result = new HashMap<>(4, 1);
     boolean isSuccessful = false;
     boolean isFirstReply = false;
     boolean isLocked = false;
-    DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+    DiscussionReply dr = getDiscussionReplyOfThread(discussionThreadId, discussionReplyId);
 
     if (dr != null) {
       isFirstReply =
@@ -1085,6 +1100,33 @@ public class DiscussionService {
     result.put("isSuccessful", isSuccessful);
     return result;
   }
+
+  /**
+   * Gets a discussion reply, provided it belongs to the given thread.
+   *
+   * @param discussionThreadId - the unique identifier of the thread the reply must belong to
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @return the discussion reply, or null if it does not exist or belongs to another thread
+   */
+  private DiscussionReply getDiscussionReplyOfThread(
+      long discussionThreadId, long discussionReplyId) {
+    DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+    return dr != null && dr.getDiscussionThreadId() == discussionThreadId ? dr : null;
+  }
+
+  /**
+   * Checks whether the content of a reply (or of a thread's opening post) fits its column: a MySQL
+   * TEXT column holds at most {@value #MAX_REPLY_CONTENT_BYTES} bytes.
+   *
+   * @param content - the filtered content
+   * @return whether the content fits
+   */
+  private static boolean isReplyContentLegal(String content) {
+    return content.getBytes(StandardCharsets.UTF_8).length <= MAX_REPLY_CONTENT_BYTES;
+  }
+
+  /** The maximum size (in UTF-8 bytes) of the content of a reply. */
+  private static final int MAX_REPLY_CONTENT_BYTES = 65535;
 
   /**
    * Gets the unique identifier of the opening post of a thread, i.e. its first reply, which cannot

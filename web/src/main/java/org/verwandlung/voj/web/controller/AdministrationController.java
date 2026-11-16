@@ -2190,8 +2190,14 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteReplyAction(
       @RequestParam(value = "replyId") long replyId, HttpServletRequest request) {
-    User currentUser = HttpSessionParser.getCurrentUser();
-    return discussionService.deleteDiscussionReply(replyId, currentUser);
+    DiscussionReply reply = discussionService.getDiscussionReplyUsingReplyId(replyId);
+    if (reply == null) {
+      Map<String, Boolean> result = new HashMap<>(2, 1);
+      result.put("isSuccessful", false);
+      return result;
+    }
+    return discussionService.deleteDiscussionReply(
+        reply.getDiscussionThreadId(), replyId, HttpSessionParser.getCurrentUser());
   }
 
   /**

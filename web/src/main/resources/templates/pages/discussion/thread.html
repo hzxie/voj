@@ -50,7 +50,7 @@
 
                     <!-- REPLY BOX -->
                     <div class="vw-alert vw-alert-warning" th:if="${discussionThread.locked}" th:text="#{voj.discussion.thread.thread-locked}">This thread is locked and no longer accepts new replies.</div>
-                    <div id="editor" class="vw-replybox" th:if="${isLogin and !discussionThread.locked}">
+                    <div id="editor" class="vw-replybox" th:if="${isLogin and (!discussionThread.locked or myProfile?.userGroup?.userGroupSlug == 'administrators')}">
                         <div class="vw-eyebrow vw-side-label vw-side-label-accent" th:text="'// ' + #{voj.discussion.thread.leave-a-comment}">// YOUR REPLY</div>
                         <div class="vw-alert vw-alert-error alert-error hide" role="alert"></div>
                         <div class="markdown-editor">
@@ -289,7 +289,8 @@
                         editor.addClass('hide');
                         $('.vw-post-body', post).html(renderMarkdown(content)).removeClass('hide');
                         typesetMath($('.vw-post-body', post)[0]);
-                    } else { vojAlert([[#{voj.discussion.thread.failed-to-update}]]); }
+                    } else if ( result['isReplyContentLegal'] === false ) { vojAlert([[#{voj.discussion.thread.reply-too-long}]]); }
+                    else { vojAlert([[#{voj.discussion.thread.failed-to-update}]]); }
                     $('.vw-reply-save', post).removeAttr('disabled').html([[#{voj.discussion.thread.update-reply}]]);
                 }
             });
@@ -342,6 +343,7 @@
                 else if ( result['isDiscussionThreadLocked'] ) { msg += [[#{voj.discussion.thread.thread-locked}]] + '<br>'; }
                 if ( !result['isReplyCreatorExists'] ) { msg += [[#{voj.discussion.thread.user-not-login}]] + '<br>'; }
                 if ( result['isReplyContentEmpty'] ) { msg += [[#{voj.discussion.thread.empty-reply}]] + '<br>'; }
+                else if ( result['isReplyContentLegal'] === false ) { msg += [[#{voj.discussion.thread.reply-too-long}]] + '<br>'; }
                 if ( result['isPostDelayElapsed'] === false ) { msg += [[#{voj.discussion.thread.post-delay-active}]].replace('{0}', [[${postDelayMinutes}]]) + '<br>'; }
                 $('.alert-error', '#editor').html(msg).removeClass('hide');
             }
