@@ -118,7 +118,7 @@ script from [`sql/upgrades/`](sql/upgrades/); see
 | Database | [MySQL](https://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+ |
 | Message queue | [ActiveMQ](https://activemq.apache.org) 6.0+ (Jakarta JMS) |
 | Judger (Linux build) | GCC/g++, make, libseccomp |
-| Judger OS | Linux 5.13+ with Landlock enabled, or Windows |
+| Judger OS | Linux 5.13+ with Landlock enabled (6.2+ for a judger not running as root), or Windows |
 
 ## Security model
 

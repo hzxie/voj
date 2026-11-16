@@ -107,7 +107,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   static data alone (`static int a[1 << 30];`) exceeds the backstop cannot even
   be loaded; it is not run and is Memory Limit Exceeded, rather than the
   `SIGSEGV` the kernel would kill it with while loading it. A run cannot create
-  memory files (`memfd_create`), whose contents would count against no limit.
+  memory files (`memfd_create`) or shared anonymous mappings, whose contents
+  would count against no limit once dropped from its resident set, nor push its
+  pages out of that set (`madvise` with `MADV_PAGEOUT` or `MADV_COLD`,
+  `process_madvise`) to keep its peak low on a host with swap.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
@@ -131,8 +134,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   `/dev/null` stays writable): not in `/tmp`, `/var/tmp`, `/dev/shm` or anywhere
   else the sandbox user could otherwise write. Compilers find their temporary
   directory and caches there through `TMPDIR` and `HOME`. System V shared
-  memory, semaphores and message queues and POSIX message queues are refused
-  (`EPERM`) by the seccomp filter. Landlock also denies a submission `ptrace`
+  memory, semaphores and message queues, POSIX message queues and the kernel
+  keyrings (`add_key`, `request_key`, `keyctl`: a user's keyrings belong to the
+  user, not to a process, so they outlive every run) are refused (`EPERM`) by
+  the seccomp filter. Landlock also denies a submission `ptrace`
   access (including `/proc/<pid>/fd`, `/proc/<pid>/mem`, ...) to any process
   outside its own sandbox, such as a concurrent run on another judger, and from
   Linux 6.12 (Landlock ABI 6) on keeps it from signalling such processes or
@@ -169,7 +174,7 @@ The judger manages two directories from `voj.properties`:
 | Property | Default | Purpose | Permissions |
 | --- | --- | --- | --- |
 | `judger.workDir` | `/tmp` | Parent of the per-submission work directories | The judger (root) must be able to create subdirectories here |
-| `judger.checkpointDir` | `/tmp/voj-testpoints` | Reference inputs and expected outputs | Kept readable only by the judger |
+| `judger.checkpointDir` | `/tmp/voj-testpoints` | Reference inputs and expected outputs | Must belong to the judger and not be writable by its group or others (the judger refuses to start otherwise, and creates a missing one with mode `0700`) |
 
 How it behaves at runtime:
 
@@ -203,6 +208,15 @@ without extra capabilities. It needs:
   (`landlock` is then listed in `/sys/kernel/security/lsm`); otherwise add it to
   the `lsm=` kernel parameter. Linux 6.12 or later adds the signal and abstract
   Unix socket scoping described above.
+- **Linux 6.2 or later (Landlock ABI 3) when the judger does not run as root.**
+  Before that, Landlock does not confine `truncate(2)` or `open(O_TRUNC)`, and a
+  submission that runs as the judger's own user (see
+  [Running without root](#running-without-root-development-and-ci)) could empty
+  the judger's files, such as the cached expected output. On Linux 5.13 to 6.1
+  a judger that is not root therefore judges every compilation and run a system
+  error, with a log message that names the truncation. A judger running as root
+  drops privileges to `system.username`, which cannot write the judger's files,
+  so 5.13 is enough there.
 - **A seccomp profile that allows Landlock**, in a container. Docker's default
   profile allows the `landlock_*` system calls (verified with Docker 29); a
   custom or older profile that denies them, like a kernel without Landlock,
@@ -251,8 +265,9 @@ Go, Kotlin, JavaScript and Rust).
 
 ## Several judgers on one host
 
-Judgers on one host may share `judger.checkpointDir` and `judger.workDir`: each
-claims a slot of its own in them (see
+Judgers on one host may share `judger.checkpointDir` and `judger.workDir`, each
+or both: each judger claims a slot of its own in each of them, with a lock file
+there (see
 [`configuration.md`](configuration.md#directories)). Their sandboxes, though,
 must be their own:
 
@@ -297,7 +312,9 @@ configuration. See [`../docker/README.md`](../docker/README.md).
 
 When the judger is not running as root it cannot drop privileges, so submissions
 run as the same user as the judger. The seccomp filter and the Landlock rules
-still apply, but the submission can read whatever the judger's account can. This is fine for development and continuous integration but is not
+still apply (which needs Linux 6.2 or later, see
+[Kernel requirements](#kernel-requirements)), but the submission can read
+whatever the judger's account can. This is fine for development and continuous integration but is not
 isolation, so do not use it in production.
 
 ## Windows native sandbox
@@ -319,7 +336,13 @@ as soon as a limit is exceeded:
   The Job also has a hard cap on commit, the counterpart of Linux's
   `RLIMIT_DATA`: twice the limit plus max(256 MB, RAM / 32), for all of a run's
   processes together (a compilation: for each process). An allocation refused
-  by the cap is judged Memory Limit Exceeded as well.
+  by the cap is judged Memory Limit Exceeded as well. Unlike on Linux, a program
+  can lower its own working set (`SetProcessWorkingSetSize(-1, -1)`,
+  `EmptyWorkingSet`), which moves pages to the standby list or the page file
+  without freeing them; Windows offers no measure of touched memory it cannot
+  lower that does not also count the JVM's untouched heap. Such a program is
+  stopped by the cap only, so on Windows the memory limit is enforced up to
+  that cap rather than exactly.
 - **Output**: 256 MB written to standard output (the Linux runner's
   `RLIMIT_FSIZE`). Other files the program writes are not limited.
 - **Processes**: a run of the submission may not create processes (its Job
