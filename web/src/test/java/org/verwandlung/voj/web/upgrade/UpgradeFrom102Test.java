@@ -42,7 +42,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
  * contest_mode and contest_is_rated columns, none of the columns and the index of the judging queue
- * of voj_submissions, the foreign key from voj_email_validation to voj_users, problem statements
+ * of voj_submissions but the index of the judge result alone, no registry of the judgers, the
+ * foreign key from voj_email_validation to voj_users, problem statements
  * and contest notes written for HTML output (with HTML entities), the contestants' code_snippet
  * column and Kotlin's old compile command.
  *
@@ -153,11 +154,15 @@ public class UpgradeFrom102Test {
     // recorded as schema.sql creates them (or a previous test's upgrade left them).
     if (judgingQueueColumns == null) {
       judgingQueueColumns = getColumnsOfSubmissions();
+      judgerColumns = getColumns("voj_judgers");
+      judgerKeys = getKeys("voj_judgers");
     }
     jdbcTemplate.execute(
         "ALTER TABLE voj_submissions DROP KEY submission_judge_queue,"
             + " DROP COLUMN submission_queued_time, DROP COLUMN submission_judge_attempts,"
-            + " DROP COLUMN submission_claim_token, DROP COLUMN submission_lease_expiry_time");
+            + " DROP COLUMN submission_claim_token, DROP COLUMN submission_lease_expiry_time,"
+            + " ADD KEY submission_runtime_result (submission_judge_result)");
+    jdbcTemplate.execute("DROP TABLE voj_judgers");
     // The email validations as 1.0.2 created them, owned by a user.
     jdbcTemplate.execute(
         "ALTER TABLE voj_email_validation ADD CONSTRAINT voj_email_validation_ibfk_1"
@@ -314,12 +319,12 @@ public class UpgradeFrom102Test {
     runUpgrade();
     Assertions.assertEquals(judgingQueueColumns, getColumnsOfSubmissions());
     Assertions.assertEquals(
-        List.of("submission_judge_result", "submission_queued_time"),
-        jdbcTemplate.queryForList(
-            "SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()"
-                + " AND TABLE_NAME = 'voj_submissions' AND INDEX_NAME = 'submission_judge_queue'"
-                + " ORDER BY SEQ_IN_INDEX",
-            String.class));
+        List.of(
+            "submission_judge_result",
+            "submission_queued_time",
+            "language_id",
+            "submission_lease_expiry_time"),
+        getColumnsOfIndex("submission_judge_queue"));
     Assertions.assertEquals(
         0,
         jdbcTemplate.queryForObject(
@@ -343,14 +348,101 @@ public class UpgradeFrom102Test {
   }
 
   /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: the index of the
+   * judge result alone, which the foreign key to voj_judge_results may use. Expected: it is dropped
+   * (the index of the judging queue, which starts with the judge result, serves the foreign key),
+   * and the second run succeeds.
+   */
+  @Test
+  public void testDropsTheIndexOfTheJudgeResultAlone() throws SQLException {
+    Assertions.assertEquals(
+        List.of("submission_judge_result"), getColumnsOfIndex("submission_runtime_result"));
+
+    runUpgrade();
+    Assertions.assertEquals(List.of(), getColumnsOfIndex("submission_runtime_result"));
+    Assertions.assertNotNull(getDeleteRule("voj_submissions_ibfk_4"));
+    runUpgrade();
+    Assertions.assertEquals(List.of(), getColumnsOfIndex("submission_runtime_result"));
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: no registry of the
+   * judgers. Expected: voj_judgers is created as schema.sql creates it (columns, primary key and
+   * the foreign key to voj_users), and the second run keeps a judger registered since.
+   */
+  @Test
+  public void testCreatesTheRegistryOfTheJudgers() throws SQLException {
+    Assertions.assertEquals(List.of(), getColumns("voj_judgers"));
+
+    runUpgrade();
+    Assertions.assertEquals(judgerColumns, getColumns("voj_judgers"));
+    Assertions.assertEquals(judgerKeys, getKeys("voj_judgers"));
+    Assertions.assertEquals("CASCADE", getDeleteRule("voj_judgers_ibfk_1"));
+
+    jdbcTemplate.update(
+        "INSERT INTO voj_judgers (judger_instance, judger_uid, judger_language_ids)"
+            + " VALUES ('upgrade-test', 1001, '2,3')");
+    try {
+      runUpgrade();
+      Assertions.assertEquals(
+          "2,3",
+          jdbcTemplate.queryForObject(
+              "SELECT judger_language_ids FROM voj_judgers WHERE judger_uid = 1001",
+              String.class));
+    } finally {
+      jdbcTemplate.update("DELETE FROM voj_judgers WHERE judger_uid = 1001");
+    }
+  }
+
+  /**
    * Gets the columns of voj_submissions: for each, its name, position, type, nullability and
    * default.
    */
   private List<Map<String, Object>> getColumnsOfSubmissions() {
+    return getColumns("voj_submissions");
+  }
+
+  /**
+   * Gets the columns of a table: for each, its name, position, type, nullability and default.
+   *
+   * @param tableName - the name of the table
+   * @return the columns, none if there is no such table
+   */
+  private List<Map<String, Object>> getColumns(String tableName) {
     return jdbcTemplate.queryForList(
         "SELECT COLUMN_NAME, ORDINAL_POSITION, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT"
             + " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
-            + " AND TABLE_NAME = 'voj_submissions' ORDER BY ORDINAL_POSITION");
+            + " AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+        tableName);
+  }
+
+  /**
+   * Gets the keys of a table: for each of their columns, the name of the key, whether it is
+   * unique, and the column.
+   *
+   * @param tableName - the name of the table
+   * @return the columns of the keys
+   */
+  private List<Map<String, Object>> getKeys(String tableName) {
+    return jdbcTemplate.queryForList(
+        "SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME FROM information_schema.STATISTICS"
+            + " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?"
+            + " ORDER BY INDEX_NAME, SEQ_IN_INDEX",
+        tableName);
+  }
+
+  /**
+   * Gets the columns of an index of voj_submissions, in their order in it.
+   *
+   * @param indexName - the name of the index
+   * @return the columns, none if there is no such index
+   */
+  private List<String> getColumnsOfIndex(String indexName) {
+    return jdbcTemplate.queryForList(
+        "SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()"
+            + " AND TABLE_NAME = 'voj_submissions' AND INDEX_NAME = ? ORDER BY SEQ_IN_INDEX",
+        String.class,
+        indexName);
   }
 
   /** Inserts a pending submission, submitted long ago, as 1.0.2 stores it. */
@@ -503,4 +595,10 @@ public class UpgradeFrom102Test {
 
   /** The columns of voj_submissions as schema.sql creates them (see getColumnsOfSubmissions). */
   private static List<Map<String, Object>> judgingQueueColumns;
+
+  /** The columns of voj_judgers as schema.sql creates them (see getColumns). */
+  private static List<Map<String, Object>> judgerColumns;
+
+  /** The keys of voj_judgers as schema.sql creates them (see getKeys). */
+  private static List<Map<String, Object>> judgerKeys;
 }

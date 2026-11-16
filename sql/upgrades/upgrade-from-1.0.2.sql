@@ -39,19 +39,32 @@
 --    rather than from a message queue. Four columns are added:
 --    submission_queued_time, when a submission was queued for judging (on
 --    submission and on every rejudge; the judgers take the oldest first),
---    submission_judge_attempts, how many judgings have taken it since,
---    submission_claim_token, which identifies the judging that took it, and
---    submission_lease_expiry_time, until when that judging holds it. The
---    existing submissions get the time of the upgrade as their queued time
---    (only that of a pending one is read) and no judging: a pending one is
---    judged by the first judger of the new version that supports its
---    language. The index submission_judge_queue serves the judgers' search
---    for the oldest pending submission.
+--    submission_judge_attempts, how many judgings of it were interrupted
+--    since (their judger stopped, or lost the database, and their lease
+--    expired), submission_claim_token, which identifies the judging that
+--    took it, and submission_lease_expiry_time, until when that judging
+--    holds it. The existing submissions get the time of the upgrade as their
+--    queued time (only that of a pending one is read) and no judging: a
+--    pending one is judged by the first judger of the new version that
+--    supports its language. The index submission_judge_queue (judge result,
+--    queued time, language, lease) serves the judgers' search for the oldest
+--    pending submission they may take from the index alone.
+-- 9. submission_runtime_result, the index of the judge result alone, is
+--    dropped: submission_judge_queue starts with the judge result, so it
+--    serves every query (and the foreign key) that used it.
+-- 10. voj_judgers is created: every running judger (every process, by a
+--    random identifier, with its account) records there, every few seconds by
+--    the database's clock, the languages it supports, whether it takes
+--    submissions and its load. The web application shows the judgers
+--    from it (rather than from the judgers' heartbeats over the message
+--    queue), and marks as a System Error the pending submissions in a
+--    language that no judger taking submissions has supported for a while.
 --
--- Safe to run more than once. Steps 1 to 4 and 6 to 8 first check the
--- information schema and only change what is still in the old state (MySQL
--- commits DDL implicitly, so a transaction could not make them atomic; an
--- interrupted run is completed by running the script again). Step 5 runs in
+-- Safe to run more than once. Steps 1 to 4, 6 and 8 to 10 first check the
+-- information schema (or create a table only if it is missing) and only change
+-- what is still in the old state (MySQL commits DDL implicitly, so a
+-- transaction could not make them atomic; an interrupted run is completed by
+-- running the script again). Step 7 changes the old command only. Step 5 runs in
 -- one transaction with the recording of the option upgradeFrom102Applied in
 -- voj_options, and only if that option was not recorded yet, so that text
 -- typed after the upgrade (e.g. a statement that means "&amp;") is never
@@ -212,7 +225,34 @@ SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
   AND COLUMN_NAME = 'submission_queued_time');
 SET @voj_sql = IF(@voj_has_column = 0,
-  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `submission_submit_time`, ADD COLUMN `submission_judge_attempts` int(4) NOT NULL DEFAULT 0 AFTER `submission_execute_time`, ADD COLUMN `submission_claim_token` bigint(20) DEFAULT NULL AFTER `submission_judge_attempts`, ADD COLUMN `submission_lease_expiry_time` timestamp NULL DEFAULT NULL AFTER `submission_claim_token`, ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`)', 'DO 0');
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `submission_submit_time`, ADD COLUMN `submission_judge_attempts` int(4) NOT NULL DEFAULT 0 AFTER `submission_execute_time`, ADD COLUMN `submission_claim_token` bigint(20) DEFAULT NULL AFTER `submission_judge_attempts`, ADD COLUMN `submission_lease_expiry_time` timestamp NULL DEFAULT NULL AFTER `submission_claim_token`, ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`,`language_id`,`submission_lease_expiry_time`)', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
+
+-- 9. The redundant index of the judge result, dropped once the index of the
+--    judging queue (step 8), which starts with the judge result, exists.
+SET @voj_has_key = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND INDEX_NAME = 'submission_runtime_result');
+SET @voj_sql = IF(@voj_has_key > 0,
+  'ALTER TABLE `voj_submissions` DROP KEY `submission_runtime_result`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
+-- 10. The registry of the running judgers.
+CREATE TABLE IF NOT EXISTS `voj_judgers` (
+  `judger_instance` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `judger_uid` bigint(20) NOT NULL,
+  `judger_description` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `judger_language_ids` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `judger_is_ready` tinyint(1) NOT NULL DEFAULT 0,
+  `judger_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `judger_heartbeat_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `judger_cpu_load` int(4) NOT NULL DEFAULT -1,
+  `judger_memory_usage` int(4) NOT NULL DEFAULT -1,
+  PRIMARY KEY (`judger_instance`),
+  KEY `judger_uid` (`judger_uid`),
+  CONSTRAINT `voj_judgers_ibfk_1` FOREIGN KEY (`judger_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

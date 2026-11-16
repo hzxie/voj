@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS `voj_discussion_threads`;
 DROP TABLE IF EXISTS `voj_discussion_topics`;
 DROP TABLE IF EXISTS `voj_email_validation`;
 DROP TABLE IF EXISTS `voj_judge_results`;
+DROP TABLE IF EXISTS `voj_judgers`;
 DROP TABLE IF EXISTS `voj_languages`;
 DROP TABLE IF EXISTS `voj_offensive_words`;
 DROP TABLE IF EXISTS `voj_options`;
@@ -114,6 +115,18 @@ CREATE TABLE `voj_judge_results` (
   `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
   `judge_result_name` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `voj_judgers` (
+  `judger_instance` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `judger_uid` bigint(20) NOT NULL,
+  `judger_description` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `judger_language_ids` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `judger_is_ready` tinyint(1) NOT NULL DEFAULT 0,
+  `judger_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `judger_heartbeat_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `judger_cpu_load` int(4) NOT NULL DEFAULT -1,
+  `judger_memory_usage` int(4) NOT NULL DEFAULT -1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_languages` (
@@ -282,6 +295,10 @@ ALTER TABLE `voj_judge_results`
   ADD PRIMARY KEY (`judge_result_id`),
   ADD UNIQUE KEY `runtime_result_slug` (`judge_result_slug`);
 
+ALTER TABLE `voj_judgers`
+  ADD PRIMARY KEY (`judger_instance`),
+  ADD KEY `judger_uid` (`judger_uid`);
+
 ALTER TABLE `voj_languages`
   ADD PRIMARY KEY (`language_id`),
   ADD UNIQUE KEY `language_slug` (`language_slug`);
@@ -321,8 +338,7 @@ ALTER TABLE `voj_submissions`
   ADD KEY `problem_id` (`problem_id`,`uid`),
   ADD KEY `uid` (`uid`),
   ADD KEY `submission_language_id` (`language_id`),
-  ADD KEY `submission_runtime_result` (`submission_judge_result`),
-  ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`),
+  ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`,`language_id`,`submission_lease_expiry_time`),
   ADD KEY `judger_uid` (`judger_uid`);
 
 ALTER TABLE `voj_usermeta`
@@ -408,6 +424,9 @@ ALTER TABLE `voj_discussion_threads`
   ADD CONSTRAINT `voj_discussion_thread_ibfk_1` FOREIGN KEY (`discussion_thread_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `voj_judgers`
+  ADD CONSTRAINT `voj_judgers_ibfk_1` FOREIGN KEY (`judger_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `voj_problem_category_relationships`
   ADD CONSTRAINT `voj_problem_category_relationships_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,
