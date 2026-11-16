@@ -22,18 +22,21 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * The entry point of the web application of Verwandlung Online Judge.
  *
  * <p>The application is packaged as a self-contained executable JAR and runs standalone via {@code
- * java -jar voj.web.jar} with embedded Tomcat.
+ * java -jar voj.web.jar} with embedded Tomcat. It runs scheduled jobs, such as
+ * SubmissionService#failStalledSubmissions.
  *
  * @author Haozhe Xie
  */
 @SpringBootApplication
 @MapperScan("org.verwandlung.voj.web.mapper")
 @PropertySource("classpath:voj.properties")
+@EnableScheduling
 public class VojWebApplication extends SpringBootServletInitializer {
   /** The entry point of the application. */
   public static void main(String[] args) {

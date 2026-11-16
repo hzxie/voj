@@ -26,10 +26,15 @@
 	<!-- Base Components -->
 	<context:annotation-config />
 	<!-- Exclude MailConfig: it would contribute a real JavaMailSenderImpl that wins the
-	     by-type injection into MailSender. The tests inject the mock 'mailSender' bean below. -->
+	     by-type injection into MailSender. The tests inject the mock 'mailSender' bean below.
+	     Exclude the application class too: it would scan the package again without these
+	     exclusions, load the production voj.properties and run the scheduled jobs, which the
+	     tests run themselves. -->
 	<context:component-scan base-package="org.verwandlung.voj.web">
 		<context:exclude-filter type="assignable"
 			expression="org.verwandlung.voj.web.config.MailConfig" />
+		<context:exclude-filter type="assignable"
+			expression="org.verwandlung.voj.web.VojWebApplication" />
 	</context:component-scan>
 
 	<!-- Property File Location -->

@@ -27,10 +27,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -62,6 +65,18 @@ import org.verwandlung.voj.web.util.Pagination;
 @Service
 @Transactional
 public class SubmissionService {
+  /** The judge log of a submission that no judger took in time. */
+  static final String UNCLAIMED_JUDGE_LOG =
+      "System Error.\n\nNo judger took the judging task of this submission in time: no running"
+          + " judger supports its language, all of them were busy, or the task was lost."
+          + " An administrator can rejudge this submission.\n";
+
+  /** The judge log of a submission that a judger took but did not finish judging in time. */
+  static final String UNFINISHED_JUDGE_LOG =
+      "System Error.\n\nA judger took this submission but did not finish judging it in time: it"
+          + " stopped, or handed the judging task back. An administrator can rejudge this"
+          + " submission.\n";
+
   /**
    * [For administrators only] Gets the number of submissions within a specified time period.
    *
@@ -693,6 +708,38 @@ public class SubmissionService {
     return isCurrentClaim && isCurrentGeneration;
   }
 
+  /**
+   * Marks as a System Error every pending submission that waited longer than the time-to-live of
+   * its judging task ({@code jms.submissionTask.ttl}): for a judger to take it since the task was
+   * queued (no running judger supports its language, all of them were busy, or the task was lost),
+   * or for the judging to finish since a judger took it (the judger stopped, or handed the task
+   * back and it expired before another judger took it). By then the broker no longer delivers the
+   * task, so no judger would record a verdict. A judger that knows why it cannot judge a submission
+   * records that itself; this catches everything else.
+   *
+   * <p>Runs every minute, on every web application instance. Only pending submissions are updated,
+   * so instances running it at the same time, and a judger recording a verdict meanwhile, do not
+   * get in each other's way. A rejudge sets the queued time again and clears the execute time, so
+   * the judging it asks for gets the whole time-to-live.
+   *
+   * @return the number of submissions marked
+   */
+  @Scheduled(initialDelay = 1, fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
+  public int failStalledSubmissions() {
+    int failed =
+        submissionMapper.failStalledSubmissions(
+            TimeUnit.MILLISECONDS.toSeconds(submissionTaskTtl),
+            UNCLAIMED_JUDGE_LOG,
+            UNFINISHED_JUDGE_LOG);
+    if (failed > 0) {
+      LOGGER.warn(
+          String.format(
+              "Marked %d pending submission(s) that were not judged in time as System Error.",
+              failed));
+    }
+    return failed;
+  }
+
   /** Why a judging task ended on the dead-letter queue. */
   public enum JudgingTaskFailure {
     /** No judger took the task before it expired: none supports the submission's language. */
@@ -842,6 +889,10 @@ public class SubmissionService {
 
   /** The autowired MessageSender object. */
   @Autowired private MessageSender messageSender;
+
+  /** How long (ms) a judging task waits for a judger, and a judging for its verdict. */
+  @Value("${jms.submissionTask.ttl:1800000}")
+  private long submissionTaskTtl;
 
   /**
    * The autowired transaction manager. Used to record a failed task submission in a transaction of

@@ -507,6 +507,65 @@ public class SubmissionServiceTest {
         jdbcTemplate.queryForObject(getJudgeLog, String.class, 1001));
   }
 
+  /**
+   * Test case: tests failStalledSubmissions(). Test data, by the database's clock: pending
+   * submissions queued a minute more than the time-to-live ago and not claimed (1001), claimed
+   * that long ago (1002), claimed a minute ago (1003), queued a minute less than the time-to-live
+   * ago (a new one), and queued long ago, then rejudged (1000); a judged one queued long ago
+   * (1004). Expected: 1001 and 1002 are marked SE, each with the judge log of what happened; the
+   * others are left as they are, and a second run marks nothing.
+   */
+  @Test
+  public void testFailStalledSubmissions() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    long ttl = submissionTaskTtl / 1000;
+    String queue =
+        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_execute_time = NULL,"
+            + " submission_queued_time = NOW() - INTERVAL ? SECOND WHERE submission_id = ?";
+    String claim =
+        "UPDATE voj_submissions SET submission_execute_time = NOW() - INTERVAL ? SECOND"
+            + " WHERE submission_id = ?";
+    jdbcTemplate.update(queue, ttl + 60, 1001);
+    jdbcTemplate.update(queue, ttl + 120, 1002);
+    jdbcTemplate.update(claim, ttl + 60, 1002);
+    jdbcTemplate.update(queue, ttl + 120, 1003);
+    jdbcTemplate.update(claim, 60, 1003);
+    jdbcTemplate.update(queue, ttl + 60, 1000);
+    submissionService.createSubmissionTasks(List.of(1000L));
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_queued_time = NOW() - INTERVAL ? SECOND"
+            + " WHERE submission_id = 1004",
+        ttl + 60);
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_code,"
+            + " submission_queued_time) VALUES (1000, 1000, 2, 'Code', NOW() - INTERVAL ? SECOND)",
+        ttl - 60);
+    long newSubmissionId =
+        jdbcTemplate.queryForObject("SELECT MAX(submission_id) FROM voj_submissions", Long.class);
+
+    Assertions.assertEquals(2, submissionService.failStalledSubmissions());
+    String getRow =
+        "SELECT submission_judge_result, submission_judge_log FROM voj_submissions"
+            + " WHERE submission_id = ?";
+    Map<String, Object> unclaimed = jdbcTemplate.queryForMap(getRow, 1001);
+    Assertions.assertEquals("SE", unclaimed.get("submission_judge_result"));
+    Assertions.assertEquals(
+        SubmissionService.UNCLAIMED_JUDGE_LOG, unclaimed.get("submission_judge_log"));
+    Map<String, Object> unfinished = jdbcTemplate.queryForMap(getRow, 1002);
+    Assertions.assertEquals("SE", unfinished.get("submission_judge_result"));
+    Assertions.assertEquals(
+        SubmissionService.UNFINISHED_JUDGE_LOG, unfinished.get("submission_judge_log"));
+    for (long submissionId : new long[] {1000, 1003, newSubmissionId}) {
+      Assertions.assertEquals(
+          "PD", jdbcTemplate.queryForMap(getRow, submissionId).get("submission_judge_result"));
+    }
+    Assertions.assertEquals(
+        "CE", jdbcTemplate.queryForMap(getRow, 1004).get("submission_judge_result"));
+
+    Assertions.assertEquals(0, submissionService.failStalledSubmissions());
+  }
+
   /** Tests whether a list of submissions contains the submission with the given identifier. */
   private static boolean containsSubmission(List<Submission> submissions, long submissionId) {
     return submissions.stream().anyMatch(s -> s.getSubmissionId() == submissionId);
@@ -694,4 +753,8 @@ public class SubmissionServiceTest {
 
   /** The DataSource of the test database, used to set up fixtures the services cannot create. */
   @Autowired private javax.sql.DataSource dataSource;
+
+  /** The time-to-live (ms) of a judging task. */
+  @org.springframework.beans.factory.annotation.Value("${jms.submissionTask.ttl}")
+  private long submissionTaskTtl;
 }

@@ -361,15 +361,33 @@ public interface SubmissionMapper {
   /**
    * Resets a submission back to the pending state so it can be re-judged, clearing the previous
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
-   * rejudge flow: without this, the record would keep its old verdict, the detail pages would not
-   * show the live judging stream, and the expired-task guard (which only touches pending rows) could
-   * never mark it as unjudgeable. The judge generation is incremented in the same statement, so the
-   * task queued for this rejudge is told apart from the tasks queued before it.
+   * rejudge flow: without this, the record would keep its old verdict and the detail pages would
+   * not show the live judging stream. The judge generation is incremented in the same statement, so
+   * the task queued for this rejudge is told apart from the tasks queued before it, and the queued
+   * time is set to now, so the judging of that task gets the whole time-to-live (see {@link
+   * #failStalledSubmissions}).
    *
    * @param submissionId - the unique identifier of the submission
    * @return the number of rows updated
    */
   int resetSubmissionToPending(@Param("submissionId") long submissionId);
+
+  /**
+   * Marks as a System Error every pending submission that has waited longer than a time-to-live
+   * by the database's clock: for a judger to claim it since its judging task was queued (no execute
+   * time), or for the judging to finish since a judger claimed it. Only pending submissions are
+   * updated, so a verdict is never overwritten, and the judging, should it still be running, can
+   * no longer record one.
+   *
+   * @param ttlSeconds - the time-to-live, in seconds
+   * @param unclaimedJudgeLog - the judge log of a submission no judger claimed
+   * @param unfinishedJudgeLog - the judge log of a submission a judger claimed
+   * @return the number of submissions marked
+   */
+  int failStalledSubmissions(
+      @Param("ttlSeconds") long ttlSeconds,
+      @Param("unclaimedJudgeLog") String unclaimedJudgeLog,
+      @Param("unfinishedJudgeLog") String unfinishedJudgeLog);
 
   /**
    * Deletes a submission by its unique identifier.

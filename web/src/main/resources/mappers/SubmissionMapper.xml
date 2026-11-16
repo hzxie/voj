@@ -378,8 +378,19 @@
 		UPDATE voj_submissions
 		SET submission_judge_result = 'PD', submission_judge_log = NULL, submission_judge_score = NULL,
 			submission_used_time = NULL, submission_used_memory = NULL, submission_execute_time = NULL,
-			judger_uid = NULL, submission_judge_generation = submission_judge_generation + 1
+			judger_uid = NULL, submission_judge_generation = submission_judge_generation + 1,
+			submission_queued_time = NOW()
 		WHERE submission_id = #{submissionId}
+	</update>
+	<update id="failStalledSubmissions"
+		parameterType="map">
+		<!-- The queued time is set by the database's clock, the execute time by the judger's: with
+		     a time-to-live of minutes, clocks some seconds apart do not matter. -->
+		UPDATE voj_submissions
+		SET submission_judge_result = 'SE',
+			submission_judge_log = IF(submission_execute_time IS NULL, #{unclaimedJudgeLog}, #{unfinishedJudgeLog})
+		WHERE submission_judge_result = 'PD'
+		AND COALESCE(submission_execute_time, submission_queued_time) &lt;= NOW() - INTERVAL #{ttlSeconds} SECOND
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">
