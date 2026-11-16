@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import com.sun.security.auth.module.NTSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -577,21 +578,28 @@ public class FileSystemUtils {
   }
 
   /**
-   * Gets the account the judger runs as, on Windows: the user of its process's token, looked up by
-   * its name qualified with its domain. Java's {@code user.name} is the bare name of the account,
-   * which a domain account and a local one may share, and not even an account's for some (that of
-   * SYSTEM is the computer's).
+   * Gets the account the judger runs as, on Windows: the user of its process's token (as {@link
+   * NTSystem} reads it: that of the calling thread, which the judger's threads do not
+   * impersonate, or else of the process), looked up by its name qualified with its domain (e.g.
+   * "HOST\judger", "NT AUTHORITY\SYSTEM" or "NT SERVICE\voj-judger"). Java's {@code user.name} is
+   * the bare name of the account, which a domain account and a local one may share, and not even
+   * an account's for some (that of SYSTEM is the computer's).
    *
    * @return the judger's account
-   * @throws IOException if the native library cannot be loaded, or the account cannot be looked up
+   * @throws IOException if the account cannot be told or looked up
    */
   public static synchronized UserPrincipal getJudgerAccount() throws IOException {
     if (judgerAccount == null) {
-      NativeLibraryLoader.loadLibrary(NATIVE_LIBRARY);
       String name;
       try {
-        name = getProcessAccountName();
-      } catch (RuntimeException | UnsatisfiedLinkError ex) {
+        NTSystem system = new NTSystem();
+        String domain = system.getDomain();
+        // Well-known accounts such as Everyone have no domain.
+        name =
+            domain == null || domain.isEmpty()
+                ? system.getName()
+                : domain + "\\" + system.getName();
+      } catch (RuntimeException | LinkageError ex) {
         throw new IOException("Cannot tell which account the judger runs as.", ex);
       }
       judgerAccount =
@@ -635,13 +643,6 @@ public class FileSystemUtils {
    */
   private static native boolean enableBackupPrivileges();
 
-  /**
-   * Gets the name of the account the judger's process runs as, qualified with its domain
-   * (Windows), such as {@code HOST\judger} or {@code NT AUTHORITY\SYSTEM}.
-   *
-   * @return the name of the account
-   */
-  private static native String getProcessAccountName();
 
   /** The native library that holds the native methods. */
   private static final String NATIVE_LIBRARY = "JudgerCore";

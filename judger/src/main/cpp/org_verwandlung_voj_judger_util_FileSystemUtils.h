@@ -15,14 +15,6 @@ extern "C" {
 JNIEXPORT jboolean JNICALL Java_org_verwandlung_voj_judger_util_FileSystemUtils_enableBackupPrivileges
   (JNIEnv *, jclass);
 
-/*
- * Class:     org_verwandlung_voj_judger_util_FileSystemUtils
- * Method:    getProcessAccountName
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_org_verwandlung_voj_judger_util_FileSystemUtils_getProcessAccountName
-  (JNIEnv *, jclass);
-
 #ifdef __cplusplus
 }
 #endif
