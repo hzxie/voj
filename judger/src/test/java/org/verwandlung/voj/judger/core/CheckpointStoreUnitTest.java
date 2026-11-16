@@ -218,6 +218,24 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
+   * Test case: a clean-up of old files in /tmp removed the lock file of the judger's slot while it
+   * ran, so another judger could lock a new file at that path and share the slot. Expected result:
+   * the judger notices before it uses its slot again, and locks the file at the path again.
+   */
+  @Test
+  public void testOpenClaimsTheSlotAgainWhenItsLockFileIsRemoved() throws Exception {
+    Path root = tempDir.resolve("voj-testpoints");
+    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
+    Path lockFile = root.resolve("judger-0.lock");
+    Assertions.assertEquals(root.resolve("judger-0"), checkpointStore.open());
+
+    Files.delete(lockFile);
+    Assertions.assertEquals(root.resolve("judger-0"), checkpointStore.open());
+
+    Assertions.assertTrue(Files.exists(lockFile));
+  }
+
+  /**
    * Builds the problem used by the tests.
    *
    * @return a problem with a checkpoints version

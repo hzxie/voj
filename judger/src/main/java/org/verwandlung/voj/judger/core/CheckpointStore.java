@@ -19,9 +19,6 @@ package org.verwandlung.voj.judger.core;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
@@ -30,14 +27,11 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
@@ -48,6 +42,7 @@ import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
+import org.verwandlung.voj.judger.util.ExclusiveFileLock;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
@@ -68,7 +63,10 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * judger claims the first slot <i>n</i> whose lock file ({@code judger-<n>.lock}) no other process
  * holds, and holds that lock until it exits. A restarted judger usually gets its old slot (and
  * cache) back. Within a judger, judging is serialised (see {@code Dispatcher#createNewTask}), so a
- * problem's copy is never replaced while it is read.
+ * problem's copy is never replaced while it is read. A clean-up of old files in {@code /tmp} may
+ * remove a lock file while it is held, and another judger would then lock a new file at the same
+ * path: so before each use the judger checks that the file at the path is still the one it
+ * locked (and marks it as just used), and claims a slot again if not.
  *
  * @author Haozhe Xie
  */
@@ -90,6 +88,15 @@ public class CheckpointStore {
    */
   public synchronized Path open() throws IOException {
     ensureCheckpointRootIsTrusted();
+    if (slotLock != null && !slotLock.isValid()) {
+      LOGGER.warn(
+          "The lock file {} of this judger's slot was removed or replaced (e.g. by a clean-up of"
+              + " temporary files): claiming a slot again.",
+          slotLock.getFile());
+      slotLock.close();
+      slotLock = null;
+      cacheDirectory = null;
+    }
     if (cacheDirectory == null) {
       cacheDirectory = claimSlot(Paths.get(checkpointDirectory));
       removeTemporaryDirectories(cacheDirectory);
@@ -167,41 +174,26 @@ public class CheckpointStore {
    * @return the slot's cache directory
    * @throws IOException if every slot is taken
    */
-  private static Path claimSlot(Path root) throws IOException {
+  private Path claimSlot(Path root) throws IOException {
     Files.createDirectories(root);
     for (int slot = 0; slot < MAX_SLOTS; ++slot) {
-      Path lockFile = root.resolve("judger-" + slot + ".lock").toAbsolutePath();
-      // A file lock is held by the whole process, and closing any channel of a locked file may drop
-      // it: never touch a lock file this JVM holds (e.g. another CheckpointStore in a test).
-      synchronized (CLAIMED_LOCK_FILES) {
-        if (CLAIMED_LOCK_FILES.contains(lockFile)) {
-          continue;
-        }
-        FileChannel channel =
-            FileChannel.open(
-                lockFile,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.WRITE,
-                LinkOption.NOFOLLOW_LINKS);
-        FileLock lock;
-        try {
-          lock = channel.tryLock();
-        } catch (OverlappingFileLockException ex) {
-          lock = null;
-        }
-        if (lock == null) {
-          channel.close();
-          continue;
-        }
-        // The channel stays open (and the lock held) until the judger exits.
-        CLAIMED_LOCK_FILES.add(lockFile);
+      ExclusiveFileLock lock =
+          ExclusiveFileLock.tryAcquire(root.resolve("judger-" + slot + ".lock"));
+      if (lock == null) {
+        continue;
       }
-      Path directory = root.resolve("judger-" + slot);
-      if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
-        createPrivateDirectory(directory);
+      try {
+        Path directory = root.resolve("judger-" + slot);
+        if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
+          createPrivateDirectory(directory);
+        }
+        ensureOwnedByJudger(directory);
+        slotLock = lock;
+        return directory;
+      } catch (IOException ex) {
+        lock.close();
+        throw ex;
       }
-      ensureOwnedByJudger(directory);
-      return directory;
     }
     throw new IOException(
         String.format(
@@ -387,8 +379,8 @@ public class CheckpointStore {
     return !System.getProperty("os.name").contains("Windows");
   }
 
-  /** The lock files of the slots claimed by this JVM, whose locks it holds until it exits. */
-  private static final Set<Path> CLAIMED_LOCK_FILES = new HashSet<>();
+  /** The lock of this judger's slot, held until it exits, once claimed. */
+  private ExclusiveFileLock slotLock;
 
   /** This judger's cache directory (its slot under the checkpoint root), once opened. */
   private Path cacheDirectory;
